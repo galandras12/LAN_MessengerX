@@ -28,10 +28,11 @@ alapján fejlődik, fázisokban:
   [`Core/README.md`](Core/README.md) és [`Windows/README.md`](Windows/README.md)
 - **Fázis 2 — Windows kliens Qt 6 portolása**: ✅ forráskód-szinten kész
   (elavult Qt5/Qt4 API-k lecserélve, telepítő NSIS-ről Inno Setup-ra
-  migrálva — lásd [`Windows/README.md`](Windows/README.md)),
-  ⏳ tényleges Qt6+OpenSSL3 build-bel (és az Inno Setup szkript tényleges
-  fordítóval) még nincs ellenőrizve (nincs Qt/Inno Setup telepítve
-  ebben a fejlesztői környezetben)
+  migrálva, magyar (`hu_HU`) fordítás hozzáadva a meglévő 17 mellé — lásd
+  [`Windows/README.md`](Windows/README.md)), ⏳ tényleges Qt6+OpenSSL3
+  build-bel (és az Inno Setup szkript tényleges fordítóval) még nincs
+  ellenőrizve (nincs Qt/Inno Setup telepítve ebben a fejlesztői
+  környezetben)
 - **Fázis 3 — Core kiemelése önálló, mindkét platform által linkelhető
   library-vé**: ✅ forráskód/build-rendszer szinten kész (`Core.pro`,
   Widgets-mentes — lásd [`Core/README.md`](Core/README.md)), ⏳ tényleges
