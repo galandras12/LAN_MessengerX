@@ -8,9 +8,10 @@
 
 int main(int argc, char* argv[]) {
 	QGuiApplication app(argc, argv);
-	QGuiApplication::setOrganizationName("Qualia Digital Solutions");
-	QGuiApplication::setOrganizationDomain("lanmessenger");
-	QGuiApplication::setApplicationName("LAN Messenger");
+	QGuiApplication::setOrganizationName("LAN Messenger X");
+	QGuiApplication::setOrganizationDomain("lanmessengerx");
+	QGuiApplication::setApplicationName("LAN Messenger X");
+	QGuiApplication::setApplicationVersion("1.0.1");
 
 	//	Registered so QML can see ContactModel/ChatModel's Q_PROPERTY role
 	//	data via the instances MessengerBridge hands out - QML never

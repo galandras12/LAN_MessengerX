@@ -52,15 +52,15 @@ void lmcStrings::retranslate(void) {
 
 const QString lmcStrings::appName(void) {
 	if(m_appName.isEmpty())
-		m_appName = tr("LAN Messenger");
+		m_appName = tr("LAN Messenger X");
 	return m_appName;
 }
 
 const QString lmcStrings::appDesc(void) {
 	if(m_appDesc.isEmpty())
-        m_appDesc = tr("LAN Messenger is a free peer-to-peer messaging application for\n"\
+        m_appDesc = tr("LAN Messenger X is a free peer-to-peer messaging application for\n"\
                        "intra-network communication and does not require a server.\n"\
-                       "LAN Messenger works on essentially every popular desktop platform.");
+                       "LAN Messenger X works on essentially every popular desktop platform.");
 	return m_appDesc;
 }
 

@@ -32,10 +32,10 @@ SetCompressor /SOLID lzma
 ;------------------------------------------------------------------------------
 ;Constants
   
-  !define ProductName "LAN Messenger"
-  !define CompanyName "LAN Messenger"
-  !define ProductVersion "1.2.39"
-  !define InstallerVersion "1.2.3.9"
+  !define ProductName "LAN Messenger X"
+  !define CompanyName "LAN Messenger X"
+  !define ProductVersion "1.0.1"
+  !define InstallerVersion "1.0.1.0"
   !define ProductUrl "http://lanmessenger.github.io"
   !define CompanyRegKey "SOFTWARE\${CompanyName}"
   !define AppRegKey "${CompanyRegKey}\${ProductName}"

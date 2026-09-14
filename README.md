@@ -1,9 +1,13 @@
 # LAN Messenger X
 
+**Alkalmazás neve:** LAN Messenger X · **Verzió:** 1.0.1
+
 Az eredeti, megszűnt támogatású **LAN Messenger** (QualiaTech / Dilip
 Radhakrishnan, GPLv3) modernizált, folyamatban lévő újrakiadása —
 Windows 11-kompatibilis asztali kliens és egy modern felületű Android
-kliens, közös hálózati/protokoll magkóddal.
+kliens, közös hálózati/protokoll magkóddal. Az alkalmazás neve és a
+verziószám egyetlen helyről ([`Core/src/definitions.h`](Core/src/definitions.h),
+`IDA_TITLE`/`IDA_VERSION`) származik mindkét platformon.
 
 ## Mappa-elrendezés
 

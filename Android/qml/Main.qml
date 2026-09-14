@@ -7,7 +7,7 @@ ApplicationWindow {
     visible: true
     width: 400
     height: 720
-    title: qsTr("LAN Messenger")
+    title: qsTr("LAN Messenger X")
 
     Material.theme: Material.System
     Material.primary: Material.Teal

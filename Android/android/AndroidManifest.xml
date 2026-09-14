@@ -10,8 +10,8 @@
     rather than a byte-verified manifest - see Android/README.md.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.qualiatech.lanmessenger"
-    android:versionName="1.0"
+    package="org.qualiatech.lanmessengerx"
+    android:versionName="1.0.1"
     android:versionCode="1"
     android:installLocation="auto">
 
@@ -33,13 +33,13 @@
          when persistent background discovery/notifications are added -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
-    <application android:label="LAN Messenger"
+    <application android:label="LAN Messenger X"
         android:icon="@mipmap/ic_launcher"
         android:extractNativeLibs="true"
         android:requestLegacyExternalStorage="true">
 
         <activity android:name="org.qtproject.qt.android.bindings.QtActivity"
-            android:label="LAN Messenger"
+            android:label="LAN Messenger X"
             android:screenOrientation="unspecified"
             android:launchMode="singleTop"
             android:exported="true"
@@ -48,7 +48,8 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <meta-data android:name="android.app.lib_name" android:value="LANMessenger"/>
+            <!-- must match Android.pro's TARGET exactly -->
+            <meta-data android:name="android.app.lib_name" android:value="LANMessengerX"/>
             <meta-data android:name="android.app.qml_import_path" android:value="qml"/>
         </activity>
 

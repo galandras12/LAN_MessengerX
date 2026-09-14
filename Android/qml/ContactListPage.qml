@@ -16,8 +16,8 @@ Page {
             anchors.leftMargin: 16
             Label {
                 text: messenger.localUserName.length > 0
-                      ? qsTr("LAN Messenger — %1").arg(messenger.localUserName)
-                      : qsTr("LAN Messenger")
+                      ? qsTr("LAN Messenger X — %1").arg(messenger.localUserName)
+                      : qsTr("LAN Messenger X")
                 font.pixelSize: 18
                 elide: Text.ElideRight
                 Layout.fillWidth: true

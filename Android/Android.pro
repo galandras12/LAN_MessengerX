@@ -12,7 +12,7 @@
 
 QT += core gui network xml quick qml
 
-TARGET = LANMessenger
+TARGET = LANMessengerX
 TEMPLATE = app
 CONFIG += c++17
 
