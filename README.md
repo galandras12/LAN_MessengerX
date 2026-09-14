@@ -22,7 +22,10 @@ alapján fejlődik, fázisokban:
 - **Fázis 1 — Stabilizálás**: ✅ kész (ez a munkamenet) — konkrét
   összeomlás-okok javítva a hálózati/titkosítási rétegben, lásd
   [`Core/README.md`](Core/README.md) és [`Windows/README.md`](Windows/README.md)
-- **Fázis 2 — Windows kliens Qt 6 portolása**: ⏳ tervezve, még nincs elkezdve
+- **Fázis 2 — Windows kliens Qt 6 portolása**: ✅ forráskód-szinten kész
+  (elavult Qt5/Qt4 API-k lecserélve — lásd [`Windows/README.md`](Windows/README.md)),
+  ⏳ tényleges Qt6+OpenSSL3 build-bel még nincs ellenőrizve (nincs Qt telepítve
+  ebben a fejlesztői környezetben)
 - **Fázis 3 — Core kiemelése önálló, mindkét platform által linkelhető
   library-vé**: ⏳ tervezve
 - **Fázis 4 — Android kliens (Qt Quick/QML)**: ⏳ tervezve

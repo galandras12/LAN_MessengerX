@@ -26,6 +26,7 @@
 #include <QAction>
 #include <QScrollBar>
 #include <QTextBlock>
+#include <QRegularExpression>
 #include "messagelog.h"
 
 const QString acceptOp("accept");
@@ -52,7 +53,7 @@ lmcMessageLog::lmcMessageLog(QWidget *parent) : QMessageBrowser (parent) {
 	fontSizeVal = 0;
 	sendFileMap.clear();
 	receiveFileMap.clear();
-	lastId = QString::null;
+	lastId = QString();
 	messageLog.clear();
 	linkHovered = false;
 	outStyle = false;
@@ -65,7 +66,7 @@ lmcMessageLog::~lmcMessageLog() {
 void lmcMessageLog::initMessageLog(QString themePath, bool clearLog) {
 	if(clearLog)
 		messageLog.clear();
-	lastId = QString::null;
+	lastId = QString();
 	this->themePath = themePath;
     reloadTheme();
 }
@@ -100,7 +101,7 @@ void lmcMessageLog::appendMessageLog(MessageType type, QString* lpszUserId, QStr
 	QFont font;
 	QColor color;
 	QString fontStyle;
-	QString id = QString::null;
+	QString id = QString();
 	bool addToLog = true;
 
     removeMessageLog(MT_ChatState);
@@ -127,7 +128,7 @@ void lmcMessageLog::appendMessageLog(MessageType type, QString* lpszUserId, QStr
 		time.setMSecsSinceEpoch(pMessage->header(XN_TIME).toLongLong());
 		message = pMessage->data(XN_BROADCAST);
 		appendBroadcast(lpszUserId, lpszUserName, &message, &time);
-		lastId  = QString::null;
+		lastId  = QString();
 		break;
 	case MT_ChatState:
 		message = pMessage->data(XN_CHATSTATE);
@@ -154,7 +155,7 @@ void lmcMessageLog::appendMessageLog(MessageType type, QString* lpszUserId, QStr
 		html.replace("%style%", fontStyle);
 		html.replace("%message%", message);
         appendMessageLog(&html, type);
-		lastId  = QString::null;
+		lastId  = QString();
 		break;
 	case MT_Error:
 		html = themeData.sysMsg;
@@ -162,14 +163,14 @@ void lmcMessageLog::appendMessageLog(MessageType type, QString* lpszUserId, QStr
 		html.replace("%sender%", tr("Your message was not sent."));
 		html.replace("%message%", "");
         appendMessageLog(&html, type);
-		lastId  = QString::null;
+		lastId  = QString();
 		addToLog = false;
 		break;
 	case MT_File:
     case MT_Folder:
         id = getFileTempId(pMessage);
         html = getFileMessageText(type, lpszUserName, pMessage, bReload);
-		lastId = QString::null;
+		lastId = QString();
         appendMessageLog(&html, MT_File, new QTextBlockData(id));
 		break;
 	case MT_Join:
@@ -183,15 +184,15 @@ void lmcMessageLog::appendMessageLog(MessageType type, QString* lpszUserId, QStr
 			html.replace("%message%", "");
             appendMessageLog(&html, type);
 		}
-		lastId = QString::null;
+		lastId = QString();
 	default:
 		break;
 	}
 
 	if(!bReload && addToLog && pMessage) {
 		XmlMessage xmlMessage = pMessage->clone();
-		QString userId = lpszUserId ? *lpszUserId : QString::null;
-		QString userName = lpszUserName ? *lpszUserName : QString::null;
+		QString userId = lpszUserId ? *lpszUserId : QString();
+		QString userName = lpszUserName ? *lpszUserName : QString();
 		messageLog.append(SingleMessage(type, userId, userName, xmlMessage, id));
     }
 }
@@ -392,7 +393,7 @@ void lmcMessageLog::onAnchorClicked(const QUrl &url)
         return;
     }
 
-    QStringList linkData = linkPath.split("/", QString::SkipEmptyParts);
+    QStringList linkData = linkPath.split("/", Qt::SkipEmptyParts);
     FileMode mode;
     FileOp op;
 
@@ -466,7 +467,7 @@ void lmcMessageLog::appendMessageLog(QString *lpszHtml, MessageType type, QTextB
 
 void lmcMessageLog::removeMessageLog(MessageType type) {
 
-    replaceMessageLog(type, QString::null, QString::null);
+    replaceMessageLog(type, QString(), QString());
 }
 
 void lmcMessageLog::replaceMessageLog(MessageType type, QString id, QString html)
@@ -554,7 +555,7 @@ void lmcMessageLog::appendBroadcast(QString* lpszUserId, QString* lpszUserName, 
 
 void lmcMessageLog::appendMessage(QString* lpszUserId, QString* lpszUserName, QString* lpszMessage, QDateTime* pTime,
 								  QFont* pFont, QColor* pColor) {
-	QString html = QString::null;
+	QString html = QString();
 	bool localUser = (lpszUserId->compare(localId) == 0);
 
 	decodeMessage(lpszMessage);
@@ -590,7 +591,7 @@ void lmcMessageLog::appendMessage(QString* lpszUserId, QString* lpszUserName, QS
 
 void lmcMessageLog::appendPublicMessage(QString* lpszUserId, QString* lpszUserName, QString* lpszMessage,
                                         QDateTime *pTime, QFont *pFont, QColor *pColor, MessageType messageType) {
-	QString html = QString::null;
+	QString html = QString();
 	bool localUser = (lpszUserId->compare(localId) == 0);
 
 	decodeMessage(lpszMessage);
@@ -671,7 +672,7 @@ QString lmcMessageLog::getFileMessageText(MessageType type, QString* lpszUserNam
             html.replace("%links%", szStatus);
 			break;
 		default:
-            html = QString::null;
+            html = QString();
 		}
     } else {
 		if(autoFile) {
@@ -717,7 +718,7 @@ QString lmcMessageLog::getFileMessageText(MessageType type, QString* lpszUserNam
             html.replace("%links%", szStatus);
 			break;
 		default:
-            html = QString::null;
+            html = QString();
         }
 	}
 
@@ -774,7 +775,7 @@ QString lmcMessageLog::getFileStatusMessage(FileMode mode, FileOp op) {
 }
 
 QString lmcMessageLog::getChatStateMessage(ChatState chatState) {
-	QString message = QString::null;
+	QString message = QString();
 
 	switch(chatState) {
 	case CS_Composing:
@@ -791,7 +792,7 @@ QString lmcMessageLog::getChatStateMessage(ChatState chatState) {
 }
 
 QString lmcMessageLog::getChatRoomMessage(GroupMsgOp op) {
-	QString message = QString::null;
+	QString message = QString();
 
 	switch(op) {
 	case GMO_Join:
@@ -863,16 +864,16 @@ void lmcMessageLog::decodeMessage(QString* lpszMessage, bool useDefaults) {
 	if(useDefaults || allowLinks) {
 //		lpszMessage->replace(QRegExp("(((https|http|ftp|file|smb):[/][/]|www.)[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)"),
 //							 "<a href='\\1'>\\1</a>");
-		lpszMessage->replace(QRegExp("((?:(?:https?|ftp|file)://|www\\.|ftp\\.)[-A-Z0-9+&@#/%=~_|$?!:,.]*[A-Z0-9+&@#/%=~_|$])", Qt::CaseInsensitive),
+		lpszMessage->replace(QRegularExpression("((?:(?:https?|ftp|file)://|www\\.|ftp\\.)[-A-Z0-9+&@#/%=~_|$?!:,.]*[A-Z0-9+&@#/%=~_|$])", QRegularExpression::CaseInsensitiveOption),
 							 "<a data-isLink='true' href='\\1'>\\1</a>");
 		lpszMessage->replace("<a data-isLink='true' href='www", "<a data-isLink='true' href='http://www");
 
 		if(!useDefaults && pathToLink)
-			lpszMessage->replace(QRegExp("((\\\\\\\\[\\w-]+\\\\[^\\\\/:*?<>|""]+)((?:\\\\[^\\\\/:*?<>|""]+)*\\\\?)$)"),
+			lpszMessage->replace(QRegularExpression("((\\\\\\\\[\\w-]+\\\\[^\\\\/:*?<>|""]+)((?:\\\\[^\\\\/:*?<>|""]+)*\\\\?)$)"),
 								 "<a data-isLink='true' href='file:\\1'>\\1</a>");
 	}
 
-	QString message = QString::null;
+	QString message = QString();
 	int index = 0;
 
 	while(index < lpszMessage->length()) {

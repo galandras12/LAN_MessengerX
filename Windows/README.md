@@ -30,16 +30,49 @@ Ez a munkamenet a modernizációs terv **Fázis 0–1** részét valósította m
   sosem szabadította fel a belső puffert).
 - ✅ A nem használt `sql` Qt modul és a Symbian/Maemo5-specifikus, holt
   `lmcapp.pro` kódágak eltávolítva.
-- ⏳ **Még nincs kész**: a tényleges Qt 6 portolás (Qt5/Qt4-es elavult API-k,
-  pl. `QRegExp`, `Q_WS_*` makrók cseréje — 11 érintett fájl), az OpenSSL 3.x
-  ellen tényleges build tesztelése, a telepítő (NSIS → Inno Setup/MSIX)
-  cseréje. Ez a terv Fázis 2-je, külön munkamenetben.
+
+Ez a munkamenet emellett elvégezte a **Fázis 2** (Qt 6 portolás) forráskód-szintű
+részét is — a Qt5/Qt4-es, Qt6 alatt már nem létező API-k lecserélve:
+
+- ✅ `QRegExp`/`QRegExpValidator` → `QRegularExpression`/`QRegularExpressionValidator`
+  (`settingsdialog.h/.cpp`, `messagelog.cpp`, `lmcapp/qtlocalpeer.cpp`) — az
+  `exactMatch()` hívások `QRegularExpression::anchoredPattern()` +
+  `match().hasMatch()` mintára cserélve, mert a `QRegularExpression`-nek
+  nincs `exactMatch()` metódusa.
+- ✅ `foreach` (Qt6 alapból nem tartalmazza, opcionális Qt5Compat modult
+  igényelne) → C++11 range-based `for` (`mainwindow.cpp`, `theme.cpp`,
+  `chatwindow.cpp`, `lmcapp/application.cpp`, `lmcapp/qtlockedfile_win.cpp`).
+- ✅ `QDesktopWidget` (Qt6-ban megszűnt) → `QGuiApplication::primaryScreen()`
+  (`historywindow.cpp`, `helpwindow.cpp`, `transferwindow.cpp`,
+  `updatewindow.cpp`; az `aboutdialog.cpp`-beli include használat nélkül
+  holt volt, törölve).
+- ✅ `qrand()`/`qsrand()` (Qt6-ban megszűnt) → `QRandomGenerator`
+  (`mainwindow.cpp`, avatar véletlen kiválasztás).
+- ✅ `QString::null` (Qt6-ban megszűnt statikus tag) → `QString()` — 60
+  előfordulás a `/Core` és `/Windows` fákban.
+- ✅ `QString::SkipEmptyParts` → `Qt::SkipEmptyParts` (`lmc.cpp`,
+  `messagelog.cpp`, `Core/src/shared.cpp`, `Core/src/trace.cpp`).
+- ✅ `Q_WS_WIN` (Qt4-es makró, Qt5/6 sosem definiálja) → `Q_OS_WIN`
+  (`lmcapp/qtsingleapplication.h` mindkét példánya, `qtlockedfile.h`
+  mindkét példánya) — enélkül a DLL export/import makrók örökre az
+  üres ágra estek volna Windows alatt is.
+- ✅ `Q_WS_X11`-re épülő `QApplication(Display*, ...)` konstruktorok
+  törölve (`lmcapp/qtsingleapplication.h`/`.cpp`) — ezek a Qt5 QPA
+  platform-absztrakciója óta nem léteznek a Qt-ban, a makró átnevezése
+  helyett törölve, hogy ne maradjon csapda egy jövőbeli
+  keresd-cseréld munkához.
+
+⏳ **Még nincs ellenőrizve valós build-bel** (ehhez a szandboxban nincs Qt6/
+OpenSSL3 telepítve) — lásd lent. A telepítő cseréje (NSIS → Inno Setup/MSIX)
+is még hátravan.
 
 ## Build előfeltételek
 
-- Qt 6 LTS (a projekt jelenleg még Qt5-ös API-kat is használ — lásd fent,
-  emiatt **Qt 6 alatt egyelőre nem fordul le hiba nélkül**, ez a Fázis 2
-  munka tárgya)
+- Qt 6 LTS — a forráskód immár nem használ olyan Qt5/Qt4-es API-t, ami Qt6
+  alatt ismerten nem fordulna (lásd a fenti listát), de **ezt egy tényleges
+  Qt6 + OpenSSL3 build-bel még nem ellenőriztük** (ez a szandbox-környezet
+  nem tartalmaz Qt-t) — az első helyi build valószínűleg feltár még
+  apróbb, itt észre nem vett hibákat is.
 - OpenSSL 3.x fejlesztői csomag — az `include` és `lib` mappáit másold ide:
   `Windows/openssl/include`, `Windows/openssl/lib` (a `.pro` fájl ezt várja).
   A Windows-os OpenSSL 3.x disztribúciók általában `libcrypto.lib` néven

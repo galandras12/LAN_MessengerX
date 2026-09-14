@@ -31,6 +31,8 @@
 #include <QFontDialog>
 #include <QColorDialog>
 #include <QDesktopServices>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
 #include "ui_settingsdialog.h"
 #include "shared.h"
 #include "settings.h"
@@ -99,8 +101,8 @@ private:
 	QFont font;
 	QColor color;
 	QIntValidator* pPortValidator;
-	QRegExp	ipRegExp;
-	QRegExpValidator* pIpValidator;
+	QRegularExpression ipRegExp;
+	QRegularExpressionValidator* pIpValidator;
 	lmcMessageLog* pMessageLog;
     int statusTimerId;
     int statusNow;
