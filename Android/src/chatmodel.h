@@ -9,6 +9,9 @@
 ** Telegram-style, rather than a separate global transfer window - see
 ** MessengerBridge for how the request/accept/progress/complete/error
 ** state machine (mirroring Core/src/filemessagingproc.cpp) drives these.
+** Also doubles as the message timeline for group chat rooms (see
+** MessengerBridge's createGroupChat()/GMO_ handling), which additionally
+** use appendSystemMessage() for join/leave notices.
 ** Kept intentionally simple (in-memory only, no persistence/history yet)
 ** for this first pass - see Android/README.md.
 **
@@ -23,10 +26,11 @@
 
 struct ChatEntry {
 	bool isFile;
+	bool isSystem;
 	bool outgoing;
 	QDateTime timestamp;
 
-	//	text message
+	//	text message / system notice (isSystem == true: text only, no sender)
 	QString senderName;
 	QString text;
 
@@ -53,7 +57,8 @@ public:
 		FileSizeRole,
 		PositionRole,
 		ProgressRole,
-		StateRole
+		StateRole,
+		IsSystemRole
 	};
 
 	explicit ChatModel(QObject* parent = nullptr);
@@ -63,6 +68,10 @@ public:
 	QHash<int, QByteArray> roleNames() const override;
 
 	void appendMessage(const QString& senderName, const QString& text, const QDateTime& timestamp, bool outgoing);
+
+	//	Join/leave notices in a group chat room ("Alice joined", "Bob left") -
+	//	rendered centered, without a bubble, in the QML delegate.
+	void appendSystemMessage(const QString& text, const QDateTime& timestamp);
 
 	//	Adds a new file transfer entry, or - if fileId is already known
 	//	(the common case: Core echoes the same fileId back through every

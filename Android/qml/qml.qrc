@@ -3,5 +3,7 @@
         <file>Main.qml</file>
         <file>ContactListPage.qml</file>
         <file>ChatPage.qml</file>
+        <file>NewGroupChatPage.qml</file>
+        <file>GroupChatPage.qml</file>
     </qresource>
 </RCC>

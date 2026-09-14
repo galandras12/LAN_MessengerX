@@ -4,6 +4,7 @@
 MessengerBridge::MessengerBridge(QObject* parent) : QObject(parent) {
 	pMessaging = new lmcMessaging();
 	pContactModel = new ContactModel(this);
+	pRoomListModel = new RoomListModel(this);
 
 	connect(pMessaging, SIGNAL(messageReceived(MessageType, QString*, XmlMessage*)),
 		this, SLOT(messaging_messageReceived(MessageType, QString*, XmlMessage*)));
@@ -153,6 +154,159 @@ void MessengerBridge::cancelFile(const QString& userId, const QString& fileId) {
 	pMessaging->sendMessage(MT_File, &id, &xmlMessage);
 }
 
+QString MessengerBridge::createGroupChat(const QStringList& userIds) {
+	QString threadId = Helper::getUuid();
+	//	Matches lmcChatRoomWindow::init()'s unconditional addUser(
+	//	pLocalUser) when groupMode is true: creating a room announces our
+	//	own membership the same way joining one does (see
+	//	messaging_messageReceived()'s GMO_Request handling) - harmless at
+	//	creation time since nobody else has this threadId yet to react to it.
+	createLocalRoom(threadId);
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_THREAD, threadId);
+	xmlMessage.addData(XN_GROUPMSGOP, GroupMsgOpNames[GMO_Request]);
+	for(const QString& userId : userIds) {
+		if(userId == localUserId())
+			continue;
+		QString id = userId;
+		pMessaging->sendMessage(MT_GroupMessage, &id, &xmlMessage);
+	}
+
+	return threadId;
+}
+
+void MessengerBridge::sendGroupMessage(const QString& threadId, const QString& text) {
+	if(!roomPeerIds.contains(threadId) || text.isEmpty())
+		return;
+
+	//	Field shape matches lmcChatRoomWindow::sendMessage() in
+	//	Windows/lmc/src/chatroomwindow.cpp, minus the font/color cosmetic
+	//	fields, same as sendMessage() above.
+	XmlMessage xmlMessage;
+	xmlMessage.addHeader(XN_TIME, QString::number(QDateTime::currentDateTime().toMSecsSinceEpoch()));
+	xmlMessage.addData(XN_THREAD, threadId);
+	xmlMessage.addData(XN_GROUPMSGOP, GroupMsgOpNames[GMO_Message]);
+	xmlMessage.addData(XN_MESSAGE, text);
+
+	//	Unlike GMO_Request/Join/Leave, actual message content is targeted
+	//	per-participant, not broadcast to everyone.
+	const QStringList peerIds = roomPeerIds.value(threadId);
+	for(const QString& peerId : peerIds) {
+		if(peerId == localUserId())
+			continue;
+		QString id = peerId;
+		pMessaging->sendMessage(MT_GroupMessage, &id, &xmlMessage);
+	}
+
+	roomMessageModels[threadId]->appendMessage(localUserName(), text, QDateTime::currentDateTime(), true);
+}
+
+void MessengerBridge::leaveGroupChat(const QString& threadId) {
+	if(!roomPeerIds.contains(threadId))
+		return;
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_THREAD, threadId);
+	xmlMessage.addData(XN_GROUPMSGOP, GroupMsgOpNames[GMO_Leave]);
+	//	NULL recipient: fans out to every online user, same as GMO_Join -
+	//	only the other room participants (who have this threadId open)
+	//	will act on it.
+	pMessaging->sendMessage(MT_GroupMessage, nullptr, &xmlMessage);
+
+	roomMessageModels.take(threadId)->deleteLater();
+	roomParticipantModels.take(threadId)->deleteLater();
+	roomPeerIds.remove(threadId);
+	pRoomListModel->removeRoom(threadId);
+}
+
+ChatModel* MessengerBridge::roomMessages(const QString& threadId) {
+	if(!roomPeerIds.contains(threadId))
+		return nullptr;
+	return roomMessageModels.value(threadId);
+}
+
+ContactModel* MessengerBridge::roomParticipants(const QString& threadId) {
+	if(!roomPeerIds.contains(threadId))
+		return nullptr;
+	return roomParticipantModels.value(threadId);
+}
+
+QString MessengerBridge::roomTitle(const QString& threadId) const {
+	if(!roomPeerIds.contains(threadId))
+		return QString();
+
+	QStringList names;
+	const QStringList peerIds = roomPeerIds.value(threadId);
+	for(const QString& peerId : peerIds) {
+		if(peerId == localUserId())
+			continue;
+		User* pUser = userById(peerId);
+		names.append(pUser ? pUser->name : peerId);
+	}
+	return names.isEmpty() ? tr("Group Chat") : names.join(", ");
+}
+
+void MessengerBridge::createLocalRoom(const QString& threadId) {
+	roomMessageModels.insert(threadId, new ChatModel(this));
+	roomParticipantModels.insert(threadId, new ContactModel(this));
+	roomPeerIds.insert(threadId, QStringList());
+
+	addRoomParticipant(threadId, localUserId());
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_THREAD, threadId);
+	xmlMessage.addData(XN_GROUPMSGOP, GroupMsgOpNames[GMO_Join]);
+	pMessaging->sendMessage(MT_GroupMessage, nullptr, &xmlMessage);
+}
+
+void MessengerBridge::addRoomParticipant(const QString& threadId, const QString& userId) {
+	if(!roomPeerIds.contains(threadId))
+		return;
+
+	User* pUser = userById(userId);
+	//	Matches lmcChatRoomWindow::addUser()'s version gate in
+	//	Windows/lmc/src/chatroomwindow.cpp: versions <= 1.2.10 predate the
+	//	room/public-chat feature and would not understand this traffic.
+	if(pUser && userId != localUserId() && Helper::compareVersions(pUser->version, "1.2.10") <= 0)
+		return;
+
+	QStringList& ids = roomPeerIds[threadId];
+	if(ids.contains(userId))
+		return;
+	ids.append(userId);
+
+	refreshRoomParticipantModel(threadId);
+}
+
+void MessengerBridge::removeRoomParticipant(const QString& threadId, const QString& userId) {
+	if(!roomPeerIds.contains(threadId))
+		return;
+
+	roomPeerIds[threadId].removeAll(userId);
+	refreshRoomParticipantModel(threadId);
+}
+
+void MessengerBridge::refreshRoomParticipantModel(const QString& threadId) {
+	QList<User> users;
+	const QStringList ids = roomPeerIds.value(threadId);
+	for(const QString& id : ids) {
+		User* pUser = userById(id);
+		if(pUser)
+			users.append(*pUser);
+	}
+	roomParticipantModels[threadId]->setUsers(users);
+	pRoomListModel->addOrUpdateRoom(threadId, roomTitle(threadId), ids.count());
+	emit roomUpdated(threadId);
+}
+
+User* MessengerBridge::userById(const QString& userId) const {
+	if(userId == localUserId())
+		return pMessaging->localUser;
+	QString id = userId;
+	return pMessaging->getUser(&id);
+}
+
 ChatModel* MessengerBridge::chatModelFor(const QString& userId) {
 	return ensureChatModel(userId);
 }
@@ -189,15 +343,69 @@ void MessengerBridge::messaging_messageReceived(MessageType type, QString* lpszU
 		refreshContacts();
 		break;
 
-	case MT_Message:
-	case MT_GroupMessage: {
+	case MT_Message: {
 		if(!lpszUserId || !pMessage)
 			break;
 		User* pUser = pMessaging->getUser(lpszUserId);
 		QString senderName = pUser ? pUser->name : *lpszUserId;
-		QString text = (type == MT_GroupMessage) ? pMessage->data(XN_GROUPMESSAGE) : pMessage->data(XN_MESSAGE);
+		QString text = pMessage->data(XN_MESSAGE);
 		ensureChatModel(*lpszUserId)->appendMessage(senderName, text, QDateTime::currentDateTime(), false);
 		emit incomingMessage(*lpszUserId, senderName, text);
+		break;
+	}
+
+	//	Group chat room protocol - see the class comment in
+	//	messengerbridge.h for the full picture (traced from
+	//	Windows/lmc/src/chatroomwindow.cpp, not guessed).
+	case MT_GroupMessage: {
+		if(!lpszUserId || !pMessage)
+			break;
+		QString threadId = pMessage->data(XN_THREAD);
+		if(threadId.isEmpty())
+			break;
+		int op = Helper::indexOf(GroupMsgOpNames, GMO_Max, pMessage->data(XN_GROUPMSGOP));
+		bool roomExists = roomPeerIds.contains(threadId);
+
+		if(op == GMO_Request) {
+			//	Someone is inviting us into thread threadId. If we do not
+			//	already know it, create it - which (matching
+			//	lmcChatRoomWindow::init()'s unconditional addUser(pLocalUser)
+			//	when groupMode is true) announces our own join to every
+			//	online user via a NULL-recipient broadcast; only the other
+			//	invitees/the inviter, who already have this threadId open,
+			//	will act on it.
+			if(!roomExists)
+				createLocalRoom(threadId);
+			addRoomParticipant(threadId, *lpszUserId);
+		} else if(!roomExists) {
+			//	Not a thread we know about - per the protocol, every
+			//	uninvited bystander just ignores this (see the class
+			//	comment), since GMO_Join/GMO_Message/GMO_Leave for a room
+			//	we were never invited to reach us too (Join/Leave are sent
+			//	to everyone, not just room members).
+			break;
+		} else {
+			User* pUser = userById(*lpszUserId);
+			QString senderName = pUser ? pUser->name : *lpszUserId;
+			switch(op) {
+			case GMO_Join:
+				addRoomParticipant(threadId, *lpszUserId);
+				roomMessageModels[threadId]->appendSystemMessage(
+					tr("%1 joined").arg(senderName), QDateTime::currentDateTime());
+				break;
+			case GMO_Message:
+				roomMessageModels[threadId]->appendMessage(senderName, pMessage->data(XN_MESSAGE),
+					QDateTime::currentDateTime(), false);
+				break;
+			case GMO_Leave:
+				removeRoomParticipant(threadId, *lpszUserId);
+				roomMessageModels[threadId]->appendSystemMessage(
+					tr("%1 left").arg(senderName), QDateTime::currentDateTime());
+				break;
+			default:
+				break;
+			}
+		}
 		break;
 	}
 
@@ -270,9 +478,8 @@ void MessengerBridge::messaging_messageReceived(MessageType type, QString* lpszU
 	}
 
 	default:
-		//	Everything else (folder transfer, chat state, queries, group
-		//	management, ...) is not wired up in this first pass - see
-		//	Android/README.md.
+		//	Everything else (folder transfer, chat state, queries, ...) is
+		//	not wired up in this first pass - see Android/README.md.
 		break;
 	}
 }

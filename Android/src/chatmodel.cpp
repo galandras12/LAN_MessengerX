@@ -26,6 +26,7 @@ QVariant ChatModel::data(const QModelIndex& index, int role) const {
 	case PositionRole: return entry.position;
 	case ProgressRole: return entry.fileSize > 0 ? double(entry.position) / double(entry.fileSize) : 0.0;
 	case StateRole: return entry.state;
+	case IsSystemRole: return entry.isSystem;
 	default: return QVariant();
 	}
 }
@@ -43,15 +44,32 @@ QHash<int, QByteArray> ChatModel::roleNames() const {
 	roles[PositionRole] = "position";
 	roles[ProgressRole] = "progress";
 	roles[StateRole] = "state";
+	roles[IsSystemRole] = "isSystem";
 	return roles;
 }
 
 void ChatModel::appendMessage(const QString& senderName, const QString& text, const QDateTime& timestamp, bool outgoing) {
 	ChatEntry entry;
 	entry.isFile = false;
+	entry.isSystem = false;
 	entry.outgoing = outgoing;
 	entry.timestamp = timestamp;
 	entry.senderName = senderName;
+	entry.text = text;
+	entry.fileSize = 0;
+	entry.position = 0;
+
+	beginInsertRows(QModelIndex(), entries.count(), entries.count());
+	entries.append(entry);
+	endInsertRows();
+}
+
+void ChatModel::appendSystemMessage(const QString& text, const QDateTime& timestamp) {
+	ChatEntry entry;
+	entry.isFile = false;
+	entry.isSystem = true;
+	entry.outgoing = false;
+	entry.timestamp = timestamp;
 	entry.text = text;
 	entry.fileSize = 0;
 	entry.position = 0;
@@ -84,6 +102,7 @@ void ChatModel::upsertFileEntry(const QString& fileId, const QString& fileName, 
 
 	ChatEntry entry;
 	entry.isFile = true;
+	entry.isSystem = false;
 	entry.outgoing = outgoing;
 	entry.timestamp = QDateTime::currentDateTime();
 	entry.fileId = fileId;

@@ -24,8 +24,21 @@
 ** call these methods (the one exception is decline, which Core does not
 ** echo back to the decliner - see messaging_messageReceived()).
 **
-** Scope note: folder transfer, chat rooms, and settings are not wired up
-** yet - only presence, 1:1 messaging, and single-file transfer. See
+** Group chat rooms mirror Windows/lmc/src/chatroomwindow.cpp's protocol
+** exactly (traced from there, not guessed): a room is a threadId (UUID)
+** plus MT_GroupMessage traffic tagged with XN_THREAD + XN_GROUPMSGOP
+** (GMO_Request/Join/Message/Leave). GMO_Request is sent point-to-point
+** to each invitee; GMO_Join and GMO_Leave are sent with a NULL recipient
+** (lmcMessaging::sendMessage()'s MT_GroupMessage/no-userId branch fans
+** those to every online user), and every recipient - invited or not -
+** just ignores any thread it doesn't already know about, which is how
+** membership converges without any server tracking room rosters. Only
+** GMO_Message (the actual chat text) is targeted per-participant. Not
+** ported: Windows' "Public Chat" (an always-on room auto-joining every
+** connected user, MT_PublicMessage) and adding participants to an
+** already-created room - see /Android/README.md.
+**
+** Scope note: folder transfer and settings are not wired up yet - see
 ** /Android/README.md, including its unresolved-storage-access caveat for
 ** sendFile() on Android.
 **
@@ -40,6 +53,7 @@
 #include "messaging.h"
 #include "contactmodel.h"
 #include "chatmodel.h"
+#include "roomlistmodel.h"
 
 class MessengerBridge : public QObject {
 	Q_OBJECT
@@ -47,6 +61,7 @@ class MessengerBridge : public QObject {
 	Q_PROPERTY(QString localUserName READ localUserName NOTIFY startedChanged)
 	Q_PROPERTY(bool connected READ isConnected NOTIFY connectedChanged)
 	Q_PROPERTY(ContactModel* contacts READ contacts CONSTANT)
+	Q_PROPERTY(RoomListModel* rooms READ rooms CONSTANT)
 
 public:
 	explicit MessengerBridge(QObject* parent = nullptr);
@@ -56,6 +71,7 @@ public:
 	QString localUserName(void) const;
 	bool isConnected(void) const;
 	ContactModel* contacts(void) const { return pContactModel; }
+	RoomListModel* rooms(void) const { return pRoomListModel; }
 
 	//	Starts the network engine. Called once from main.cpp after the QML
 	//	engine is set up, not from the constructor, so QML bindings exist
@@ -78,11 +94,30 @@ public:
 	Q_INVOKABLE void declineFile(const QString& userId, const QString& fileId);
 	Q_INVOKABLE void cancelFile(const QString& userId, const QString& fileId);
 
+	//	Creates a new group chat room with the given participants (not
+	//	including the local user - added automatically), returning its
+	//	threadId so QML can navigate to it immediately.
+	Q_INVOKABLE QString createGroupChat(const QStringList& userIds);
+	Q_INVOKABLE void sendGroupMessage(const QString& threadId, const QString& text);
+	Q_INVOKABLE void leaveGroupChat(const QString& threadId);
+	Q_INVOKABLE ChatModel* roomMessages(const QString& threadId);
+	Q_INVOKABLE ContactModel* roomParticipants(const QString& threadId);
+	//	Comma-joined participant names (excluding the local user) - a
+	//	deliberate small deviation from Windows' getWindowTitle(), which
+	//	includes "you" in its own title too; that reads oddly on your own
+	//	screen and doesn't affect the wire protocol at all.
+	Q_INVOKABLE QString roomTitle(const QString& threadId) const;
+
 signals:
 	void startedChanged(void);
 	void connectedChanged(void);
 	void incomingMessage(const QString& userId, const QString& senderName, const QString& text);
 	void incomingFileRequest(const QString& userId, const QString& peerName, const QString& fileId, const QString& fileName, qint64 fileSize);
+	//	Emitted whenever a room's participant list (and therefore its
+	//	title) changes - QML pages bind to roomTitle()/roomParticipants()
+	//	imperatively and refresh on this rather than relying on implicit
+	//	property-binding reactivity through a non-NOTIFYing model call.
+	void roomUpdated(const QString& threadId);
 
 private slots:
 	void messaging_messageReceived(MessageType type, QString* lpszUserId, XmlMessage* pMessage);
@@ -92,9 +127,23 @@ private:
 	void refreshContacts(void);
 	ChatModel* ensureChatModel(const QString& userId);
 
+	void createLocalRoom(const QString& threadId);
+	void addRoomParticipant(const QString& threadId, const QString& userId);
+	void removeRoomParticipant(const QString& threadId, const QString& userId);
+	void refreshRoomParticipantModel(const QString& threadId);
+	User* userById(const QString& userId) const;
+
 	lmcMessaging* pMessaging;
 	ContactModel* pContactModel;
+	RoomListModel* pRoomListModel;
 	QMap<QString, ChatModel*> chatModels;
+
+	QMap<QString, ChatModel*> roomMessageModels;
+	QMap<QString, ContactModel*> roomParticipantModels;
+	//	Participant ids per room, in join order - the fan-out list for
+	//	GMO_Message sends and the source used to rebuild
+	//	roomParticipantModels/the room title after each add/remove.
+	QMap<QString, QStringList> roomPeerIds;
 };
 
 #endif // MESSENGERBRIDGE_H
