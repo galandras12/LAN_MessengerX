@@ -99,6 +99,23 @@ Page {
             }
         }
 
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 4
+
+            Label {
+                text: qsTr("Privacy")
+                font.pixelSize: 13
+                opacity: 0.6
+            }
+            Switch {
+                id: historySwitch
+                text: qsTr("Save message history")
+                checked: messenger.historyEnabled
+                onToggled: messenger.historyEnabled = checked
+            }
+        }
+
         Label {
             text: qsTr("Your device/network user id: %1").arg(messenger.localUserId)
             font.pixelSize: 11

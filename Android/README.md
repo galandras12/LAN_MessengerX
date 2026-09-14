@@ -33,11 +33,14 @@ bekötött** első verziót írt meg, nem csak UI-vázat:
   bejegyzéseket és (szobáknál) join/leave rendszerüzeneteket tárolja.
 - ✅ `src/roomlistmodel.h/.cpp` — a csoportos chat szobák listája (lásd
   külön szakasz lent).
+- ✅ `src/historylistmodel.h/.cpp` — a mentett üzenetelőzmény-bejegyzések
+  listája (lásd külön szakasz lent).
 - ✅ `qml/Main.qml`, `qml/ContactListPage.qml`, `qml/ChatPage.qml`,
   `qml/NewGroupChatPage.qml`, `qml/GroupChatPage.qml`,
-  `qml/SettingsPage.qml` — Qt Quick Controls + Material stílusú
-  kontaktlista, chat-buborék, csoportos chat és profil-beállítások
-  nézetek, `StackView`-val közöttük.
+  `qml/SettingsPage.qml`, `qml/HistoryPage.qml`,
+  `qml/HistoryDetailPage.qml` — Qt Quick Controls + Material stílusú
+  kontaktlista, chat-buborék, csoportos chat, profil-beállítások és
+  üzenetelőzmény nézetek, `StackView`-val közöttük.
 - ✅ `Android.pro` — a `lmccore` (`/Core`) statikus library-t linkeli,
   `QT += quick qml`, Android target beállítások.
 - ✅ `android/AndroidManifest.xml` — a szükséges engedélyekkel
@@ -81,10 +84,67 @@ fájl-hozzáférést vár, nem SAF `content://` URI-t — ennek a rendes
 megoldása (pl. a tartalom App-specifikus/külső tárhelyre másolása küldés
 előtt) még nincs implementálva.
 
-### Amit ez az első verzió *nem* tud (nincs bekötve)
+## Üzenetelőzmény (History)
 
-- Üzenetelőzmény-perzisztencia (a `ChatModel` csak memóriában tárol,
-  `/Core/src/history.cpp` már létezik erre, de nincs bekötve).
+A kontaktlista fejlécének 📜 gombja a mentett beszélgetéseket listázza. A
+`/Core`-beli `History` osztályt (`Core/src/history.cpp/.h`) **változtatás
+nélkül** használja — ugyanazt a `messenger.db` fájlformátumot írja/olvassa,
+amit a Windows kliens `lmcHistoryWindow`-ja is használ, tehát az egyik
+kliens által mentett bejegyzés a másikban is megjelenik (persze csak akkor,
+ha ugyanazt a fájlt éri el — Androidon ez az app saját, alkalmazás-specifikus
+tárhelyén van, nem szinkronizálódik automatikusan a Windows géppel).
+
+**Egy tudatos eltérés a Windows-modelltől**: a Windows kliens
+(`Windows/lmc/src/chatwindow.cpp::stop()`) csak **egyszer**, a chat *ablak
+bezárásakor* hívja a `History::save()`-t, a teljes addig felgyűlt,
+formázott munkamenet-naplót egyetlen HTML-blobként mentve, a partner neve
+alatt kulcsolva. Az Android kliensen nincs ehhez hasonló "ablak bezárása"
+pillanat (egy QML chat-oldal szabadon bezárható/újranyitható anélkül, hogy
+ez bármit jelentene), ezért itt minden egyes szöveges üzenet (1:1 és
+csoportos chat, fájlátvitel-bejegyzések **nem**) azonnal, önállóan
+elmentésre kerül, saját kis HTML-blobként, ugyanazzal a kulcsolási logikával
+mint Windowson (`peerNames.value(peerId)` 1:1-hez, `tr("Group
+Conversation")` csoportos chathez). A fájlformátum és a `History` API
+érintetlen, csak a bejegyzés-granularitás más — lásd `messengerbridge.h`
+osztály-kommentjét a pontos indoklásért.
+
+- ✅ `messenger.history` (`HistoryListModel`) — a mentett bejegyzések
+  listája (`name`/`date`/`offset` role-ok), `messenger.refreshHistory()`-val
+  frissítve (a `HistoryPage.qml` a megnyitásakor hívja).
+- ✅ `messenger.historyMessageHtml(offset)` — egy bejegyzés nyers HTML
+  tartalma (`History::getMessage()`), a `HistoryDetailPage.qml` egy
+  `TextEdit`-tel (`textFormat: TextEdit.RichText`) jeleníti meg — ez az
+  egyenértékű a Windows-os `pMessageLog->setHtml(data)`-nak.
+- ✅ `messenger.clearHistory()` — törli a teljes `messenger.db` fájlt
+  (`History::historyFile()`), megegyezik a Windows-os
+  `btnClearHistory_clicked()` viselkedésével.
+- ✅ `messenger.historyEnabled` (kétirányú property, `IDS_HISTORY`
+  beállításkulcs) — ki/be kapcsolható a `SettingsPage.qml`
+  "Save message history" kapcsolójával; kikapcsolva egyetlen új üzenet sem
+  kerül mentésre (de a már meglévő bejegyzések megmaradnak, ahogy
+  Windowson is).
+
+### Amit ez **nem** tesz
+
+- Fájlátvitel-bejegyzések nem kerülnek be az előzménybe (csak szöveges
+  üzenetek) — Windows saját munkamenet-naplója ezeket is tartalmazza egy
+  session-en belül, itt szándékosan nincs replikálva.
+- A `History::historyFile()` útvonala (`IDS_HISTORYPATH`/
+  `IDS_SYSHISTORYPATH`) módosítására nincs UI — a rendszer-alapértelmezett
+  útvonalat használja.
+
+### Talált és javított Qt6-kompatibilitási hiba eközben
+
+A `/Core`-beli `history.cpp` és `stdlocation.h` mindegyike
+`QStandardPaths::DataLocation`-t hívott — ezt az enumértéket a Qt **eltávolította
+Qt6-ban** (Qt 5.14 óta deprecated volt, Qt6-ban már nem is létezik), tehát ez
+a két fájl **egyáltalán nem fordult volna** Qt6 alatt, sem Windowson, sem
+Androidon. Lecserélve `QStandardPaths::AppLocalDataLocation`-re (a hivatalos
+Qt-ajánlott megfelelő), plusz a hiányzó `#include <QStandardPaths>`
+hozzáadva mindkét fájlhoz. Ez egy valódi, a fordítást megakasztó hiba volt,
+nem csak stílus — a Fázis 2 (Qt6-portolás) korábbi, kézi API-audit köre nem
+vette észre, mert `history.cpp`/`stdlocation.h` nem szerepelt a akkor
+átvizsgált fájlok listájában.
 
 ## Beállítások képernyő (profil szerkesztése)
 
@@ -277,10 +337,12 @@ akadály a tényleges Android build előtt.
 Android/
 ├── Android.pro
 ├── src/               - main.cpp, MessengerBridge, ContactModel, ChatModel,
-│                         RoomListModel, AndroidForegroundService (JNI wrapper)
+│                         RoomListModel, HistoryListModel,
+│                         AndroidForegroundService (JNI wrapper)
 ├── qml/                - Main.qml, ContactListPage.qml, ChatPage.qml,
 │                         NewGroupChatPage.qml, GroupChatPage.qml,
-│                         SettingsPage.qml, qml.qrc
+│                         SettingsPage.qml, HistoryPage.qml,
+│                         HistoryDetailPage.qml, qml.qrc
 └── android/
     ├── AndroidManifest.xml
     └── src/org/qualiatech/lanmessengerx/

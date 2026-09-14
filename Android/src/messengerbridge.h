@@ -61,6 +61,24 @@
 ** /Android/README.md, including its unresolved-storage-access caveat for
 ** sendFile() on Android.
 **
+** Message history persistence uses /Core's History class exactly as-is
+** (Core/src/history.cpp/.h, the same "messenger.db" file format Windows'
+** lmcHistoryWindow reads) - one deliberate deviation from how Windows
+** uses it: Windows/lmc/src/chatwindow.cpp only calls History::save()
+** once, when a chat *window* closes, with the whole accumulated
+** session's rich-text log as a single blob keyed by peer name. This
+** client has no equivalent "window closed" moment (a QML chat page can
+** be popped and reopened freely without that being a meaningful
+** boundary), so it instead calls History::save() once per individual
+** text message (1:1 and group chat only, not file transfers), each as
+** its own small self-contained HTML blob keyed the same way Windows
+** keys it (the peer's display name for 1:1, tr("Group Conversation")
+** for group chat - see chatwindow.cpp/chatroomwindow.cpp). The on-disk
+** format and the History API are untouched, so entries either client
+** writes show up in the other's history list/viewer - they just don't
+** group multiple messages into one entry the way Windows' own entries
+** do. See Android/README.md.
+**
 ****************************************************************************/
 
 #ifndef MESSENGERBRIDGE_H
@@ -71,9 +89,11 @@
 #include <QUrl>
 #include "messaging.h"
 #include "strings.h"
+#include "history.h"
 #include "contactmodel.h"
 #include "chatmodel.h"
 #include "roomlistmodel.h"
+#include "historylistmodel.h"
 
 class MessengerBridge : public QObject {
 	Q_OBJECT
@@ -84,6 +104,8 @@ class MessengerBridge : public QObject {
 	Q_PROPERTY(bool connected READ isConnected NOTIFY connectedChanged)
 	Q_PROPERTY(ContactModel* contacts READ contacts CONSTANT)
 	Q_PROPERTY(RoomListModel* rooms READ rooms CONSTANT)
+	Q_PROPERTY(HistoryListModel* history READ history CONSTANT)
+	Q_PROPERTY(bool historyEnabled READ historyEnabled WRITE setHistoryEnabled NOTIFY historyEnabledChanged)
 
 public:
 	explicit MessengerBridge(QObject* parent = nullptr);
@@ -96,6 +118,9 @@ public:
 	bool isConnected(void) const;
 	ContactModel* contacts(void) const { return pContactModel; }
 	RoomListModel* rooms(void) const { return pRoomListModel; }
+	HistoryListModel* history(void) const { return pHistoryListModel; }
+	bool historyEnabled(void) const;
+	void setHistoryEnabled(bool enabled);
 
 	//	Starts the network engine. Called once from main.cpp after the QML
 	//	engine is set up, not from the constructor, so QML bindings exist
@@ -143,9 +168,19 @@ public:
 	Q_INVOKABLE void setLocalStatus(const QString& status);
 	Q_INVOKABLE void setLocalNote(const QString& note);
 
+	//	Reloads the history list from disk (History::getList()) - call
+	//	from QML when a history page becomes active, not eagerly, since
+	//	nothing pushes live updates into it otherwise.
+	Q_INVOKABLE void refreshHistory(void);
+	//	Raw HTML for one saved entry (History::getMessage()'s offset) -
+	//	render with a rich-text-capable QML Text/TextArea.
+	Q_INVOKABLE QString historyMessageHtml(qint64 offset) const;
+	Q_INVOKABLE void clearHistory(void);
+
 signals:
 	void startedChanged(void);
 	void localProfileChanged(void);
+	void historyEnabledChanged(void);
 	void connectedChanged(void);
 	void incomingMessage(const QString& userId, const QString& senderName, const QString& text);
 	void incomingFileRequest(const QString& userId, const QString& peerName, const QString& fileId, const QString& fileName, qint64 fileSize);
@@ -169,9 +204,16 @@ private:
 	void refreshRoomParticipantModel(const QString& threadId);
 	User* userById(const QString& userId) const;
 
+	//	peerName is who the *conversation* is with (matching how Windows
+	//	keys History entries - see the class comment) - not necessarily
+	//	who sent this particular message; senderName is who actually
+	//	wrote it, shown inside the saved HTML.
+	void saveMessageToHistory(const QString& peerName, const QString& senderName, const QString& text, const QDateTime& time);
+
 	lmcMessaging* pMessaging;
 	ContactModel* pContactModel;
 	RoomListModel* pRoomListModel;
+	HistoryListModel* pHistoryListModel;
 	QMap<QString, ChatModel*> chatModels;
 
 	QMap<QString, ChatModel*> roomMessageModels;

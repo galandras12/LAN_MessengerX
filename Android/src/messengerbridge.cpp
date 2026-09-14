@@ -1,10 +1,12 @@
 #include <QDateTime>
+#include <QFile>
 #include "messengerbridge.h"
 
 MessengerBridge::MessengerBridge(QObject* parent) : QObject(parent) {
 	pMessaging = new lmcMessaging();
 	pContactModel = new ContactModel(this);
 	pRoomListModel = new RoomListModel(this);
+	pHistoryListModel = new HistoryListModel(this);
 
 	connect(pMessaging, SIGNAL(messageReceived(MessageType, QString*, XmlMessage*)),
 		this, SLOT(messaging_messageReceived(MessageType, QString*, XmlMessage*)));
@@ -97,6 +99,51 @@ void MessengerBridge::setLocalStatus(const QString& status) {
 	emit localProfileChanged();
 }
 
+bool MessengerBridge::historyEnabled(void) const {
+	lmcSettings settings;
+	return settings.value(IDS_HISTORY, IDS_HISTORY_VAL).toBool();
+}
+
+void MessengerBridge::setHistoryEnabled(bool enabled) {
+	if(enabled == historyEnabled())
+		return;
+	lmcSettings settings;
+	settings.setValue(IDS_HISTORY, enabled);
+	emit historyEnabledChanged();
+}
+
+void MessengerBridge::refreshHistory(void) {
+	pHistoryListModel->setEntries(History::getList());
+}
+
+QString MessengerBridge::historyMessageHtml(qint64 offset) const {
+	return History::getMessage(offset);
+}
+
+void MessengerBridge::clearHistory(void) {
+	QFile::remove(History::historyFile());
+	refreshHistory();
+}
+
+void MessengerBridge::saveMessageToHistory(const QString& peerName, const QString& senderName, const QString& text, const QDateTime& time) {
+	if(!historyEnabled() || peerName.isEmpty())
+		return;
+
+	//	A minimal, self-contained HTML fragment per message - not trying
+	//	to reproduce Windows' themed, multi-message session log exactly
+	//	(see the class comment for why), just something History::save()'s
+	//	format-agnostic blob storage can hold and lmcHistoryWindow's
+	//	pMessageLog->setHtml(data) can render without erroring.
+	QString html = QStringLiteral(
+		"<html><body><p><b>%1</b> "
+		"<span style=\"color:gray;font-size:small;\">[%2]</span><br>%3</p></body></html>")
+		.arg(senderName.toHtmlEscaped(),
+			time.toString(QStringLiteral("yyyy-MM-dd HH:mm:ss")),
+			text.toHtmlEscaped().replace(QStringLiteral("\n"), QStringLiteral("<br>")));
+
+	History::save(peerName, time, &html);
+}
+
 void MessengerBridge::setLocalNote(const QString& note) {
 	if(!pMessaging->localUser || note == pMessaging->localUser->note)
 		return;
@@ -127,7 +174,13 @@ void MessengerBridge::sendMessage(const QString& userId, const QString& text) {
 	QString id = userId;
 	pMessaging->sendMessage(MT_Message, &id, &xmlMessage);
 
-	ensureChatModel(userId)->appendMessage(localUserName(), text, QDateTime::currentDateTime(), true);
+	QDateTime now = QDateTime::currentDateTime();
+	ensureChatModel(userId)->appendMessage(localUserName(), text, now, true);
+
+	//	Keyed by the peer's name, matching Windows/lmc/src/chatwindow.cpp's
+	//	History::save(peerNames.value(peerId), ...) - see the class comment.
+	User* pPeer = userById(userId);
+	saveMessageToHistory(pPeer ? pPeer->name : userId, localUserName(), text, now);
 }
 
 void MessengerBridge::sendBroadcast(const QString& text) {
@@ -269,7 +322,12 @@ void MessengerBridge::sendGroupMessage(const QString& threadId, const QString& t
 		pMessaging->sendMessage(MT_GroupMessage, &id, &xmlMessage);
 	}
 
-	roomMessageModels[threadId]->appendMessage(localUserName(), text, QDateTime::currentDateTime(), true);
+	QDateTime now = QDateTime::currentDateTime();
+	roomMessageModels[threadId]->appendMessage(localUserName(), text, now, true);
+
+	//	Matches lmcChatRoomWindow's History::save(tr("Group Conversation"),
+	//	...) in Windows/lmc/src/chatroomwindow.cpp - see the class comment.
+	saveMessageToHistory(tr("Group Conversation"), localUserName(), text, now);
 }
 
 void MessengerBridge::leaveGroupChat(const QString& threadId) {
@@ -419,7 +477,10 @@ void MessengerBridge::messaging_messageReceived(MessageType type, QString* lpszU
 		User* pUser = pMessaging->getUser(lpszUserId);
 		QString senderName = pUser ? pUser->name : *lpszUserId;
 		QString text = pMessage->data(XN_MESSAGE);
-		ensureChatModel(*lpszUserId)->appendMessage(senderName, text, QDateTime::currentDateTime(), false);
+		QDateTime now = QDateTime::currentDateTime();
+		ensureChatModel(*lpszUserId)->appendMessage(senderName, text, now, false);
+		//	Incoming, so the peer we're conversing with is the sender.
+		saveMessageToHistory(senderName, senderName, text, now);
 		emit incomingMessage(*lpszUserId, senderName, text);
 		break;
 	}
@@ -463,10 +524,13 @@ void MessengerBridge::messaging_messageReceived(MessageType type, QString* lpszU
 				roomMessageModels[threadId]->appendSystemMessage(
 					tr("%1 joined").arg(senderName), QDateTime::currentDateTime());
 				break;
-			case GMO_Message:
-				roomMessageModels[threadId]->appendMessage(senderName, pMessage->data(XN_MESSAGE),
-					QDateTime::currentDateTime(), false);
+			case GMO_Message: {
+				QString text = pMessage->data(XN_MESSAGE);
+				QDateTime now = QDateTime::currentDateTime();
+				roomMessageModels[threadId]->appendMessage(senderName, text, now, false);
+				saveMessageToHistory(tr("Group Conversation"), senderName, text, now);
 				break;
+			}
 			case GMO_Leave:
 				removeRoomParticipant(threadId, *lpszUserId);
 				roomMessageModels[threadId]->appendSystemMessage(

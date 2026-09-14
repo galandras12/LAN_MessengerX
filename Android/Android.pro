@@ -28,6 +28,7 @@ SOURCES += \
     src/contactmodel.cpp \
     src/chatmodel.cpp \
     src/roomlistmodel.cpp \
+    src/historylistmodel.cpp \
     src/androidforegroundservice.cpp
 
 HEADERS += \
@@ -35,6 +36,7 @@ HEADERS += \
     src/contactmodel.h \
     src/chatmodel.h \
     src/roomlistmodel.h \
+    src/historylistmodel.h \
     src/androidforegroundservice.h
 
 RESOURCES += qml/qml.qrc

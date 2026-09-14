@@ -38,12 +38,13 @@ alapján fejlődik, fázisokban:
   bekötött verzió (kontaktlista, 1:1 chat, broadcast küldés, egyfájlos
   fájlátvitel, csoportos chat szoba (meghívás/csatlakozás/üzenet/kilépés,
   a Windows `chatroomwindow.cpp` protokollját lekövetve), profil-
-  beállítások (név/állapot/megjegyzés), foreground service + Wi-Fi
-  multicast lock a háttérbeli működéshez — lásd
-  [`Android/README.md`](Android/README.md)), ⏳ build/futtatás
+  beállítások (név/állapot/megjegyzés), üzenetelőzmény (`/Core`-beli
+  `History` fájlformátumra bekötve, Windowsszal kompatibilisen), foreground
+  service + Wi-Fi multicast lock a háttérbeli működéshez, push-jellegű
+  új-üzenet értesítés + `POST_NOTIFICATIONS` futásidejű engedélykérés —
+  lásd [`Android/README.md`](Android/README.md)), ⏳ build/futtatás
   ellenőrizetlen, néhány funkció (mappaátvitel, Public Chat, szobához
-  utólagos meghívás, avatar szerkesztése, új-üzenet push-értesítés) még
-  nincs bekötve, **az
+  utólagos meghívás, avatar szerkesztése) még nincs bekötve, **az
   Android-specifikus OpenSSL linkelés megoldatlan** (lásd Android README
   "Kritikus" szakasza), a fájlküldés pedig csak `file://` elérési útra
   működik (`content://` SAF URI-kra még nem)

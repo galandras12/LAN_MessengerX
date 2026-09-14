@@ -33,6 +33,12 @@ Page {
                 onClicked: StackView.view.push(Qt.resolvedUrl("NewGroupChatPage.qml"))
             }
             ToolButton {
+                text: "📜"
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Message history")
+                onClicked: StackView.view.push(Qt.resolvedUrl("HistoryPage.qml"))
+            }
+            ToolButton {
                 text: "⚙"
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Settings")

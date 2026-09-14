@@ -7,6 +7,7 @@
 #include "contactmodel.h"
 #include "chatmodel.h"
 #include "roomlistmodel.h"
+#include "historylistmodel.h"
 #include "androidforegroundservice.h"
 
 int main(int argc, char* argv[]) {
@@ -45,6 +46,7 @@ int main(int argc, char* argv[]) {
 	qmlRegisterUncreatableType<ContactModel>("LanMessenger", 1, 0, "ContactModel", "Created by MessengerBridge");
 	qmlRegisterUncreatableType<ChatModel>("LanMessenger", 1, 0, "ChatModel", "Created by MessengerBridge");
 	qmlRegisterUncreatableType<RoomListModel>("LanMessenger", 1, 0, "RoomListModel", "Created by MessengerBridge");
+	qmlRegisterUncreatableType<HistoryListModel>("LanMessenger", 1, 0, "HistoryListModel", "Created by MessengerBridge");
 
 	MessengerBridge bridge;
 

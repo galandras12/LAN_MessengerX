@@ -63,6 +63,14 @@ részét is — a Qt5/Qt4-es, Qt6 alatt már nem létező API-k lecserélve:
   platform-absztrakciója óta nem léteznek a Qt-ban, a makró átnevezése
   helyett törölve, hogy ne maradjon csapda egy jövőbeli
   keresd-cseréld munkához.
+- ✅ `QStandardPaths::DataLocation` (Qt 5.14 óta deprecated, **Qt6-ban
+  ténylegesen megszűnt** — fordítási hiba lett volna) →
+  `QStandardPaths::AppLocalDataLocation`, 7 előfordulás
+  (`Core/src/history.cpp`, `Core/src/stdlocation.h`) — ezt az Android
+  kliens üzenetelőzmény-funkciójának fejlesztése közben vettem észre,
+  mert az `/Core` mindkét klienshez közös, tehát ez a hiba a Windows
+  buildet is ugyanúgy megakasztotta volna, csak a korábbi Fázis 2-es
+  audit kör nem terjedt ki erre a két fájlra.
 
 Emellett ez a munkamenet elvégezte a **Fázis 3** (Core kiemelése önálló
 library-vé) érdemi részét is:
