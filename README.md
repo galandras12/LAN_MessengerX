@@ -27,23 +27,25 @@ alapján fejlődik, fázisokban:
   összeomlás-okok javítva a hálózati/titkosítási rétegben, lásd
   [`Core/README.md`](Core/README.md) és [`Windows/README.md`](Windows/README.md)
 - **Fázis 2 — Windows kliens Qt 6 portolása**: ✅ forráskód-szinten kész
-  (elavult Qt5/Qt4 API-k lecserélve — lásd [`Windows/README.md`](Windows/README.md)),
-  ⏳ tényleges Qt6+OpenSSL3 build-bel még nincs ellenőrizve (nincs Qt telepítve
+  (elavult Qt5/Qt4 API-k lecserélve, telepítő NSIS-ről Inno Setup-ra
+  migrálva — lásd [`Windows/README.md`](Windows/README.md)),
+  ⏳ tényleges Qt6+OpenSSL3 build-bel (és az Inno Setup szkript tényleges
+  fordítóval) még nincs ellenőrizve (nincs Qt/Inno Setup telepítve
   ebben a fejlesztői környezetben)
 - **Fázis 3 — Core kiemelése önálló, mindkét platform által linkelhető
   library-vé**: ✅ forráskód/build-rendszer szinten kész (`Core.pro`,
   Widgets-mentes — lásd [`Core/README.md`](Core/README.md)), ⏳ tényleges
   build-bel még nincs ellenőrizve, Android (NDK) célzás még nem indult
 - **Fázis 4 — Android kliens (Qt Quick/QML)**: ✅ valóban a `/Core`-ra
-  bekötött verzió (kontaktlista, 1:1 chat, broadcast küldés, egyfájlos
-  fájlátvitel, csoportos chat szoba (meghívás/csatlakozás/üzenet/kilépés,
-  a Windows `chatroomwindow.cpp` protokollját lekövetve), profil-
-  beállítások (név/állapot/megjegyzés), üzenetelőzmény (`/Core`-beli
-  `History` fájlformátumra bekötve, Windowsszal kompatibilisen), foreground
+  bekötött verzió — kontaktlista, 1:1 chat, broadcast küldés, egyfájlos
+  fájlátvitel, csoportos chat szoba (meghívás/csatlakozás/üzenet/kilépés
+  és utólagos meghívás is, a Windows `chatroomwindow.cpp` protokollját
+  lekövetve), profil-beállítások (név/állapot/megjegyzés, avatar
+  szerkesztése és fogadása), üzenetelőzmény (`/Core`-beli `History`
+  fájlformátumra bekötve, Windowsszal kompatibilisen), foreground
   service + Wi-Fi multicast lock a háttérbeli működéshez, push-jellegű
   új-üzenet értesítés + `POST_NOTIFICATIONS` futásidejű engedélykérés —
-  szobához utólagos meghívás, avatar (profilkép) szerkesztése és fogadás —
-  lásd [`Android/README.md`](Android/README.md)), ⏳ build/futtatás
+  lásd [`Android/README.md`](Android/README.md). ⏳ build/futtatás
   ellenőrizetlen, néhány funkció (mappaátvitel, Public Chat, beépített
   avatar-galéria) még nincs bekötve, **az
   Android-specifikus OpenSSL linkelés megoldatlan** (lásd Android README
