@@ -1,0 +1,18 @@
+name: Windows build (placeholder)
+
+# NOTE: this workflow is intentionally manual-only for now. The Windows
+# client does not yet build cleanly against Qt 6 (see Windows/README.md -
+# Qt6 porting is planned as Fázis 2 of the modernization plan, not done
+# yet), so an automatic build-on-push here would just be permanently red.
+# Wire this up (add Qt6 + OpenSSL3 setup steps, remove workflow_dispatch-only
+# trigger) once Fázis 2 is complete.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder
+        run: echo "Qt6 + OpenSSL3 build steps go here once Windows/lmc/src is Qt6-clean (Fazis 2)."

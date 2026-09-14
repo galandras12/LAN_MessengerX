@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<!--
+    Hand-written starting point for the LAN Messenger Android client.
+
+    NOTE: Qt Creator's "Add Android support" wizard (or running qmake with
+    an Android kit) normally generates/reconciles this file's Qt-specific
+    <application>/<meta-data> entries against the exact Qt version and NDK
+    installed. The permissions and application shape below are correct in
+    intent, but treat this as a draft to run through that wizard once,
+    rather than a byte-verified manifest - see Android/README.md.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.qualiatech.lanmessengerx"
+    android:versionName="1.0.1"
+    android:versionCode="1"
+    android:installLocation="auto">
+
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34"/>
+
+    <!-- LAN discovery + chat traffic -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <!-- required to receive the UDP broadcast/multicast discovery traffic
+         other LAN Messenger clients (Windows and original) use to find
+         each other -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+    <!-- Android 13+ (API 33+) requires this to post either notification
+         this app shows: the persistent "running in background" one from
+         the foreground service, and the per-message/file-request one -
+         see MessengerForegroundService and AndroidForegroundService::
+         requestNotificationPermission() (called once at startup from
+         main.cpp) for the runtime request flow. Without it granted,
+         the service still runs and still protects the process, it just
+         won't show either notification on API 33+. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <!-- Android 14+ (API 34+) requires a permission matching the
+         foreground service type declared below in addition to the
+         generic FOREGROUND_SERVICE permission -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+
+    <application android:label="LAN Messenger X"
+        android:icon="@mipmap/ic_launcher"
+        android:extractNativeLibs="true"
+        android:requestLegacyExternalStorage="true">
+
+        <activity android:name="org.qtproject.qt.android.bindings.QtActivity"
+            android:label="LAN Messenger X"
+            android:screenOrientation="unspecified"
+            android:launchMode="singleTop"
+            android:exported="true"
+            android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- must match Android.pro's TARGET exactly -->
+            <meta-data android:name="android.app.lib_name" android:value="LANMessengerX"/>
+            <meta-data android:name="android.app.qml_import_path" android:value="qml"/>
+        </activity>
+
+        <!-- Keeps the process (and with it, the lmcMessaging engine, its
+             sockets and timers) alive and mostly Doze-exempt while the app
+             is backgrounded - see AndroidForegroundService (src/) and
+             MessengerForegroundService.java. Runs in the same process as
+             the activity (no android:process override) since it exists
+             only to hold a foreground-priority state and a notification,
+             not to do independent work of its own. -->
+        <service android:name=".MessengerForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false"/>
+
+    </application>
+
+</manifest>

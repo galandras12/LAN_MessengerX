@@ -1,0 +1,760 @@
+#include <QDateTime>
+#include <QFile>
+#include <QFileInfo>
+#include <QDir>
+#include <QImage>
+#include "messengerbridge.h"
+#include "stdlocation.h"
+
+MessengerBridge::MessengerBridge(QObject* parent) : QObject(parent) {
+	pMessaging = new lmcMessaging();
+	pContactModel = new ContactModel(this);
+	pRoomListModel = new RoomListModel(this);
+	pHistoryListModel = new HistoryListModel(this);
+
+	connect(pMessaging, SIGNAL(messageReceived(MessageType, QString*, XmlMessage*)),
+		this, SLOT(messaging_messageReceived(MessageType, QString*, XmlMessage*)));
+	connect(pMessaging, SIGNAL(connectionStateChanged()),
+		this, SLOT(messaging_connectionStateChanged()));
+}
+
+MessengerBridge::~MessengerBridge(void) {
+	pMessaging->stop();
+}
+
+void MessengerBridge::start(void) {
+	//	Mirrors lmcCore::loadSettings()+init() in Windows/lmc/src/lmc.cpp,
+	//	minus the command-line flag parsing (silent/trace/port/config) that
+	//	only makes sense for a desktop process - a bare XmlMessage is a
+	//	valid, fully-optional init params object (every field is read with
+	//	dataExists()/falls back to a default in lmcMessaging::init()).
+	XmlMessage initParams;
+	pMessaging->init(&initParams);
+	pMessaging->start();
+
+	emit startedChanged();
+	emit localProfileChanged();
+	refreshContacts();
+}
+
+QString MessengerBridge::localUserId(void) const {
+	return pMessaging->localUser ? pMessaging->localUser->id : QString();
+}
+
+QString MessengerBridge::localUserName(void) const {
+	return pMessaging->localUser ? pMessaging->localUser->name : QString();
+}
+
+QString MessengerBridge::localStatus(void) const {
+	return pMessaging->localUser ? pMessaging->localUser->status : QString();
+}
+
+QString MessengerBridge::localNote(void) const {
+	return pMessaging->localUser ? pMessaging->localUser->note : QString();
+}
+
+QString MessengerBridge::localAvatarPath(void) const {
+	//	Always StdLocation::avatarFile() - a single fixed path set once at
+	//	lmcMessaging::init() (see Core/src/messaging.cpp) and never
+	//	changed after that, only overwritten in place by setAvatar()
+	//	below - so this never needs its own change notification beyond
+	//	localProfileChanged() firing for an unrelated reason.
+	return pMessaging->localUser ? pMessaging->localUser->avatarPath : QString();
+}
+
+bool MessengerBridge::isConnected(void) const {
+	return pMessaging->isConnected();
+}
+
+QStringList MessengerBridge::statusCodes(void) const {
+	QStringList codes;
+	for(int i = 0; i < ST_COUNT; i++)
+		codes.append(statusCode[i]);
+	return codes;
+}
+
+QStringList MessengerBridge::statusLabels(void) const {
+	return lmcStrings::statusDesc();
+}
+
+void MessengerBridge::setLocalName(const QString& name) {
+	QString trimmed = name.trimmed();
+	if(trimmed.isEmpty() || !pMessaging->localUser || trimmed == pMessaging->localUser->name)
+		return;
+
+	//	Write the setting and let lmcMessaging::settingsChanged() do the
+	//	compare-and-broadcast itself (see the class comment) - a separate
+	//	lmcSettings instance is fine here, same as
+	//	Windows/lmc/src/settingsdialog.cpp does: QSettings::IniFormat
+	//	re-reads from the same underlying file each time .value() is
+	//	called, so Core's own internal settings object picks this up.
+	lmcSettings settings;
+	settings.setValue(IDS_USERNAME, trimmed, IDS_USERNAME_VAL);
+	pMessaging->settingsChanged();
+
+	emit localProfileChanged();
+}
+
+void MessengerBridge::setLocalStatus(const QString& status) {
+	if(!pMessaging->localUser || status == pMessaging->localUser->status)
+		return;
+	if(Helper::indexOf(statusCode, ST_COUNT, status) < 0)
+		return;
+
+	pMessaging->localUser->status = status;
+	lmcSettings settings;
+	settings.setValue(IDS_STATUS, status);
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_STATUS, status);
+	pMessaging->sendMessage(MT_Status, nullptr, &xmlMessage);
+
+	emit localProfileChanged();
+}
+
+bool MessengerBridge::historyEnabled(void) const {
+	lmcSettings settings;
+	return settings.value(IDS_HISTORY, IDS_HISTORY_VAL).toBool();
+}
+
+void MessengerBridge::setHistoryEnabled(bool enabled) {
+	if(enabled == historyEnabled())
+		return;
+	lmcSettings settings;
+	settings.setValue(IDS_HISTORY, enabled);
+	emit historyEnabledChanged();
+}
+
+void MessengerBridge::refreshHistory(void) {
+	pHistoryListModel->setEntries(History::getList());
+}
+
+QString MessengerBridge::historyMessageHtml(qint64 offset) const {
+	return History::getMessage(offset);
+}
+
+void MessengerBridge::clearHistory(void) {
+	QFile::remove(History::historyFile());
+	refreshHistory();
+}
+
+void MessengerBridge::saveMessageToHistory(const QString& peerName, const QString& senderName, const QString& text, const QDateTime& time) {
+	if(!historyEnabled() || peerName.isEmpty())
+		return;
+
+	//	A minimal, self-contained HTML fragment per message - not trying
+	//	to reproduce Windows' themed, multi-message session log exactly
+	//	(see the class comment for why), just something History::save()'s
+	//	format-agnostic blob storage can hold and lmcHistoryWindow's
+	//	pMessageLog->setHtml(data) can render without erroring.
+	QString html = QStringLiteral(
+		"<html><body><p><b>%1</b> "
+		"<span style=\"color:gray;font-size:small;\">[%2]</span><br>%3</p></body></html>")
+		.arg(senderName.toHtmlEscaped(),
+			time.toString(QStringLiteral("yyyy-MM-dd HH:mm:ss")),
+			text.toHtmlEscaped().replace(QStringLiteral("\n"), QStringLiteral("<br>")));
+
+	History::save(peerName, time, &html);
+}
+
+void MessengerBridge::setLocalNote(const QString& note) {
+	if(!pMessaging->localUser || note == pMessaging->localUser->note)
+		return;
+
+	pMessaging->localUser->note = note;
+	lmcSettings settings;
+	settings.setValue(IDS_NOTE, note, IDS_NOTE_VAL);
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_NOTE, note);
+	pMessaging->sendMessage(MT_Note, nullptr, &xmlMessage);
+
+	emit localProfileChanged();
+}
+
+void MessengerBridge::setAvatar(const QUrl& fileUrl) {
+	if(!pMessaging->localUser || fileUrl.isEmpty())
+		return;
+
+	//	Same content:// URI caveat as sendFile() - see the class comment.
+	QString sourcePath = fileUrl.toLocalFile();
+	if(sourcePath.isEmpty())
+		return;
+
+	QImage image(sourcePath);
+	if(image.isNull())
+		return;
+
+	//	96x96 is this client's own choice - Windows' equivalent constant
+	//	(AVT_WIDTH/AVT_HEIGHT) lives in its Widgets-only uidefinitions.h,
+	//	not in /Core, so there is nothing shared to reuse here; the wire
+	//	format doesn't care about the exact size, only that it's a PNG at
+	//	the path this message points to.
+	image = image.scaled(96, 96, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+
+	QString avatarPath = StdLocation::avatarFile();
+	QDir avatarDir = QFileInfo(avatarPath).dir();
+	if(!avatarDir.exists())
+		avatarDir.mkpath(avatarDir.absolutePath());
+	if(!image.save(avatarPath, "PNG"))
+		return;
+
+	//	-1 means "custom picture", matching nAvatar in
+	//	Windows/lmc/src/mainwindow.cpp::setAvatar() - the built-in
+	//	numbered avatar gallery it also supports isn't ported here (no
+	//	equivalent picture set shipped with the Android client).
+	lmcSettings settings;
+	settings.setValue(IDS_AVATAR, -1);
+
+	//	One call does the rest - see the class comment for the full
+	//	self-echo/fan-out/auto-accept sequence Core runs from here.
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_FILETYPE, FileTypeNames[FT_Avatar]);
+	xmlMessage.addData(XN_FILEOP, FileOpNames[FO_Request]);
+	xmlMessage.addData(XN_FILEPATH, avatarPath);
+	pMessaging->sendMessage(MT_Avatar, nullptr, &xmlMessage);
+}
+
+void MessengerBridge::sendMessage(const QString& userId, const QString& text) {
+	if(userId.isEmpty() || text.isEmpty())
+		return;
+
+	//	Field shape matches lmcChatWindow::sendMessage() in
+	//	Windows/lmc/src/chatwindow.cpp, minus the font/color cosmetic
+	//	fields the HTML-themed Widgets message log uses - the QML chat
+	//	page renders its own bubbles and does not need them.
+	XmlMessage xmlMessage;
+	xmlMessage.addHeader(XN_TIME, QString::number(QDateTime::currentDateTime().toMSecsSinceEpoch()));
+	xmlMessage.addData(XN_MESSAGE, text);
+
+	QString id = userId;
+	pMessaging->sendMessage(MT_Message, &id, &xmlMessage);
+
+	QDateTime now = QDateTime::currentDateTime();
+	ensureChatModel(userId)->appendMessage(localUserName(), text, now, true);
+
+	//	Keyed by the peer's name, matching Windows/lmc/src/chatwindow.cpp's
+	//	History::save(peerNames.value(peerId), ...) - see the class comment.
+	User* pPeer = userById(userId);
+	saveMessageToHistory(pPeer ? pPeer->name : userId, localUserName(), text, now);
+}
+
+void MessengerBridge::sendBroadcast(const QString& text) {
+	if(text.isEmpty())
+		return;
+
+	XmlMessage xmlMessage;
+	xmlMessage.addHeader(XN_TIME, QString::number(QDateTime::currentDateTime().toMSecsSinceEpoch()));
+	xmlMessage.addData(XN_BROADCAST, text);
+	pMessaging->sendBroadcast(MT_Broadcast, &xmlMessage);
+}
+
+void MessengerBridge::sendFile(const QString& userId, const QUrl& fileUrl) {
+	if(userId.isEmpty() || fileUrl.isEmpty())
+		return;
+
+	//	QUrl::toLocalFile() returns an empty string for anything that
+	//	isn't a plain file:// URL - notably a content:// URL, which is
+	//	what Android's Storage Access Framework often hands back from a
+	//	native file picker (e.g. for Downloads or cloud storage). See the
+	//	class comment and Android/README.md.
+	QString filePath = fileUrl.toLocalFile();
+	if(filePath.isEmpty())
+		return;
+
+	//	Field shape matches lmcChatWindow::sendFile()/sendObject() in
+	//	Windows/lmc/src/chatwindow.cpp. Deliberately does NOT touch
+	//	ChatModel here - Core echoes this request back to us (with the
+	//	fileId it assigns) through messageReceived(), which is what
+	//	actually adds the entry - see the class comment.
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_FILETYPE, FileTypeNames[FT_Normal]);
+	xmlMessage.addData(XN_FILEOP, FileOpNames[FO_Request]);
+	xmlMessage.addData(XN_FILEPATH, filePath);
+
+	QString id = userId;
+	pMessaging->sendMessage(MT_File, &id, &xmlMessage);
+}
+
+void MessengerBridge::acceptFile(const QString& userId, const QString& fileId) {
+	if(userId.isEmpty() || fileId.isEmpty())
+		return;
+
+	//	Core fills in the actual save path/filename itself from the
+	//	transfer it recorded when the request first arrived (see
+	//	lmcMessaging::updateFileTransfer's FO_Accept/FM_Receive branch in
+	//	Core/src/filemessagingproc.cpp) - we only need to echo the id back.
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_MODE, FileModeNames[FM_Receive]);
+	xmlMessage.addData(XN_FILETYPE, FileTypeNames[FT_Normal]);
+	xmlMessage.addData(XN_FILEOP, FileOpNames[FO_Accept]);
+	xmlMessage.addData(XN_FILEID, fileId);
+
+	QString id = userId;
+	pMessaging->sendMessage(MT_File, &id, &xmlMessage);
+}
+
+void MessengerBridge::declineFile(const QString& userId, const QString& fileId) {
+	if(userId.isEmpty() || fileId.isEmpty())
+		return;
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_MODE, FileModeNames[FM_Receive]);
+	xmlMessage.addData(XN_FILETYPE, FileTypeNames[FT_Normal]);
+	xmlMessage.addData(XN_FILEOP, FileOpNames[FO_Decline]);
+	xmlMessage.addData(XN_FILEID, fileId);
+
+	QString id = userId;
+	pMessaging->sendMessage(MT_File, &id, &xmlMessage);
+
+	//	Unlike accept/cancel, Core does not echo a decline back to the
+	//	side that declined (see lmcMessaging::updateFileTransfer's
+	//	FO_Decline branch - it just drops the transfer from its list, no
+	//	emit) - so update the model directly here.
+	ensureChatModel(userId)->updateFileState(fileId, QStringLiteral("declined"));
+}
+
+void MessengerBridge::cancelFile(const QString& userId, const QString& fileId) {
+	if(userId.isEmpty() || fileId.isEmpty())
+		return;
+
+	//	Core needs to know which side of the transfer we are to route the
+	//	cancel correctly - read it back from the entry we already have.
+	bool outgoing = ensureChatModel(userId)->isOutgoingFile(fileId);
+	FileMode mode = outgoing ? FM_Send : FM_Receive;
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_MODE, FileModeNames[mode]);
+	xmlMessage.addData(XN_FILETYPE, FileTypeNames[FT_Normal]);
+	xmlMessage.addData(XN_FILEOP, FileOpNames[FO_Cancel]);
+	xmlMessage.addData(XN_FILEID, fileId);
+
+	QString id = userId;
+	pMessaging->sendMessage(MT_File, &id, &xmlMessage);
+}
+
+QString MessengerBridge::createGroupChat(const QStringList& userIds) {
+	QString threadId = Helper::getUuid();
+	//	Matches lmcChatRoomWindow::init()'s unconditional addUser(
+	//	pLocalUser) when groupMode is true: creating a room announces our
+	//	own membership the same way joining one does (see
+	//	messaging_messageReceived()'s GMO_Request handling) - harmless at
+	//	creation time since nobody else has this threadId yet to react to it.
+	createLocalRoom(threadId);
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_THREAD, threadId);
+	xmlMessage.addData(XN_GROUPMSGOP, GroupMsgOpNames[GMO_Request]);
+	for(const QString& userId : userIds) {
+		if(userId == localUserId())
+			continue;
+		QString id = userId;
+		pMessaging->sendMessage(MT_GroupMessage, &id, &xmlMessage);
+	}
+
+	return threadId;
+}
+
+void MessengerBridge::addParticipantsToRoom(const QString& threadId, const QStringList& userIds) {
+	if(!roomPeerIds.contains(threadId))
+		return;
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_THREAD, threadId);
+	xmlMessage.addData(XN_GROUPMSGOP, GroupMsgOpNames[GMO_Request]);
+
+	const QStringList currentPeers = roomPeerIds.value(threadId);
+	for(const QString& userId : userIds) {
+		if(userId == localUserId() || currentPeers.contains(userId))
+			continue;
+		QString id = userId;
+		pMessaging->sendMessage(MT_GroupMessage, &id, &xmlMessage);
+	}
+}
+
+QStringList MessengerBridge::roomParticipantIds(const QString& threadId) const {
+	return roomPeerIds.value(threadId);
+}
+
+void MessengerBridge::sendGroupMessage(const QString& threadId, const QString& text) {
+	if(!roomPeerIds.contains(threadId) || text.isEmpty())
+		return;
+
+	//	Field shape matches lmcChatRoomWindow::sendMessage() in
+	//	Windows/lmc/src/chatroomwindow.cpp, minus the font/color cosmetic
+	//	fields, same as sendMessage() above.
+	XmlMessage xmlMessage;
+	xmlMessage.addHeader(XN_TIME, QString::number(QDateTime::currentDateTime().toMSecsSinceEpoch()));
+	xmlMessage.addData(XN_THREAD, threadId);
+	xmlMessage.addData(XN_GROUPMSGOP, GroupMsgOpNames[GMO_Message]);
+	xmlMessage.addData(XN_MESSAGE, text);
+
+	//	Unlike GMO_Request/Join/Leave, actual message content is targeted
+	//	per-participant, not broadcast to everyone.
+	const QStringList peerIds = roomPeerIds.value(threadId);
+	for(const QString& peerId : peerIds) {
+		if(peerId == localUserId())
+			continue;
+		QString id = peerId;
+		pMessaging->sendMessage(MT_GroupMessage, &id, &xmlMessage);
+	}
+
+	QDateTime now = QDateTime::currentDateTime();
+	roomMessageModels[threadId]->appendMessage(localUserName(), text, now, true);
+
+	//	Matches lmcChatRoomWindow's History::save(tr("Group Conversation"),
+	//	...) in Windows/lmc/src/chatroomwindow.cpp - see the class comment.
+	saveMessageToHistory(tr("Group Conversation"), localUserName(), text, now);
+}
+
+void MessengerBridge::leaveGroupChat(const QString& threadId) {
+	if(!roomPeerIds.contains(threadId))
+		return;
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_THREAD, threadId);
+	xmlMessage.addData(XN_GROUPMSGOP, GroupMsgOpNames[GMO_Leave]);
+	//	NULL recipient: fans out to every online user, same as GMO_Join -
+	//	only the other room participants (who have this threadId open)
+	//	will act on it.
+	pMessaging->sendMessage(MT_GroupMessage, nullptr, &xmlMessage);
+
+	roomMessageModels.take(threadId)->deleteLater();
+	roomParticipantModels.take(threadId)->deleteLater();
+	roomPeerIds.remove(threadId);
+	pRoomListModel->removeRoom(threadId);
+}
+
+ChatModel* MessengerBridge::roomMessages(const QString& threadId) {
+	if(!roomPeerIds.contains(threadId))
+		return nullptr;
+	return roomMessageModels.value(threadId);
+}
+
+ContactModel* MessengerBridge::roomParticipants(const QString& threadId) {
+	if(!roomPeerIds.contains(threadId))
+		return nullptr;
+	return roomParticipantModels.value(threadId);
+}
+
+QString MessengerBridge::roomTitle(const QString& threadId) const {
+	if(!roomPeerIds.contains(threadId))
+		return QString();
+
+	QStringList names;
+	const QStringList peerIds = roomPeerIds.value(threadId);
+	for(const QString& peerId : peerIds) {
+		if(peerId == localUserId())
+			continue;
+		User* pUser = userById(peerId);
+		names.append(pUser ? pUser->name : peerId);
+	}
+	return names.isEmpty() ? tr("Group Chat") : names.join(", ");
+}
+
+void MessengerBridge::createLocalRoom(const QString& threadId) {
+	roomMessageModels.insert(threadId, new ChatModel(this));
+	roomParticipantModels.insert(threadId, new ContactModel(this));
+	roomPeerIds.insert(threadId, QStringList());
+
+	addRoomParticipant(threadId, localUserId());
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_THREAD, threadId);
+	xmlMessage.addData(XN_GROUPMSGOP, GroupMsgOpNames[GMO_Join]);
+	pMessaging->sendMessage(MT_GroupMessage, nullptr, &xmlMessage);
+}
+
+void MessengerBridge::addRoomParticipant(const QString& threadId, const QString& userId) {
+	if(!roomPeerIds.contains(threadId))
+		return;
+
+	User* pUser = userById(userId);
+	//	Matches lmcChatRoomWindow::addUser()'s version gate in
+	//	Windows/lmc/src/chatroomwindow.cpp: versions <= 1.2.10 predate the
+	//	room/public-chat feature and would not understand this traffic.
+	if(pUser && userId != localUserId() && Helper::compareVersions(pUser->version, "1.2.10") <= 0)
+		return;
+
+	QStringList& ids = roomPeerIds[threadId];
+	if(ids.contains(userId))
+		return;
+	ids.append(userId);
+
+	refreshRoomParticipantModel(threadId);
+}
+
+void MessengerBridge::removeRoomParticipant(const QString& threadId, const QString& userId) {
+	if(!roomPeerIds.contains(threadId))
+		return;
+
+	roomPeerIds[threadId].removeAll(userId);
+	refreshRoomParticipantModel(threadId);
+}
+
+void MessengerBridge::refreshRoomParticipantModel(const QString& threadId) {
+	QList<User> users;
+	const QStringList ids = roomPeerIds.value(threadId);
+	for(const QString& id : ids) {
+		User* pUser = userById(id);
+		if(pUser)
+			users.append(*pUser);
+	}
+	roomParticipantModels[threadId]->setUsers(users);
+	pRoomListModel->addOrUpdateRoom(threadId, roomTitle(threadId), ids.count());
+	emit roomUpdated(threadId);
+}
+
+void MessengerBridge::refreshRoomParticipantsFor(const QString& userId) {
+	const QStringList threadIds = roomPeerIds.keys();
+	for(const QString& threadId : threadIds) {
+		if(roomPeerIds.value(threadId).contains(userId))
+			refreshRoomParticipantModel(threadId);
+	}
+}
+
+void MessengerBridge::departUserFromRooms(const QString& userId) {
+	//	userById() still resolves them here - Core emits MT_Depart before
+	//	actually erasing the entry from its own userList (see
+	//	lmcMessaging::removeUser() in Core/src/messaging.cpp), same
+	//	ordering this relies on for every other presence field.
+	User* pUser = userById(userId);
+	QString userName = pUser ? pUser->name : userId;
+
+	const QStringList threadIds = roomPeerIds.keys();
+	for(const QString& threadId : threadIds) {
+		if(!roomPeerIds.value(threadId).contains(userId))
+			continue;
+		removeRoomParticipant(threadId, userId);
+		roomMessageModels[threadId]->appendSystemMessage(
+			tr("%1 left").arg(userName), QDateTime::currentDateTime());
+	}
+}
+
+User* MessengerBridge::userById(const QString& userId) const {
+	if(userId == localUserId())
+		return pMessaging->localUser;
+	QString id = userId;
+	return pMessaging->getUser(&id);
+}
+
+ChatModel* MessengerBridge::chatModelFor(const QString& userId) {
+	return ensureChatModel(userId);
+}
+
+ChatModel* MessengerBridge::ensureChatModel(const QString& userId) {
+	ChatModel* pModel = chatModels.value(userId, nullptr);
+	if(!pModel) {
+		pModel = new ChatModel(this);
+		chatModels.insert(userId, pModel);
+	}
+	return pModel;
+}
+
+void MessengerBridge::refreshContacts(void) {
+	pContactModel->setUsers(pMessaging->userList);
+}
+
+void MessengerBridge::messaging_connectionStateChanged(void) {
+	emit connectedChanged();
+}
+
+void MessengerBridge::messaging_messageReceived(MessageType type, QString* lpszUserId, XmlMessage* pMessage) {
+	switch(type) {
+	//	Presence traffic: lmcMessaging has already applied the change to
+	//	its own userList by the time this signal fires (see
+	//	Core/src/messagingproc.cpp) - just re-sync our copy from it rather
+	//	than re-parsing pMessage ourselves. Also re-sync any open group
+	//	chat room's own participant model for this user, since that model
+	//	is a separate snapshot (see refreshRoomParticipantModel()) that
+	//	otherwise only refreshes on a join/leave and would show a stale
+	//	name/status/note until one happens.
+	case MT_Announce:
+		refreshContacts();
+		break;
+
+	//	A NULL pMessage means the user actually disconnected (see
+	//	lmcMessaging::removeUser() and the pending-ping-timeout path in
+	//	Core/src/messaging.cpp); a non-NULL (dummy) pMessage means they
+	//	only switched to the "appear offline" status and are still
+	//	genuinely connected. Windows/lmc/src/lmc.cpp's routeGroupMessage()
+	//	draws exactly this distinction - only a real disconnect removes
+	//	them from open chat rooms, since Core already emits a matching
+	//	MT_Status just before this either way (handled below), which is
+	//	enough to show them as offline without evicting them.
+	case MT_Depart:
+		if(lpszUserId && !pMessage)
+			departUserFromRooms(*lpszUserId);
+		refreshContacts();
+		break;
+
+	case MT_Status:
+	case MT_UserName:
+	case MT_Note:
+		if(lpszUserId)
+			refreshRoomParticipantsFor(*lpszUserId);
+		refreshContacts();
+		break;
+
+	//	Fires both for the self-echo lmcMessaging::sendMessage() emits
+	//	right when we call setAvatar() (userId == our own id, before any
+	//	network round trip) and for a peer's avatar finishing download -
+	//	see the class comment. localAvatarPath() itself never changes (a
+	//	fixed path, only its file content does), so there is nothing to
+	//	refresh there beyond letting bound QML Image sources know to
+	//	re-fetch; refreshContacts()/refreshRoomParticipantsFor() cover
+	//	peers via ContactModel's avatarPath role.
+	case MT_Avatar:
+		if(lpszUserId && *lpszUserId == localUserId())
+			emit localProfileChanged();
+		else if(lpszUserId)
+			refreshRoomParticipantsFor(*lpszUserId);
+		refreshContacts();
+		break;
+
+	case MT_Message: {
+		if(!lpszUserId || !pMessage)
+			break;
+		User* pUser = pMessaging->getUser(lpszUserId);
+		QString senderName = pUser ? pUser->name : *lpszUserId;
+		QString text = pMessage->data(XN_MESSAGE);
+		QDateTime now = QDateTime::currentDateTime();
+		ensureChatModel(*lpszUserId)->appendMessage(senderName, text, now, false);
+		//	Incoming, so the peer we're conversing with is the sender.
+		saveMessageToHistory(senderName, senderName, text, now);
+		emit incomingMessage(*lpszUserId, senderName, text);
+		break;
+	}
+
+	//	Group chat room protocol - see the class comment in
+	//	messengerbridge.h for the full picture (traced from
+	//	Windows/lmc/src/chatroomwindow.cpp, not guessed).
+	case MT_GroupMessage: {
+		if(!lpszUserId || !pMessage)
+			break;
+		QString threadId = pMessage->data(XN_THREAD);
+		if(threadId.isEmpty())
+			break;
+		int op = Helper::indexOf(GroupMsgOpNames, GMO_Max, pMessage->data(XN_GROUPMSGOP));
+		bool roomExists = roomPeerIds.contains(threadId);
+
+		if(op == GMO_Request) {
+			//	Someone is inviting us into thread threadId. If we do not
+			//	already know it, create it - which (matching
+			//	lmcChatRoomWindow::init()'s unconditional addUser(pLocalUser)
+			//	when groupMode is true) announces our own join to every
+			//	online user via a NULL-recipient broadcast; only the other
+			//	invitees/the inviter, who already have this threadId open,
+			//	will act on it.
+			if(!roomExists)
+				createLocalRoom(threadId);
+			addRoomParticipant(threadId, *lpszUserId);
+		} else if(!roomExists) {
+			//	Not a thread we know about - per the protocol, every
+			//	uninvited bystander just ignores this (see the class
+			//	comment), since GMO_Join/GMO_Message/GMO_Leave for a room
+			//	we were never invited to reach us too (Join/Leave are sent
+			//	to everyone, not just room members).
+			break;
+		} else {
+			User* pUser = userById(*lpszUserId);
+			QString senderName = pUser ? pUser->name : *lpszUserId;
+			switch(op) {
+			case GMO_Join:
+				addRoomParticipant(threadId, *lpszUserId);
+				roomMessageModels[threadId]->appendSystemMessage(
+					tr("%1 joined").arg(senderName), QDateTime::currentDateTime());
+				break;
+			case GMO_Message: {
+				QString text = pMessage->data(XN_MESSAGE);
+				QDateTime now = QDateTime::currentDateTime();
+				roomMessageModels[threadId]->appendMessage(senderName, text, now, false);
+				saveMessageToHistory(tr("Group Conversation"), senderName, text, now);
+				break;
+			}
+			case GMO_Leave:
+				removeRoomParticipant(threadId, *lpszUserId);
+				roomMessageModels[threadId]->appendSystemMessage(
+					tr("%1 left").arg(senderName), QDateTime::currentDateTime());
+				break;
+			default:
+				break;
+			}
+		}
+		break;
+	}
+
+	case MT_Broadcast: {
+		if(!pMessage)
+			break;
+		User* pUser = lpszUserId ? pMessaging->getUser(lpszUserId) : nullptr;
+		QString senderName = pUser ? pUser->name : (lpszUserId ? *lpszUserId : tr("Broadcast"));
+		QString text = pMessage->data(XN_BROADCAST);
+		emit incomingMessage(lpszUserId ? *lpszUserId : QString(), senderName, text);
+		break;
+	}
+
+	//	Single-file transfer only (MT_Folder/folder transfer is not wired
+	//	up - see Android/README.md). Every state transition below - for
+	//	transfers we initiated as well as ones a peer initiated - reaches
+	//	us through this same signal (see the class comment in
+	//	messengerbridge.h for why), so ChatModel is the single place file
+	//	transfer state lives; there is no separate transfer list here.
+	case MT_File: {
+		if(!lpszUserId || !pMessage)
+			break;
+		QString fileId = pMessage->data(XN_FILEID);
+		if(fileId.isEmpty())
+			break;
+
+		//	Core sets this to "send" only on the echo of a transfer *we*
+		//	requested (see lmcMessaging::addFileTransfer's FM_Send branch
+		//	in Core/src/filemessagingproc.cpp); an incoming request from a
+		//	peer has already been flipped to "receive" by the time it
+		//	reaches us (see lmcMessaging::processFile).
+		bool outgoing = pMessage->data(XN_MODE) == FileModeNames[FM_Send];
+		int fileOp = Helper::indexOf(FileOpNames, FO_Max, pMessage->data(XN_FILEOP));
+		ChatModel* pChat = ensureChatModel(*lpszUserId);
+
+		switch(fileOp) {
+		case FO_Request: {
+			QString fileName = pMessage->data(XN_FILENAME);
+			qint64 fileSize = pMessage->data(XN_FILESIZE).toLongLong();
+			pChat->upsertFileEntry(fileId, fileName, fileSize, 0, outgoing, QStringLiteral("request"));
+			if(!outgoing) {
+				User* pUser = pMessaging->getUser(lpszUserId);
+				emit incomingFileRequest(*lpszUserId, pUser ? pUser->name : *lpszUserId, fileId, fileName, fileSize);
+			}
+			break;
+		}
+		case FO_Accept:
+			pChat->updateFileState(fileId, QStringLiteral("transferring"));
+			break;
+		case FO_Progress:
+			pChat->updateFileProgress(fileId, pMessage->data(XN_FILESIZE).toLongLong());
+			break;
+		case FO_Complete:
+			pChat->updateFileState(fileId, QStringLiteral("complete"));
+			break;
+		case FO_Decline:
+			pChat->updateFileState(fileId, QStringLiteral("declined"));
+			break;
+		case FO_Cancel:
+		case FO_Abort:
+			pChat->updateFileState(fileId, QStringLiteral("cancelled"));
+			break;
+		case FO_Error:
+			pChat->updateFileState(fileId, QStringLiteral("error"));
+			break;
+		default:
+			break;
+		}
+		break;
+	}
+
+	default:
+		//	Everything else (folder transfer, chat state, queries, ...) is
+		//	not wired up in this first pass - see Android/README.md.
+		break;
+	}
+}
