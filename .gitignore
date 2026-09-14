@@ -1,0 +1,54 @@
+# C++ build artifacts
+*.slo
+*.lo
+*.o
+*.a
+*.la
+*.lai
+*.so
+*.dylib
+*.obj
+*.pdb
+*.exe
+*.dll
+
+# Qt / qmake
+/.qmake.cache
+/.qmake.stash
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+Makefile*
+*build-*
+*.autosave
+
+# Third-party dependencies fetched locally at build time (not vendored in the repo)
+/Windows/openssl/
+/Windows/lmc/debug/
+/Windows/lmc/release*/
+/Windows/lmc/build/
+/Windows/lmc/setup/lmc*.exe
+/Windows/lmc/setup/lmc*.zip
+/Windows/lmcapp/lib/
+/Windows/lmcapp/bin/
+
+# Android / Qt for Android / Gradle build output
+/Android/build/
+/Android/.gradle/
+/Android/android-build*/
+/Android/*.apk
+/Android/*.aab
+local.properties
+.cxx/
+
+# IDE
+CMakeLists.txt.user*
+*.qmlproject.user
+*.qmlproject.user.*
+.vs/
+.idea/
