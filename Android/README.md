@@ -47,10 +47,37 @@ egy kontakttal 1:1 szöveges üzenetváltást (mindkét irányban), valamint
 broadcast üzenet küldését (`MessengerBridge::sendBroadcast()`, a QML
 egyelőre nem hív rá UI-t).
 
+**Fájlátvitel (egyetlen fájl, mappaátvitel még nem)**: a `ChatPage.qml`
+csatolás-gombja (📎) file dialógust nyit, a küldés/fogadás/elfogadás/
+elutasítás/megszakítás/haladás mind a `MessengerBridge::sendFile()`/
+`acceptFile()`/`declineFile()`/`cancelFile()` metódusokon és a
+`messageReceived(MT_File, ...)` jel feldolgozásán megy át — ugyanazt a
+`Core/src/filemessagingproc.cpp`-beli állapotgépet használja, mint a
+Windows kliens (`FO_Request`/`FO_Accept`/`FO_Decline`/`FO_Cancel`/
+`FO_Progress`/`FO_Complete`/`FO_Error`). A fájlátvitel-bejegyzések
+(fájlnév, méret, folyamatjelző, Elfogad/Elutasít/Megszakít gombok) a
+csevegés idővonalán belül jelennek meg, WhatsApp/Telegram-stílusban, nem
+egy külön "átvitelek" ablakban (mint a Windows kliens `transferwindow`-ja).
+A fogadott fájlok mentési helye (`StdLocation::fileStorageDir()`,
+`QStandardPaths::DocumentsLocation`) Androidon app-specifikus külső
+tárhelyre mutat, ami **külön futásidejű engedély nélkül** írható —
+ellenőriztem a `/Core` kódját, ez rendben van.
+
+⚠️ **A küldés oldala korlátozott**: a `QUrl::toLocalFile()` csak valódi
+`file://` URL-eket tud helyi elérési úttá alakítani. Ha Android natív
+fájlválasztója (Storage Access Framework) egy `content://` URL-t ad vissza
+— ami a Letöltések vagy egy felhő-tárhely esetén tipikus —, a küldés
+csendben nem történik meg (`sendFile()` korán visszatér). Ez azért van,
+mert a `/Core`-beli `crypto.cpp`/`netstreamer.cpp` sima `QFile`-alapú
+fájl-hozzáférést vár, nem SAF `content://` URI-t — ennek a rendes
+megoldása (pl. a tartalom App-specifikus/külső tárhelyre másolása küldés
+előtt) még nincs implementálva.
+
 ### Amit ez az első verzió *nem* tud (nincs bekötve)
 
-- Fájl-/mappaátvitel (`MT_File`/`MT_Folder`) — a `/Core` réteg
-  (`filemessagingproc.cpp`) támogatja, a bridge egyelőre nem hívja.
+- Mappaátvitel (`MT_Folder`) — a `/Core` réteg (`filemessagingproc.cpp`)
+  támogatja, a bridge egyelőre csak az `MT_File` (egyetlen fájl) ágat
+  kezeli.
 - Csoportos csevegés/chat room UI (a `MT_GroupMessage` adatot már a
   chat-modell kezeli, de nincs hozzá csoport-létrehozó/kezelő QML nézet).
 - Beállítások képernyő (felhasználónév/avatar/állapot szerkesztése —

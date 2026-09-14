@@ -4,9 +4,13 @@
 **
 ** Part of the Android client: a per-conversation list model of chat
 ** messages, appended to as MessengerBridge receives/sends MT_Message /
-** MT_GroupMessage traffic from lmcMessaging (/Core). Kept intentionally
-** simple (in-memory only, no persistence/history yet) for this first
-** pass - see Android/README.md.
+** MT_GroupMessage traffic from lmcMessaging (/Core). Also carries file
+** transfer entries (MT_File) inline in the same timeline, WhatsApp/
+** Telegram-style, rather than a separate global transfer window - see
+** MessengerBridge for how the request/accept/progress/complete/error
+** state machine (mirroring Core/src/filemessagingproc.cpp) drives these.
+** Kept intentionally simple (in-memory only, no persistence/history yet)
+** for this first pass - see Android/README.md.
 **
 ****************************************************************************/
 
@@ -18,10 +22,20 @@
 #include <QVector>
 
 struct ChatEntry {
+	bool isFile;
+	bool outgoing;
+	QDateTime timestamp;
+
+	//	text message
 	QString senderName;
 	QString text;
-	QDateTime timestamp;
-	bool outgoing;
+
+	//	file transfer (isFile == true)
+	QString fileId;
+	QString fileName;
+	qint64 fileSize;
+	qint64 position;
+	QString state;	//	"request" | "transferring" | "complete" | "declined" | "cancelled" | "error"
 };
 
 class ChatModel : public QAbstractListModel {
@@ -32,7 +46,14 @@ public:
 		SenderNameRole = Qt::UserRole + 1,
 		TextRole,
 		TimeRole,
-		OutgoingRole
+		OutgoingRole,
+		IsFileRole,
+		FileIdRole,
+		FileNameRole,
+		FileSizeRole,
+		PositionRole,
+		ProgressRole,
+		StateRole
 	};
 
 	explicit ChatModel(QObject* parent = nullptr);
@@ -43,7 +64,23 @@ public:
 
 	void appendMessage(const QString& senderName, const QString& text, const QDateTime& timestamp, bool outgoing);
 
+	//	Adds a new file transfer entry, or - if fileId is already known
+	//	(the common case: Core echoes the same fileId back through every
+	//	subsequent accept/progress/complete/error event for it) - updates
+	//	the existing one in place instead of appending a duplicate.
+	void upsertFileEntry(const QString& fileId, const QString& fileName, qint64 fileSize,
+		qint64 position, bool outgoing, const QString& state);
+	void updateFileState(const QString& fileId, const QString& state);
+	void updateFileProgress(const QString& fileId, qint64 position);
+
+	//	Used by MessengerBridge to fill in FileMode correctly when the user
+	//	cancels a transfer (Core needs to know whether the local side is
+	//	the sender or the receiver of that specific transfer).
+	bool isOutgoingFile(const QString& fileId) const;
+
 private:
+	int indexOfFile(const QString& fileId) const;
+
 	QVector<ChatEntry> entries;
 };
 

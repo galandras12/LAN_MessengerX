@@ -69,6 +69,90 @@ void MessengerBridge::sendBroadcast(const QString& text) {
 	pMessaging->sendBroadcast(MT_Broadcast, &xmlMessage);
 }
 
+void MessengerBridge::sendFile(const QString& userId, const QUrl& fileUrl) {
+	if(userId.isEmpty() || fileUrl.isEmpty())
+		return;
+
+	//	QUrl::toLocalFile() returns an empty string for anything that
+	//	isn't a plain file:// URL - notably a content:// URL, which is
+	//	what Android's Storage Access Framework often hands back from a
+	//	native file picker (e.g. for Downloads or cloud storage). See the
+	//	class comment and Android/README.md.
+	QString filePath = fileUrl.toLocalFile();
+	if(filePath.isEmpty())
+		return;
+
+	//	Field shape matches lmcChatWindow::sendFile()/sendObject() in
+	//	Windows/lmc/src/chatwindow.cpp. Deliberately does NOT touch
+	//	ChatModel here - Core echoes this request back to us (with the
+	//	fileId it assigns) through messageReceived(), which is what
+	//	actually adds the entry - see the class comment.
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_FILETYPE, FileTypeNames[FT_Normal]);
+	xmlMessage.addData(XN_FILEOP, FileOpNames[FO_Request]);
+	xmlMessage.addData(XN_FILEPATH, filePath);
+
+	QString id = userId;
+	pMessaging->sendMessage(MT_File, &id, &xmlMessage);
+}
+
+void MessengerBridge::acceptFile(const QString& userId, const QString& fileId) {
+	if(userId.isEmpty() || fileId.isEmpty())
+		return;
+
+	//	Core fills in the actual save path/filename itself from the
+	//	transfer it recorded when the request first arrived (see
+	//	lmcMessaging::updateFileTransfer's FO_Accept/FM_Receive branch in
+	//	Core/src/filemessagingproc.cpp) - we only need to echo the id back.
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_MODE, FileModeNames[FM_Receive]);
+	xmlMessage.addData(XN_FILETYPE, FileTypeNames[FT_Normal]);
+	xmlMessage.addData(XN_FILEOP, FileOpNames[FO_Accept]);
+	xmlMessage.addData(XN_FILEID, fileId);
+
+	QString id = userId;
+	pMessaging->sendMessage(MT_File, &id, &xmlMessage);
+}
+
+void MessengerBridge::declineFile(const QString& userId, const QString& fileId) {
+	if(userId.isEmpty() || fileId.isEmpty())
+		return;
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_MODE, FileModeNames[FM_Receive]);
+	xmlMessage.addData(XN_FILETYPE, FileTypeNames[FT_Normal]);
+	xmlMessage.addData(XN_FILEOP, FileOpNames[FO_Decline]);
+	xmlMessage.addData(XN_FILEID, fileId);
+
+	QString id = userId;
+	pMessaging->sendMessage(MT_File, &id, &xmlMessage);
+
+	//	Unlike accept/cancel, Core does not echo a decline back to the
+	//	side that declined (see lmcMessaging::updateFileTransfer's
+	//	FO_Decline branch - it just drops the transfer from its list, no
+	//	emit) - so update the model directly here.
+	ensureChatModel(userId)->updateFileState(fileId, QStringLiteral("declined"));
+}
+
+void MessengerBridge::cancelFile(const QString& userId, const QString& fileId) {
+	if(userId.isEmpty() || fileId.isEmpty())
+		return;
+
+	//	Core needs to know which side of the transfer we are to route the
+	//	cancel correctly - read it back from the entry we already have.
+	bool outgoing = ensureChatModel(userId)->isOutgoingFile(fileId);
+	FileMode mode = outgoing ? FM_Send : FM_Receive;
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_MODE, FileModeNames[mode]);
+	xmlMessage.addData(XN_FILETYPE, FileTypeNames[FT_Normal]);
+	xmlMessage.addData(XN_FILEOP, FileOpNames[FO_Cancel]);
+	xmlMessage.addData(XN_FILEID, fileId);
+
+	QString id = userId;
+	pMessaging->sendMessage(MT_File, &id, &xmlMessage);
+}
+
 ChatModel* MessengerBridge::chatModelFor(const QString& userId) {
 	return ensureChatModel(userId);
 }
@@ -127,8 +211,66 @@ void MessengerBridge::messaging_messageReceived(MessageType type, QString* lpszU
 		break;
 	}
 
+	//	Single-file transfer only (MT_Folder/folder transfer is not wired
+	//	up - see Android/README.md). Every state transition below - for
+	//	transfers we initiated as well as ones a peer initiated - reaches
+	//	us through this same signal (see the class comment in
+	//	messengerbridge.h for why), so ChatModel is the single place file
+	//	transfer state lives; there is no separate transfer list here.
+	case MT_File: {
+		if(!lpszUserId || !pMessage)
+			break;
+		QString fileId = pMessage->data(XN_FILEID);
+		if(fileId.isEmpty())
+			break;
+
+		//	Core sets this to "send" only on the echo of a transfer *we*
+		//	requested (see lmcMessaging::addFileTransfer's FM_Send branch
+		//	in Core/src/filemessagingproc.cpp); an incoming request from a
+		//	peer has already been flipped to "receive" by the time it
+		//	reaches us (see lmcMessaging::processFile).
+		bool outgoing = pMessage->data(XN_MODE) == FileModeNames[FM_Send];
+		int fileOp = Helper::indexOf(FileOpNames, FO_Max, pMessage->data(XN_FILEOP));
+		ChatModel* pChat = ensureChatModel(*lpszUserId);
+
+		switch(fileOp) {
+		case FO_Request: {
+			QString fileName = pMessage->data(XN_FILENAME);
+			qint64 fileSize = pMessage->data(XN_FILESIZE).toLongLong();
+			pChat->upsertFileEntry(fileId, fileName, fileSize, 0, outgoing, QStringLiteral("request"));
+			if(!outgoing) {
+				User* pUser = pMessaging->getUser(lpszUserId);
+				emit incomingFileRequest(*lpszUserId, pUser ? pUser->name : *lpszUserId, fileId, fileName, fileSize);
+			}
+			break;
+		}
+		case FO_Accept:
+			pChat->updateFileState(fileId, QStringLiteral("transferring"));
+			break;
+		case FO_Progress:
+			pChat->updateFileProgress(fileId, pMessage->data(XN_FILESIZE).toLongLong());
+			break;
+		case FO_Complete:
+			pChat->updateFileState(fileId, QStringLiteral("complete"));
+			break;
+		case FO_Decline:
+			pChat->updateFileState(fileId, QStringLiteral("declined"));
+			break;
+		case FO_Cancel:
+		case FO_Abort:
+			pChat->updateFileState(fileId, QStringLiteral("cancelled"));
+			break;
+		case FO_Error:
+			pChat->updateFileState(fileId, QStringLiteral("error"));
+			break;
+		default:
+			break;
+		}
+		break;
+	}
+
 	default:
-		//	Everything else (file transfer, chat state, queries, group
+		//	Everything else (folder transfer, chat state, queries, group
 		//	management, ...) is not wired up in this first pass - see
 		//	Android/README.md.
 		break;

@@ -13,8 +13,21 @@
 ** to bind to, keeping /Core exactly as reusable as intended (see
 ** /Core/README.md).
 **
-** Scope note: file transfer, chat rooms, and settings are not wired up
-** yet - only presence and 1:1 messaging. See /Android/README.md.
+** File transfer (single files only, not folders yet) is wired the same
+** way: sendFile()/acceptFile()/declineFile()/cancelFile() just send the
+** appropriate MT_File XmlMessage through lmcMessaging::sendMessage(), the
+** same as sendMessage() does for chat text. Core's own state machine
+** (Core/src/filemessagingproc.cpp) echoes every request/accept/progress/
+** complete/error transition - including ones *we* initiated - back
+** through messageReceived(), so ChatModel's file entries are driven
+** entirely from there rather than being updated optimistically when we
+** call these methods (the one exception is decline, which Core does not
+** echo back to the decliner - see messaging_messageReceived()).
+**
+** Scope note: folder transfer, chat rooms, and settings are not wired up
+** yet - only presence, 1:1 messaging, and single-file transfer. See
+** /Android/README.md, including its unresolved-storage-access caveat for
+** sendFile() on Android.
 **
 ****************************************************************************/
 
@@ -23,6 +36,7 @@
 
 #include <QObject>
 #include <QMap>
+#include <QUrl>
 #include "messaging.h"
 #include "contactmodel.h"
 #include "chatmodel.h"
@@ -55,10 +69,20 @@ public:
 	//	peer, for a QML chat page to bind its ListView model to.
 	Q_INVOKABLE ChatModel* chatModelFor(const QString& userId);
 
+	//	fileUrl is expected to be a local file:// URL (QML's FileDialog
+	//	selectedFile). See the Android/README.md caveat: a content:// URL
+	//	from Android's Storage Access Framework (e.g. a Downloads or
+	//	cloud-storage picker) will not resolve to a readable local path.
+	Q_INVOKABLE void sendFile(const QString& userId, const QUrl& fileUrl);
+	Q_INVOKABLE void acceptFile(const QString& userId, const QString& fileId);
+	Q_INVOKABLE void declineFile(const QString& userId, const QString& fileId);
+	Q_INVOKABLE void cancelFile(const QString& userId, const QString& fileId);
+
 signals:
 	void startedChanged(void);
 	void connectedChanged(void);
 	void incomingMessage(const QString& userId, const QString& senderName, const QString& text);
+	void incomingFileRequest(const QString& userId, const QString& peerName, const QString& fileId, const QString& fileName, qint64 fileSize);
 
 private slots:
 	void messaging_messageReceived(MessageType type, QString* lpszUserId, XmlMessage* pMessage);
