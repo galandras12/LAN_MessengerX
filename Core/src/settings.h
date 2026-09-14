@@ -26,8 +26,16 @@
 #define SETTINGS_H
 
 #include <QSettings>
-#include <QtWidgets/QApplication>
 #include <QDir>
+//	QApplication (QtWidgets) is only needed for the two _VAL macros below,
+//	and only to compute a widget-toolkit-aware default (current app font/
+//	text color). Guarded on QT_WIDGETS_LIB (which qmake defines whenever
+//	"QT += widgets" is set) so this header - and everything in /Core that
+//	transitively includes it - stays usable from a Widgets-free consumer
+//	(e.g. a future Qt Quick/QML Android client) without linking QtWidgets.
+#ifdef QT_WIDGETS_LIB
+#include <QtWidgets/QApplication>
+#endif
 #include "shared.h"
 
 //	Application settings definitions and default values
@@ -88,9 +96,17 @@
 #define IDS_PUBMESSAGEPOP		"Messages/PubMessagePop"
 #define IDS_PUBMESSAGEPOP_VAL	false
 #define IDS_FONT				"Messages/Font"
-#define IDS_FONT_VAL			QApplication::font().toString()
 #define IDS_COLOR				"Messages/Color"
+#ifdef QT_WIDGETS_LIB
+#define IDS_FONT_VAL			QApplication::font().toString()
 #define IDS_COLOR_VAL			QApplication::palette().text().color().name()
+#else
+//	No QApplication available without QtWidgets - a Widgets-free consumer
+//	(e.g. Qt Quick/QML) is expected to apply its own UI-appropriate default
+//	on top of this when the setting has never been explicitly saved.
+#define IDS_FONT_VAL			QString()
+#define IDS_COLOR_VAL			QString()
+#endif
 #define IDS_FONTSIZE			"Messages/FontSize"
 #define IDS_FONTSIZE_VAL		FS_MEDIUM
 #define IDS_HISTORY				"History/History"

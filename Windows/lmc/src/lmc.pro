@@ -3,10 +3,11 @@
 # LAN Messenger project file (Windows client)
 #
 # NOTE (modernization): the platform-independent networking / protocol /
-# crypto / message-history layer now lives in ../../../Core/src and is
-# compiled directly into this target (not yet a separate library - that
-# split is planned for a later phase once the Android/Qt Quick client
-# needs to link the same sources). Do not duplicate those files here.
+# crypto / message-history layer lives in ../../../Core and builds as its
+# own static library (lmccore, see Core/Core.pro) so the planned Android/Qt
+# Quick client can link the exact same code. This project links that
+# library rather than compiling Core's sources itself - do not duplicate
+# those files here. Build Core first (see Windows/README.md).
 #-------------------------------------------------
 
 QT += core gui network xml widgets
@@ -18,53 +19,15 @@ win32: TARGET = lmc
 unix: TARGET = lan-messenger
 macx: TARGET  = "LAN-Messenger"
 TEMPLATE = app
+CONFIG += c++17
 
 RESOURCES = resource.qrc
 
-CORE_SRC = $$PWD/../../../Core/src
+CORE_ROOT = $$PWD/../../../Core
 
-INCLUDEPATH += $$CORE_SRC
-DEPENDPATH += $$CORE_SRC
-
-# platform-independent core (networking, protocol, crypto, settings, history)
-SOURCES += \
-    $$CORE_SRC/udpnetwork.cpp \
-    $$CORE_SRC/tcpnetwork.cpp \
-    $$CORE_SRC/strings.cpp \
-    $$CORE_SRC/shared.cpp \
-    $$CORE_SRC/settings.cpp \
-    $$CORE_SRC/network.cpp \
-    $$CORE_SRC/netstreamer.cpp \
-    $$CORE_SRC/messagingproc.cpp \
-    $$CORE_SRC/messaging.cpp \
-    $$CORE_SRC/message.cpp \
-    $$CORE_SRC/history.cpp \
-    $$CORE_SRC/datagram.cpp \
-    $$CORE_SRC/crypto.cpp \
-    $$CORE_SRC/xmlmessage.cpp \
-    $$CORE_SRC/webnetwork.cpp \
-    $$CORE_SRC/trace.cpp \
-    $$CORE_SRC/filemessagingproc.cpp
-
-HEADERS += \
-    $$CORE_SRC/udpnetwork.h \
-    $$CORE_SRC/tcpnetwork.h \
-    $$CORE_SRC/strings.h \
-    $$CORE_SRC/shared.h \
-    $$CORE_SRC/settings.h \
-    $$CORE_SRC/network.h \
-    $$CORE_SRC/netstreamer.h \
-    $$CORE_SRC/messaging.h \
-    $$CORE_SRC/message.h \
-    $$CORE_SRC/history.h \
-    $$CORE_SRC/stdlocation.h \
-    $$CORE_SRC/definitions.h \
-    $$CORE_SRC/datagram.h \
-    $$CORE_SRC/crypto.h \
-    $$CORE_SRC/xmlmessage.h \
-    $$CORE_SRC/chatdefinitions.h \
-    $$CORE_SRC/webnetwork.h \
-    $$CORE_SRC/trace.h
+INCLUDEPATH += $$CORE_ROOT/src
+DEPENDPATH += $$CORE_ROOT/src
+LIBS += -L$$CORE_ROOT/lib -llmccore
 
 # Windows/desktop UI layer
 SOURCES += \
@@ -185,11 +148,11 @@ DEPENDPATH += $$PWD/../../lmcapp/include
 
 win32-msvc*: LIBS += advapi32.lib # for GetUserNameW(...) in Helper::getLogonName(..)
 
-# OpenSSL 3.x: modern Windows builds/packages name the import library
-# "libcrypto.lib" (older 1.0.2-era packages used "libeay32.lib" - adjust
-# to match whatever OpenSSL 3.x distribution you install if this differs).
-win32: LIBS += -L$$PWD/../../openssl/lib/ -llibcrypto
-unix:!symbian: LIBS += -L$$PWD/../../openssl/lib/ -lcrypto
-
-INCLUDEPATH += $$PWD/../../openssl/include
-DEPENDPATH += $$PWD/../../openssl/include
+# OpenSSL 3.x: only needed at final link time here (lmccore's crypto.cpp is
+# what actually calls into it - see Core/Core.pro). Modern Windows builds/
+# packages name the import library "libcrypto.lib" (older 1.0.2-era
+# packages used "libeay32.lib" - adjust to match whatever OpenSSL 3.x
+# distribution you install if this differs). Expected at repo-root
+# /openssl, i.e. a sibling of /Core and /Windows.
+win32: LIBS += -L$$PWD/../../../openssl/lib/ -llibcrypto
+unix:!symbian: LIBS += -L$$PWD/../../../openssl/lib/ -lcrypto

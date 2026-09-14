@@ -27,7 +27,9 @@ alapján fejlődik, fázisokban:
   ⏳ tényleges Qt6+OpenSSL3 build-bel még nincs ellenőrizve (nincs Qt telepítve
   ebben a fejlesztői környezetben)
 - **Fázis 3 — Core kiemelése önálló, mindkét platform által linkelhető
-  library-vé**: ⏳ tervezve
+  library-vé**: ✅ forráskód/build-rendszer szinten kész (`Core.pro`,
+  Widgets-mentes — lásd [`Core/README.md`](Core/README.md)), ⏳ tényleges
+  build-bel még nincs ellenőrizve, Android (NDK) célzás még nem indult
 - **Fázis 4 — Android kliens (Qt Quick/QML)**: ⏳ tervezve
 - **Fázis 5 — Cross-platform interop tesztelés**: ⏳ tervezve
 

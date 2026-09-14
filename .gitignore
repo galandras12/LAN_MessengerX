@@ -28,7 +28,7 @@ Makefile*
 *.autosave
 
 # Third-party dependencies fetched locally at build time (not vendored in the repo)
-/Windows/openssl/
+/openssl/
 /Windows/lmc/debug/
 /Windows/lmc/release*/
 /Windows/lmc/build/
@@ -36,6 +36,12 @@ Makefile*
 /Windows/lmc/setup/lmc*.zip
 /Windows/lmcapp/lib/
 /Windows/lmcapp/bin/
+
+# Core static library build output
+/Core/lib/
+/Core/debug/
+/Core/release*/
+/Core/build/
 
 # Android / Qt for Android / Gradle build output
 /Android/build/

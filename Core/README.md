@@ -9,16 +9,31 @@ csevegési előzmények kezeléséhez.
 
 ## Jelenlegi állapot
 
-**Fizikailag különálló**, de a build rendszer szintjén **még nem önálló
-library** — a `Windows/lmc/src/lmc.pro` jelenleg közvetlenül idefordítja be
-ezeket a forrásfájlokat a Windows kliens buildjébe. Az, hogy ez tényleges,
-mindkét platform (Widgets + Qt Quick) által linkelhető statikus/shared
-library legyen, egy későbbi fázis (a tervben "Fázis 3 — Megosztott Core
-kiemelése") munkája — ekkor kell majd megvizsgálni és szükség esetén
-eltávolítani a `settings.cpp`/`settings.h` jelenlegi `QApplication`-
-függőségét is (alapértelmezett betűtípus/szín lekérdezéséhez használja,
-ami Qt Widgets-specifikus, egy QML-alapú Android kliens ezt nem tudja
-ugyanígy hívni).
+Önálló, `lmccore` nevű **statikus library** qmake-projekt ([`Core.pro`](Core.pro),
+`TEMPLATE = lib`, `CONFIG += staticlib`) — a `Windows/lmc/src/lmc.pro` ezt
+linkeli be, nem fordítja be közvetlenül a forrásfájljait.
+
+A `Core.pro` szándékosan **nem kér QtWidgets-et** (`QT -= gui`), így egy
+jövőbeli Qt Quick/QML Android kliens Widgets nélkül is linkelheti. Az
+egyetlen korábbi Widgets-függés — a `settings.h`-beli `IDS_FONT_VAL`/
+`IDS_COLOR_VAL` makrók, amik `QApplication::font()`/`palette()`-et hívtak
+alapértékként — `#ifdef QT_WIDGETS_LIB`-fel körbevéve maradt meg: a
+Windows kliens build-jében (ahol ez a makró definiálva van, mert
+`QT += widgets`) a viselkedés változatlan, egy Widgets nélküli fogyasztó
+pedig egyszerűen üres stringet kap alapértékként, és a saját UI-jának
+megfelelő alapértéket állíthat be helyette. A `settings.cpp` egyetlen
+közvetlen `QApplication`-hívása (`applicationFilePath()`) pedig
+`QCoreApplication`-re lett cserélve, mivel ott van ténylegesen definiálva.
+
+Ellenőrizve (grep-el), hogy a `/Core` semmilyen más QtGui/QtWidgets típust
+nem használ (`QColor`, `QFont`, `QPixmap`, `QIcon`, `QWidget` stb.) — a
+fenti volt az egyetlen ilyen függés.
+
+Amit ez a fázis **nem old meg**: a `Core.pro` build-jét ez a
+szandbox-környezet nem tudta ellenőrizni (nincs telepítve Qt), és az
+Android célzáshoz (NDK toolchain, a `lmccore` Android ABI-kra fordítása,
+az OpenSSL Android-specifikus linkelése) még semmi nem készült — az a
+terv Fázis 4-je.
 
 ## Ebben a munkamenetben javított hibák
 

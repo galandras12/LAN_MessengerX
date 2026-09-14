@@ -12,6 +12,8 @@ Ez a munkamenet a modernizációs terv **Fázis 0–1** részét valósította m
 
 - ✅ A platformfüggetlen hálózati/protokoll/titkosítási réteg kiemelve a
   [`/Core`](../Core) mappába, ezt linkeli be ez a projekt (`lmc.pro`).
+  Azóta (Fázis 3) a `/Core` tényleges, önálló statikus library-vé
+  (`lmccore`) is épül — lásd lent.
 - ✅ Javítva egy konkrét, éles összeomlás-forrás: a TCP üzenetkeretezés
   (`Core/src/netstreamer.cpp`, `MsgStream::readyRead`) nem kezelte helyesen,
   ha a 4 bájtos hosszfejléc vagy az üzenettörzs több hálózati olvasásra
@@ -62,9 +64,38 @@ részét is — a Qt5/Qt4-es, Qt6 alatt már nem létező API-k lecserélve:
   helyett törölve, hogy ne maradjon csapda egy jövőbeli
   keresd-cseréld munkához.
 
+Emellett ez a munkamenet elvégezte a **Fázis 3** (Core kiemelése önálló
+library-vé) érdemi részét is:
+
+- ✅ [`/Core/Core.pro`](../Core/Core.pro) — a `/Core` mostantól egy önálló,
+  `lmccore` nevű **statikus library** qmake-projekt (`TEMPLATE = lib`,
+  `CONFIG += staticlib`), amit a `Windows/lmc/src/lmc.pro` most már
+  linkel, nem pedig a forrásfájljait fordítja be közvetlenül.
+- ✅ `Core.pro` szándékosan **nem** kér `QT += widgets`-et (sőt
+  `QT -= gui`) — ellenőriztem, hogy a `/Core`-ban semmi nem használ
+  QtGui/QtWidgets típust (`QColor`, `QFont`, `QPixmap`, `QWidget` stb.),
+  **kivéve** a `settings.h`-ban lévő `IDS_FONT_VAL`/`IDS_COLOR_VAL`
+  makrókat, amik `QApplication::font()`/`palette()`-et hívtak. Ezeket
+  `#ifdef QT_WIDGETS_LIB`-fel körbevettem: a Windows kliens (ami
+  `QT += widgets`-szel épül) változatlanul a `QApplication`-alapú
+  alapértéket kapja, egy jövőbeli Widgets nélküli (QML) fogyasztó pedig
+  üres stringet — ez teszi lehetővé, hogy a `/Core` ténylegesen
+  Widgets-mentes maradjon anélkül, hogy a Windows-os viselkedés
+  megváltozna.
+- ✅ `settings.cpp`-ben az egyetlen közvetlen `QApplication`-hívás
+  (`applicationFilePath()`, az `autostart` regisztrációs kulcsban) átírva
+  `QCoreApplication`-re — ez a metódus ott van definiálva, a hívás nem is
+  igényelt volna Widgets-et.
+- ✅ Az OpenSSL keresési útvonal a repó gyökerébe költözött
+  (`/openssl/include`, `/openssl/lib`, `Windows/openssl` helyett) — így
+  mind a `Core.pro` (fordításhoz kellenek a fejlécek), mind a `lmc.pro`
+  (a végleges linkeléshez kell a `libcrypto`) ugyanarra a helyre mutat.
+- ✅ `build_windows.bat` frissítve: előbb a `Core`, utána a `lmcapp`, majd a
+  `lmc` épül.
+
 ⏳ **Még nincs ellenőrizve valós build-bel** (ehhez a szandboxban nincs Qt6/
-OpenSSL3 telepítve) — lásd lent. A telepítő cseréje (NSIS → Inno Setup/MSIX)
-is még hátravan.
+OpenSSL3 telepítve). A telepítő cseréje (NSIS → Inno Setup/MSIX) is még
+hátravan.
 
 ## Build előfeltételek
 
@@ -73,13 +104,16 @@ is még hátravan.
   Qt6 + OpenSSL3 build-bel még nem ellenőriztük** (ez a szandbox-környezet
   nem tartalmaz Qt-t) — az első helyi build valószínűleg feltár még
   apróbb, itt észre nem vett hibákat is.
-- OpenSSL 3.x fejlesztői csomag — az `include` és `lib` mappáit másold ide:
-  `Windows/openssl/include`, `Windows/openssl/lib` (a `.pro` fájl ezt várja).
-  A Windows-os OpenSSL 3.x disztribúciók általában `libcrypto.lib` néven
-  adják az import library-t — ha a tiéd más néven csomagolja, igazítsd a
-  `lmc/src/lmc.pro` végén lévő `LIBS +=` sort.
-- A `lmcapp` alprojektet (egyedi single-instance könyvtár) előbb kell
-  buildelni, lásd `PLATFORM_SPECIFIC.md`.
+- OpenSSL 3.x fejlesztői csomag — az `include` és `lib` mappáit másold a
+  repó gyökerébe: `openssl/include`, `openssl/lib` (az `openssl` mappa a
+  `Core` és `Windows` melletti testvérmappa legyen). A Windows-os OpenSSL
+  3.x disztribúciók általában `libcrypto.lib` néven adják az import
+  library-t — ha a tiéd más néven csomagolja, igazítsd a
+  `Windows/lmc/src/lmc.pro` végén lévő `LIBS +=` sort.
+- Build sorrend: **előbb a `Core`** (`Core/Core.pro` → `lmccore` statikus
+  library), utána a `lmcapp` alprojekt (egyedi single-instance könyvtár,
+  lásd `PLATFORM_SPECIFIC.md`), végül a `lmc` (a tényleges Windows
+  kliens). A `build_windows.bat` ezt a sorrendet automatizálja.
 
 ## Mappa-elrendezés
 
@@ -91,5 +125,6 @@ Windows/
 └── build_windows.bat
 ```
 
-A hálózati/protokoll/titkosítási/előzmény kód a [`/Core`](../Core) mappában van,
-onnan fordítja be közvetlenül a `lmc.pro`.
+A hálózati/protokoll/titkosítási/előzmény kód a [`/Core`](../Core) mappában
+van, önálló `lmccore` statikus library-ként épül, amit a `lmc.pro` linkel
+(lásd [`Core/Core.pro`](../Core/Core.pro) és [`Core/README.md`](../Core/README.md)).

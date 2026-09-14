@@ -22,6 +22,7 @@
 ****************************************************************************/
 
 
+#include <QCoreApplication>
 #include "settings.h"
 #include "stdlocation.h"
 
@@ -205,7 +206,7 @@ void lmcSettings::setAutoStart(bool on) {
 	QSettings settings("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
 		QSettings::NativeFormat);
 	if(on)
-		settings.setValue(IDA_TITLE, QDir::toNativeSeparators(QApplication::applicationFilePath()));
+		settings.setValue(IDA_TITLE, QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));
 	else
 		settings.remove(IDA_TITLE);
 #endif
