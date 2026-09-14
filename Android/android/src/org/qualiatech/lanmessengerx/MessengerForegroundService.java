@@ -16,6 +16,8 @@
 
 package org.qualiatech.lanmessengerx;
 
+import android.Manifest;
+import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -23,6 +25,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -32,6 +35,14 @@ public class MessengerForegroundService extends Service {
 
     private static final String CHANNEL_ID = "lanmessengerx_running";
     private static final int NOTIFICATION_ID = 1;
+
+    // Separate, higher-importance channel from the always-on "running in
+    // background" one above - this one is for actual new-message/incoming-
+    // file-request notifications the user should be interrupted for, so it
+    // must not share the low-importance silent channel of the persistent
+    // service notification.
+    private static final String MESSAGE_CHANNEL_ID = "lanmessengerx_messages";
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 1001;
 
     private static WifiManager.MulticastLock multicastLock;
 
@@ -68,6 +79,74 @@ public class MessengerForegroundService extends Service {
     public static synchronized void releaseMulticastLock() {
         if (multicastLock != null && multicastLock.isHeld())
             multicastLock.release();
+    }
+
+    // Called from AndroidForegroundService::showMessageNotification (C++)
+    // whenever MessengerBridge::incomingMessage/incomingFileRequest fires
+    // while the app is not in the foreground - this is a distinct,
+    // dismissible, high-importance notification per new message/file
+    // request, not the permanent low-importance "running" one above.
+    // notificationId is chosen by the caller (C++ hashes the sender's
+    // userId) so later messages from the same sender update/replace their
+    // own notification instead of stacking indefinitely.
+    public static void showMessageNotification(Context context, int notificationId, String title, String text) {
+        NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager == null)
+            return;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+            return;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && manager.getNotificationChannel(MESSAGE_CHANNEL_ID) == null) {
+            NotificationChannel channel = new NotificationChannel(
+                    MESSAGE_CHANNEL_ID,
+                    "New messages",
+                    NotificationManager.IMPORTANCE_HIGH);
+            channel.setDescription("New chat messages and incoming file requests received while LAN Messenger X is in the background.");
+            manager.createNotificationChannel(channel);
+        }
+
+        PendingIntent contentIntent = null;
+        Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+        if (launchIntent != null) {
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                flags |= PendingIntent.FLAG_IMMUTABLE;
+            contentIntent = PendingIntent.getActivity(context, notificationId, launchIntent, flags);
+        }
+
+        Notification.Builder builder = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                ? new Notification.Builder(context, MESSAGE_CHANNEL_ID)
+                : new Notification.Builder(context);
+
+        builder.setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(context.getApplicationInfo().icon)
+                .setAutoCancel(true)
+                .setPriority(Notification.PRIORITY_HIGH);
+        if (contentIntent != null)
+            builder.setContentIntent(contentIntent);
+
+        manager.notify(notificationId, builder.build());
+    }
+
+    // Called once at startup (see AndroidForegroundService::
+    // requestNotificationPermission). Android 13+ (API 33+) requires this
+    // runtime-granted permission before either this service's persistent
+    // notification or showMessageNotification() above can actually be
+    // shown to the user - without it, both silently post nothing (the
+    // service/process itself still runs fine either way). There is no
+    // custom Activity subclass in this app to receive
+    // onRequestPermissionsResult, so the outcome isn't observed here; the
+    // system remembers the user's choice regardless.
+    public static void requestNotificationPermission(Activity activity) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+            return;
+        if (activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
+            return;
+        activity.requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_PERMISSION_REQUEST_CODE);
     }
 
     @Override

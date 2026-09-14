@@ -83,10 +83,6 @@ előtt) még nincs implementálva.
 
 ### Amit ez az első verzió *nem* tud (nincs bekötve)
 
-- Új üzenetről szóló push-jellegű értesítés (csak a folyamatosan látható
-  "a háttérben fut" értesítés van meg, lásd lent — egy külön, "X üzenete
-  érkezett" tartalmú értesítés még nincs bekötve az `incomingMessage`/
-  `incomingFileRequest` jelekre).
 - Üzenetelőzmény-perzisztencia (a `ChatModel` csak memóriában tárol,
   `/Core/src/history.cpp` már létezik erre, de nincs bekötve).
 
@@ -207,15 +203,37 @@ Most már bekötve:
   hozzáadva az Android 14+ által megkövetelt típus-specifikus engedély
   (`FOREGROUND_SERVICE_DATA_SYNC`) a már meglévő általános
   `FOREGROUND_SERVICE` mellé.
+- ✅ **Futásidejű `POST_NOTIFICATIONS` engedélykérés** Android 13+ (API 33+)
+  alatt: `AndroidForegroundService::requestNotificationPermission()`
+  (`src/androidforegroundservice.h/.cpp`) egyszer, induláskor
+  (`main.cpp`) meghívja a Java oldali
+  `MessengerForegroundService.requestNotificationPermission(Activity)`-t,
+  ami `Activity.requestPermissions()`-t hív, ha az engedély még nincs
+  megadva. Nincs egyedi `Activity` alosztály ebben az appban, ami az
+  `onRequestPermissionsResult()`-öt fogadná, így a válasz (elfogadva/
+  elutasítva) forráskód-szinten nem kerül feldolgozásra — Android maga
+  megjegyzi a döntést, és a service/appfolyamat mindkét esetben ugyanúgy
+  fut tovább, csak az engedély hiányában egyik értesítés (se a "fut a
+  háttérben", se az új-üzenet, lásd lent) sem jelenik meg ténylegesen.
+- ✅ **Push-jellegű új-üzenet/fájlkérés-értesítés**:
+  `MessengerForegroundService.showMessageNotification(Context, int
+  notificationId, String title, String text)` egy külön, magas
+  fontosságú (`IMPORTANCE_HIGH`) csatornát (`lanmessengerx_messages`)
+  használ — szándékosan **nem** ugyanazt, mint a fenti, alacsony
+  fontosságú, néma "fut a háttérben" értesítés. A `main.cpp` feliratkozik
+  a `MessengerBridge::incomingMessage`/`incomingFileRequest` jelekre, és
+  csak akkor hív értesítést (`AndroidForegroundService::
+  showMessageNotification()`), ha `QGuiApplication::applicationState() !=
+  Qt::ApplicationActive` — vagyis az app épp nincs előtérben. A
+  `notificationId` a küldő `userId`-jának hash-e, nem az üzenet/fájl
+  azonosítójáé, így ugyanattól a küldőtől érkező több üzenet a *saját*
+  értesítését frissíti/cseréli, nem halmozódik végtelenül; egy fájlkérés
+  ugyanattól a küldőtől ugyanígy felülírja egy függőben lévő
+  chat-értesítését — ez egy tudatosan vállalt egyszerűsítés (nem külön
+  azonosító-tér fajtánként).
 
 ### Amit ez **nem** old meg teljesen
 
-- **Nincs futásidejű engedélykérés** a `POST_NOTIFICATIONS`-hoz Android
-  13+ (API 33+) alatt — a service enélkül is fut és véd (a folyamat életben
-  marad), csak az értesítés nem feltétlenül látszik a felhasználónak, ha
-  nem adta meg az engedélyt. Ennek rendes megoldása (Qt6 engedély-API
-  vagy közvetlen JNI `Activity.requestPermissions()` hívás) még nincs
-  implementálva.
 - **OEM-specifikus agresszív akkumulátor-kezelés** (pl. Xiaomi/MIUI,
   Huawei, egyes Samsung-beállítások) sok esetben a hivatalos Android
   foreground service védelmet is felülbírálja, hacsak a felhasználó

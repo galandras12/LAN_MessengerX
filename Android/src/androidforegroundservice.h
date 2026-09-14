@@ -20,6 +20,8 @@
 #ifndef ANDROIDFOREGROUNDSERVICE_H
 #define ANDROIDFOREGROUNDSERVICE_H
 
+#include <QString>
+
 class AndroidForegroundService {
 public:
 	//	Ties the foreground-service (and its visible "running in
@@ -34,6 +36,20 @@ public:
 	//	at startup; release() on shutdown.
 	static void acquireMulticastLock(void);
 	static void releaseMulticastLock(void);
+
+	//	Posts a dismissible, high-importance notification (separate from
+	//	the permanent low-importance "running" one above) - call this from
+	//	MessengerBridge::incomingMessage/incomingFileRequest handlers, only
+	//	while the app is not in the foreground. notificationId should be
+	//	stable per sender (e.g. a hash of their userId) so later messages
+	//	from the same sender replace their own notification instead of
+	//	stacking indefinitely. No-op if POST_NOTIFICATIONS isn't granted.
+	static void showMessageNotification(int notificationId, const QString& title, const QString& text);
+
+	//	Triggers the Android 13+ (API 33+) system permission prompt for
+	//	POST_NOTIFICATIONS, if not already granted. Call once at startup.
+	//	A no-op below API 33 (no such runtime permission exists there).
+	static void requestNotificationPermission(void);
 };
 
 #endif // ANDROIDFOREGROUNDSERVICE_H
