@@ -42,6 +42,16 @@
 #define IDA_CONTACT		"lanmsngr@gmail.com"
 #define IDA_DOMAIN		"http://lanmessenger.github.io"
 
+//	Credits shown in the About dialog/screen on both platforms (see
+//	Windows/lmc/src/aboutdialog.cpp and Android/qml/SettingsPage.qml) -
+//	kept here, alongside IDA_TITLE/IDA_VERSION, as the single place both
+//	clients read app identity/attribution from. IDA_COPYRIGHT above is
+//	the original project's own GPL-header copyright line and is left
+//	untouched; these three are this fork's own additions.
+#define IDA_ORIGINAL_AUTHOR	"Original LAN Messenger created by Dilip Radhakrishnan (Qualia Digital Solutions)."
+#define IDA_FORK_AUTHOR		"LAN Messenger X modernization and continued development by galandras12."
+#define IDA_REPOSITORY		"https://github.com/galandras12/LAN_MessengerX"
+
 #if defined Q_OS_WIN
 #define IDA_PLATFORM	"Windows"
 #elif defined Q_OS_MAC

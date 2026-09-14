@@ -60,6 +60,23 @@ A döntések, amik a tervet alakították:
   **megmarad a kompatibilitás** — ez korlátozza, mennyire lehet a
   protokollt/titkosítást modernizálni (lásd a Core README-jét).
 
+## Szerzőség / Credits
+
+- **Eredeti LAN Messenger**: Dilip Radhakrishnan (Qualia Digital Solutions /
+  QualiaTech) — a GPLv3 fejléc-kommentek és az eredeti telepítő
+  verzióinformációi alapján (lásd a forrásfájlok fejlécét, pl.
+  [`Core/src/definitions.h`](Core/src/definitions.h)).
+- **LAN Messenger X** (ez a modernizált/továbbfejlesztett verzió):
+  továbbfejlesztő — [galandras12](https://github.com/galandras12/LAN_MessengerX).
+- **Visszajelzés és elérhetőség**: [github.com/galandras12/LAN_MessengerX](https://github.com/galandras12/LAN_MessengerX)
+
+Mindkét kliens Névjegy/Beállítások képernyője (Windows: Névjegy ablak
+"About" fül; Android: Beállítások képernyő alján "About" szakasz)
+megjeleníti mindkét szerzőséget és a fenti linket — lásd
+[`Core/src/definitions.h`](Core/src/definitions.h) `IDA_ORIGINAL_AUTHOR`/
+`IDA_FORK_AUTHOR`/`IDA_REPOSITORY` konstansait, ez az egyetlen hely, ahonnan
+mindkét platform ugyanazt a szöveget olvassa.
+
 ## Licenc
 
 GPLv3, az eredeti projekt licencét megtartva (lásd [`LICENSE`](LICENSE)).

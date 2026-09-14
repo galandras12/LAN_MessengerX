@@ -473,7 +473,11 @@ void lmcMainWindow::helpAction_triggered(void) {
 }
 
 void lmcMainWindow::homePageAction_triggered(void) {
-	QDesktopServices::openUrl(QUrl(IDA_DOMAIN));
+	//	This fork's project page/contact point - not IDA_DOMAIN, which
+	//	stays pointed at the original upstream project's own site for the
+	//	other links that still depend on it (help/FAQ/support pages,
+	//	update-check URL - see Core/src/definitions.h's comment).
+	QDesktopServices::openUrl(QUrl(IDA_REPOSITORY));
 }
 
 void lmcMainWindow::updateAction_triggered(void) {

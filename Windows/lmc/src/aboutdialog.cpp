@@ -82,8 +82,17 @@ void lmcAboutDialog::setUIText(void) {
                                   QSysInfo::productType(),
                                   QSysInfo::productVersion()));
 
-	QString description(lmcStrings::appDesc() + "\n\n");
-	description.append(IDA_COPYRIGHT "\n" IDA_DOMAIN);
+	//	Rich text (see aboutdialog.ui's lblDescription: textFormat=RichText,
+	//	openExternalLinks=true) so the repository link below is actually
+	//	clickable, not just printed - "elérhetőség" (reachability) is the
+	//	whole point of showing it.
+	QString description = lmcStrings::appDesc().toHtmlEscaped();
+	description.replace("\n", "<br>");
+	description += "<br><br>";
+	description += QString(IDA_COPYRIGHT).toHtmlEscaped() + "<br>";
+	description += QString(IDA_ORIGINAL_AUTHOR).toHtmlEscaped() + "<br>";
+	description += QString(IDA_FORK_AUTHOR).toHtmlEscaped() + "<br>";
+	description += "<a href=\"" IDA_REPOSITORY "\">" IDA_REPOSITORY "</a>";
 	ui.lblDescription->setText(description);
 
 	QFile thanks(IDR_THANKSTEXT);

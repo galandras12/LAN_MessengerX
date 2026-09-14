@@ -213,6 +213,21 @@ protokollban):
   ritkán módosított, technikai jellegű beállítások, nincsenek a mostani
   képernyőn.
 
+### About szakasz
+
+A beállítások képernyő alján egy kompakt "About" szakasz jeleníti meg az
+alkalmazás nevét/verzióját, az eredeti szerző (Dilip Radhakrishnan, Qualia
+Digital Solutions) és ennek a verziónak a továbbfejlesztője (galandras12)
+feltüntetését, plusz egy kattintható linket a projekt GitHub oldalára
+(`Qt.openUrlExternally`). A szövegeket a `messenger.appVersion`/
+`originalAuthorCredit`/`forkAuthorCredit`/`repositoryUrl` property-k adják,
+amik közvetlenül a `Core/src/definitions.h`-beli `IDA_VERSION`/
+`IDA_ORIGINAL_AUTHOR`/`IDA_FORK_AUTHOR`/`IDA_REPOSITORY` konstansokat
+olvassák — ugyanaz az egyetlen forrás, amit a Windows-os Névjegy ablak is
+használ. Mivel ez a szakasz a képernyőt magasabbra nőtte, a
+`SettingsPage.qml` most egy `ScrollView`-ba van csomagolva (korábban nem
+volt rá szükség).
+
 ## Csoportos chat (group chat room)
 
 A kontaktlista fejlécének 👥+ gombja csoportos beszélgetést indít.

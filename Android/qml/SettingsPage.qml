@@ -42,9 +42,20 @@ Page {
         }
     }
 
-    ColumnLayout {
+    //	Wrapped in a ScrollView now that the About section below makes
+    //	this page's content taller than some phone screens can show at
+    //	once - the page previously fit without scrolling, but nothing
+    //	here assumed that, so this is a safe addition rather than a
+    //	structural change.
+    ScrollView {
         anchors.fill: parent
-        anchors.margins: 16
+        contentWidth: availableWidth
+        clip: true
+
+    ColumnLayout {
+        x: 16
+        y: 16
+        width: parent.width - 32
         spacing: 20
 
         ColumnLayout {
@@ -195,7 +206,48 @@ Page {
             Layout.fillWidth: true
         }
 
-        Item { Layout.fillHeight: true }
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: 8
+            spacing: 4
+
+            Label {
+                text: qsTr("About")
+                font.pixelSize: 13
+                opacity: 0.6
+            }
+            Label {
+                text: qsTr("LAN Messenger X %1").arg(messenger.appVersion)
+                font.pixelSize: 13
+                font.bold: true
+                Layout.fillWidth: true
+            }
+            Label {
+                text: messenger.originalAuthorCredit
+                font.pixelSize: 11
+                opacity: 0.7
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+            Label {
+                text: messenger.forkAuthorCredit
+                font.pixelSize: 11
+                opacity: 0.7
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+            Label {
+                text: qsTr("Feedback &amp; contact: <a href=\"%1\">%1</a>").arg(messenger.repositoryUrl)
+                font.pixelSize: 11
+                textFormat: Text.RichText
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+                onLinkActivated: (link) => Qt.openUrlExternally(link)
+            }
+        }
+
+        Item { Layout.preferredHeight: 16 }
+    }
     }
 
     //	Keeps the fields in sync if the profile changes from elsewhere

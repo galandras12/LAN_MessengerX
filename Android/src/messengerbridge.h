@@ -122,6 +122,14 @@ class MessengerBridge : public QObject {
 	Q_PROPERTY(RoomListModel* rooms READ rooms CONSTANT)
 	Q_PROPERTY(HistoryListModel* history READ history CONSTANT)
 	Q_PROPERTY(bool historyEnabled READ historyEnabled WRITE setHistoryEnabled NOTIFY historyEnabledChanged)
+	//	App identity/attribution for an About section in the UI (see
+	//	SettingsPage.qml) - sourced from the same Core/src/definitions.h
+	//	constants Windows' aboutdialog.cpp reads, so both clients show
+	//	the same credits from one place.
+	Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
+	Q_PROPERTY(QString originalAuthorCredit READ originalAuthorCredit CONSTANT)
+	Q_PROPERTY(QString forkAuthorCredit READ forkAuthorCredit CONSTANT)
+	Q_PROPERTY(QString repositoryUrl READ repositoryUrl CONSTANT)
 
 public:
 	explicit MessengerBridge(QObject* parent = nullptr);
@@ -138,6 +146,11 @@ public:
 	HistoryListModel* history(void) const { return pHistoryListModel; }
 	bool historyEnabled(void) const;
 	void setHistoryEnabled(bool enabled);
+
+	QString appVersion(void) const { return QStringLiteral(IDA_VERSION); }
+	QString originalAuthorCredit(void) const { return QStringLiteral(IDA_ORIGINAL_AUTHOR); }
+	QString forkAuthorCredit(void) const { return QStringLiteral(IDA_FORK_AUTHOR); }
+	QString repositoryUrl(void) const { return QStringLiteral(IDA_REPOSITORY); }
 
 	//	Starts the network engine. Called once from main.cpp after the QML
 	//	engine is set up, not from the constructor, so QML bindings exist

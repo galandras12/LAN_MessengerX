@@ -104,6 +104,22 @@ library-vé) érdemi részét is:
 ⏳ **Még nincs ellenőrizve valós build-bel** (ehhez a szandboxban nincs Qt6/
 OpenSSL3 telepítve).
 
+## Szerzőség a Névjegyben
+
+A Névjegy ("About") ablak "About" füle mostantól az eredeti `IDA_COPYRIGHT`
+sor mellett explicit feltünteti az eredeti szerzőt (Dilip Radhakrishnan,
+Qualia Digital Solutions) és ennek a verziónak a továbbfejlesztőjét
+(galandras12), plusz egy kattintható linket a projekt GitHub oldalára
+(`https://github.com/galandras12/LAN_MessengerX`) — lásd
+`aboutdialog.cpp`/`.ui` és `Core/src/definitions.h`
+(`IDA_ORIGINAL_AUTHOR`/`IDA_FORK_AUTHOR`/`IDA_REPOSITORY`). A "Súgó" menü
+"LAN Messenger X online" akciója (`homePageAction_triggered()`,
+`mainwindow.cpp`) is erre a linkre mutat mostantól — a `help.php`/
+`faq.php`/`support.php`/frissítés-ellenőrző URL-ek (`IDA_DOMAIN`) viszont
+szándékosan változatlanok maradtak, mivel azok az eredeti projekt saját,
+külön infrastruktúrájára mutatnak, aminek nincs megfelelője ebben a
+repóban.
+
 ## Telepítő: NSIS → Inno Setup
 
 A régi `setup/win32/setup.nsi` (makensis) helyett most
