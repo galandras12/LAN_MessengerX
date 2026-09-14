@@ -102,8 +102,65 @@ library-vé) érdemi részét is:
   `lmc` épül.
 
 ⏳ **Még nincs ellenőrizve valós build-bel** (ehhez a szandboxban nincs Qt6/
-OpenSSL3 telepítve). A telepítő cseréje (NSIS → Inno Setup/MSIX) is még
-hátravan.
+OpenSSL3 telepítve).
+
+## Telepítő: NSIS → Inno Setup
+
+A régi `setup/win32/setup.nsi` (makensis) helyett most
+[`setup/win32/setup.iss`](setup/win32/setup.iss) (Inno Setup 6) a
+telepítő forrása — a régi `.nsi`/`setup.bat` referenciaként megmaradt a
+mappában, nincs törölve. Az új szkript szakaszról szakaszra lekövetve
+készült a régi viselkedése alapján (nem újratervezve), lásd az `.iss`
+fájl fejléc-kommentjét a pontos indoklásért:
+
+- ✅ Ugyanaz a telepítési hely (`Program Files\LAN Messenger X`),
+  Start Menü parancsikonok (+ opcionális asztali ikon, amit a régi NSIS
+  nem kínált — apró, szándékos többlet), admin jogosultság-kérés.
+- ✅ **Windows Firewall kivétel**: a régi NSIS a harmadik féltől származó
+  `nsisFirewall` plugint (`AddAuthorizedApplication`) használta; az új
+  szkript beépített `netsh advfirewall firewall add rule` hívásokkal
+  helyettesíti (be- és kimenő irányban is, mivel az
+  `AddAuthorizedApplication` mindkettőt engedélyezte) — nincs
+  plugin-függőség.
+- ✅ Telepítés utáni `lmc.exe /silent /sync /quit` futtatás — pontosan
+  ugyanaz, mint a régi szkript utolsó lépése (az indítópult-bejegyzés
+  szinkronizálása a beállításokból).
+- ✅ Eltávolításkor: az alkalmazás csendes bezárása (`/silent /term`),
+  tűzfalszabály törlése, és **két Igen/Nem kérdés** ("Töröljem az
+  üzenetelőzményt is?" / "Töröljem a mentett beállításokat is?") — a régi
+  NSIS ezt egy egyedi `nsDialogs`-alapú checkbox-oldallal oldotta meg;
+  az Inno Setup Pascal Scriptje nem ad ilyen egyszerűen újrahasználható
+  egyedi wizard-oldal API-t az eltávolítóhoz, ezért itt két egyszerű
+  `MsgBox`-kérdés adja ugyanazt a választási lehetőséget (kis
+  UX-eltérés, ugyanaz a végeredmény: a törlési jelzőket ugyanúgy az
+  alkalmazásnak magának adja át `/nohistory /nofilehistory`/`/noconfig`
+  kapcsolókkal, nem a telepítő nyúl közvetlenül a fájlokhoz).
+- ✅ A régi szkript két konkrét OpenSSL 1.0.2 DLL-t (`libeay32.dll`,
+  `ssleay32.dll`) sorolt fel névre szólóan a `[Files]`-ban — ez a modern
+  Qt6+OpenSSL3 build-nél **törékeny** lenne (más DLL-nevek, más Qt-modul
+  DLL-ek), ezért az új szkript a teljes `windeployqt`-kimenetet
+  helyettesíti be egy wildcard-os `Source: "{#SourceDir}\*"` sorral —
+  lásd az `.iss` kommentjét a pontos build-előfeltételről (előbb
+  `windeployqt`-t kell futtatni a Release `lmc.exe`-n).
+
+### Amit ez **nem** old meg / nincs ellenőrizve
+
+- **Nincs lefordítva/tesztelve valós Inno Setup fordítóval** — ebben a
+  környezetben nincs `ISCC.exe` (sem `makensis`), tehát ez a szkript is
+  csak kézi átvizsgálással, az Inno Setup dokumentált szintaxisa alapján
+  készült, akárcsak a Core/Windows kód többi része. Az első tényleges
+  build valószínűleg feltár apróbb hibákat (pl. útvonal-elgépelést).
+- A régi NSIS-es fejléckép/banner (`header-r.bmp`, `banner.bmp`) nincs
+  átvéve — az Inno Setup más pixelméretű wizard-képeket vár, ezekhez új,
+  megfelelő méretű képek kellenének; kozmetikai hiányosság.
+- MSIX csomagolás (a tervben eredetileg alternatívaként felmerült) nincs
+  elkészítve — az Inno Setup-ra esett a választás, mert az közelebb áll a
+  régi NSIS-szkript tényleges viselkedéséhez (egyedi telepítési útvonal,
+  tűzfalszabály, egyedi eltávolítási logika), amit egy tiszta MSIX
+  csomag natívan nem tesz lehetővé ugyanolyan egyszerűen.
+- `[Registry]` szakasz csak a régi bookkeeping-kulcs megtartásáért van
+  (semmilyen alkalmazáskód nem olvassa) — ellenőrizve, hogy
+  `Windows/lmc/src` sehol nem olvas `HKLM\...\LAN Messenger X`-et.
 
 ## Build előfeltételek
 
@@ -129,7 +186,9 @@ hátravan.
 Windows/
 ├── lmc/src/       - a fő alkalmazás (UI: mainwindow, chatwindow, stb. + lmc.pro)
 ├── lmcapp/        - egyedi single-instance/singleapplication könyvtár
-├── setup/         - telepítő-csomagoló szkriptek (win32/x11/mac)
+├── setup/         - telepítő-csomagoló szkriptek (win32/x11/mac);
+│                    win32 alatt setup.iss (Inno Setup, aktuális) és a
+│                    régi setup.nsi/setup.bat (referenciaként megtartva)
 └── build_windows.bat
 ```
 
