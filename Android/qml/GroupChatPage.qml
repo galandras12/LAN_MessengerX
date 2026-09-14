@@ -56,6 +56,13 @@ Page {
                 }
             }
             ToolButton {
+                text: "👥+"
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Add people")
+                onClicked: StackView.view.push(Qt.resolvedUrl("NewGroupChatPage.qml"),
+                    {"existingThreadId": page.threadId, "excludeIds": messenger.roomParticipantIds(page.threadId)})
+            }
+            ToolButton {
                 text: qsTr("Leave")
                 onClicked: {
                     messenger.leaveGroupChat(page.threadId)

@@ -6,9 +6,16 @@ import LanMessenger 1.0
 
 Page {
     id: page
-    title: qsTr("New Group Chat")
 
+    //	Set (with excludeIds) when navigated to from an already-open
+    //	GroupChatPage's "invite more" button rather than from the "New
+    //	group chat" entry point - switches this page from creating a new
+    //	room to inviting more people into threadId.
+    property string existingThreadId: ""
+    property var excludeIds: []
     property var selectedIds: []
+
+    title: existingThreadId.length > 0 ? qsTr("Add People") : qsTr("New Group Chat")
 
     header: ToolBar {
         Material.foreground: "white"
@@ -27,12 +34,17 @@ Page {
                 Layout.fillWidth: true
             }
             ToolButton {
-                text: qsTr("Create")
+                text: page.existingThreadId.length > 0 ? qsTr("Add") : qsTr("Create")
                 enabled: page.selectedIds.length > 0
                 onClicked: {
-                    var threadId = messenger.createGroupChat(page.selectedIds)
-                    StackView.view.pop()
-                    StackView.view.push(Qt.resolvedUrl("GroupChatPage.qml"), {"threadId": threadId})
+                    if(page.existingThreadId.length > 0) {
+                        messenger.addParticipantsToRoom(page.existingThreadId, page.selectedIds)
+                        StackView.view.pop()
+                    } else {
+                        var threadId = messenger.createGroupChat(page.selectedIds)
+                        StackView.view.pop()
+                        StackView.view.push(Qt.resolvedUrl("GroupChatPage.qml"), {"threadId": threadId})
+                    }
                 }
             }
         }
@@ -57,10 +69,16 @@ Page {
             model: messenger.contacts
 
             delegate: CheckDelegate {
+                readonly property bool alreadyIn: page.excludeIds.indexOf(userId) !== -1
+
                 width: ListView.view.width
-                text: name
+                text: alreadyIn ? qsTr("%1 (already in this chat)").arg(name) : name
+                enabled: !alreadyIn
+                checked: alreadyIn
 
                 onCheckedChanged: {
+                    if(alreadyIn)
+                        return
                     var ids = page.selectedIds.slice()
                     var idx = ids.indexOf(userId)
                     if(checked && idx === -1)

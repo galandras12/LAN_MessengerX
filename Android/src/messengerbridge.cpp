@@ -299,6 +299,27 @@ QString MessengerBridge::createGroupChat(const QStringList& userIds) {
 	return threadId;
 }
 
+void MessengerBridge::addParticipantsToRoom(const QString& threadId, const QStringList& userIds) {
+	if(!roomPeerIds.contains(threadId))
+		return;
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_THREAD, threadId);
+	xmlMessage.addData(XN_GROUPMSGOP, GroupMsgOpNames[GMO_Request]);
+
+	const QStringList currentPeers = roomPeerIds.value(threadId);
+	for(const QString& userId : userIds) {
+		if(userId == localUserId() || currentPeers.contains(userId))
+			continue;
+		QString id = userId;
+		pMessaging->sendMessage(MT_GroupMessage, &id, &xmlMessage);
+	}
+}
+
+QStringList MessengerBridge::roomParticipantIds(const QString& threadId) const {
+	return roomPeerIds.value(threadId);
+}
+
 void MessengerBridge::sendGroupMessage(const QString& threadId, const QString& text) {
 	if(!roomPeerIds.contains(threadId) || text.isEmpty())
 		return;

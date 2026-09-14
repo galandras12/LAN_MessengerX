@@ -219,6 +219,16 @@ ténylegesen a Windows kliens `chatroomwindow.cpp`-je:
   jelentő partnerek nem kerülnek be a szoba résztvevői közé (ők még nem
   ismerik ezt a funkciót) — pontosan úgy, ahogy
   `lmcChatRoomWindow::addUser()` is teszi.
+- ✅ **Már létrehozott szobához utólagos meghívás**
+  (`messenger.addParticipantsToRoom(threadId, userIds)`): a
+  `GroupChatPage.qml` fejlécének 👥+ gombja a `NewGroupChatPage.qml`-t
+  nyitja meg (a már bent lévők kipipálva/letiltva), és a kiválasztottaknak
+  ugyanazt a pont-pont `GMO_Request`-et küldi, mint az induló meghívás —
+  pontosan lekövetve `lmcChatRoomWindow::selectContacts()`-ot
+  (`chatroomwindow.cpp`): nincs szükség külön értesítésre a szoba már
+  meglévő tagjai felé, mert az új meghívott saját `GMO_Join`-ja (amit a
+  helyi szoba létrehozásakor amúgy is mindenkinek szétküld) éppúgy eléri
+  őket, mint bármely más csatlakozást.
 
 ### Amit ez **nem** tesz
 
@@ -227,9 +237,6 @@ ténylegesen a Windows kliens `chatroomwindow.cpp`-je:
   egy külön, jelentősen másképp viselkedő funkció a Windows kliensben,
   szándékosan nincs portolva; a most implementált "csoportos chat" a
   Windows `lmcChatRoomWindow` *ad hoc, meghívásos* módja.
-- Már létrehozott szobához **később** további kontaktok hozzáadása
-  (`lmcChatRoomWindow::addContactAction_triggered()` Windows-on) — most
-  csak a létrehozáskori meghívás működik.
 - Fájlátvitel csoportos szobán belül — a `ChatModel` már támogatja a
   fájl-bejegyzéseket (lásd fent), de a szoba-kezelő kód nem indít
   `MT_File`-t szobakontextusban.

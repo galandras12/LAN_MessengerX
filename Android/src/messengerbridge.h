@@ -147,10 +147,24 @@ public:
 	//	including the local user - added automatically), returning its
 	//	threadId so QML can navigate to it immediately.
 	Q_INVOKABLE QString createGroupChat(const QStringList& userIds);
+	//	Invites more people into an *already-created* room - matches
+	//	lmcChatRoomWindow::selectContacts() in
+	//	Windows/lmc/src/chatroomwindow.cpp exactly: just sends a
+	//	point-to-point GMO_Request to each newly-added userId, same as the
+	//	initial invite in createGroupChat() above. No separate
+	//	notification to the room's existing participants is needed - the
+	//	new invitee's own GMO_Join (sent when they create their local room
+	//	off this GMO_Request, see messaging_messageReceived()) reaches
+	//	them the same way any other join does.
+	Q_INVOKABLE void addParticipantsToRoom(const QString& threadId, const QStringList& userIds);
 	Q_INVOKABLE void sendGroupMessage(const QString& threadId, const QString& text);
 	Q_INVOKABLE void leaveGroupChat(const QString& threadId);
 	Q_INVOKABLE ChatModel* roomMessages(const QString& threadId);
 	Q_INVOKABLE ContactModel* roomParticipants(const QString& threadId);
+	//	userIds of a room's current participants (including the local
+	//	user) - for a QML contact picker to exclude people already in the
+	//	room when inviting more.
+	Q_INVOKABLE QStringList roomParticipantIds(const QString& threadId) const;
 	//	Comma-joined participant names (excluding the local user) - a
 	//	deliberate small deviation from Windows' getWindowTitle(), which
 	//	includes "you" in its own title too; that reads oddly on your own
