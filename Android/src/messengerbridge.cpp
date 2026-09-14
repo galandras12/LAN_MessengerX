@@ -505,6 +505,32 @@ void MessengerBridge::refreshRoomParticipantModel(const QString& threadId) {
 	emit roomUpdated(threadId);
 }
 
+void MessengerBridge::refreshRoomParticipantsFor(const QString& userId) {
+	const QStringList threadIds = roomPeerIds.keys();
+	for(const QString& threadId : threadIds) {
+		if(roomPeerIds.value(threadId).contains(userId))
+			refreshRoomParticipantModel(threadId);
+	}
+}
+
+void MessengerBridge::departUserFromRooms(const QString& userId) {
+	//	userById() still resolves them here - Core emits MT_Depart before
+	//	actually erasing the entry from its own userList (see
+	//	lmcMessaging::removeUser() in Core/src/messaging.cpp), same
+	//	ordering this relies on for every other presence field.
+	User* pUser = userById(userId);
+	QString userName = pUser ? pUser->name : userId;
+
+	const QStringList threadIds = roomPeerIds.keys();
+	for(const QString& threadId : threadIds) {
+		if(!roomPeerIds.value(threadId).contains(userId))
+			continue;
+		removeRoomParticipant(threadId, userId);
+		roomMessageModels[threadId]->appendSystemMessage(
+			tr("%1 left").arg(userName), QDateTime::currentDateTime());
+	}
+}
+
 User* MessengerBridge::userById(const QString& userId) const {
 	if(userId == localUserId())
 		return pMessaging->localUser;
@@ -538,12 +564,35 @@ void MessengerBridge::messaging_messageReceived(MessageType type, QString* lpszU
 	//	Presence traffic: lmcMessaging has already applied the change to
 	//	its own userList by the time this signal fires (see
 	//	Core/src/messagingproc.cpp) - just re-sync our copy from it rather
-	//	than re-parsing pMessage ourselves.
+	//	than re-parsing pMessage ourselves. Also re-sync any open group
+	//	chat room's own participant model for this user, since that model
+	//	is a separate snapshot (see refreshRoomParticipantModel()) that
+	//	otherwise only refreshes on a join/leave and would show a stale
+	//	name/status/note until one happens.
 	case MT_Announce:
+		refreshContacts();
+		break;
+
+	//	A NULL pMessage means the user actually disconnected (see
+	//	lmcMessaging::removeUser() and the pending-ping-timeout path in
+	//	Core/src/messaging.cpp); a non-NULL (dummy) pMessage means they
+	//	only switched to the "appear offline" status and are still
+	//	genuinely connected. Windows/lmc/src/lmc.cpp's routeGroupMessage()
+	//	draws exactly this distinction - only a real disconnect removes
+	//	them from open chat rooms, since Core already emits a matching
+	//	MT_Status just before this either way (handled below), which is
+	//	enough to show them as offline without evicting them.
 	case MT_Depart:
+		if(lpszUserId && !pMessage)
+			departUserFromRooms(*lpszUserId);
+		refreshContacts();
+		break;
+
 	case MT_Status:
 	case MT_UserName:
 	case MT_Note:
+		if(lpszUserId)
+			refreshRoomParticipantsFor(*lpszUserId);
 		refreshContacts();
 		break;
 
@@ -553,11 +602,13 @@ void MessengerBridge::messaging_messageReceived(MessageType type, QString* lpszU
 	//	see the class comment. localAvatarPath() itself never changes (a
 	//	fixed path, only its file content does), so there is nothing to
 	//	refresh there beyond letting bound QML Image sources know to
-	//	re-fetch; refreshContacts() covers peers via ContactModel's
-	//	avatarPath role.
+	//	re-fetch; refreshContacts()/refreshRoomParticipantsFor() cover
+	//	peers via ContactModel's avatarPath role.
 	case MT_Avatar:
 		if(lpszUserId && *lpszUserId == localUserId())
 			emit localProfileChanged();
+		else if(lpszUserId)
+			refreshRoomParticipantsFor(*lpszUserId);
 		refreshContacts();
 		break;
 

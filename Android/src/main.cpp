@@ -10,6 +10,24 @@
 #include "historylistmodel.h"
 #include "androidforegroundservice.h"
 
+namespace {
+
+//	Notification id for a per-sender message/file-request notification -
+//	see the comment at the connect() calls below for why it's keyed by
+//	sender, not per-message. Android's NotificationManager keys
+//	notifications by (package, tag, id) with a null tag here, so this
+//	must never collide with MessengerForegroundService's own fixed
+//	NOTIFICATION_ID (1) for the persistent "running" notification -
+//	otherwise one would silently replace the other. qHash()'s output
+//	landing on such a small reserved value is astronomically unlikely,
+//	but the guard is free, so there is no reason to rely on that.
+int messageNotificationId(const QString& userId) {
+	int id = int(qHash(userId) & 0x7fffffff);
+	return id < 2 ? id + 2 : id;
+}
+
+}	//	anonymous namespace
+
 int main(int argc, char* argv[]) {
 	QGuiApplication app(argc, argv);
 	QGuiApplication::setOrganizationName("LAN Messenger X");
@@ -72,13 +90,13 @@ int main(int argc, char* argv[]) {
 		[&app](const QString& userId, const QString& senderName, const QString& text) {
 			if(QGuiApplication::applicationState() == Qt::ApplicationActive)
 				return;
-			AndroidForegroundService::showMessageNotification(int(qHash(userId) & 0x7fffffff), senderName, text);
+			AndroidForegroundService::showMessageNotification(messageNotificationId(userId), senderName, text);
 		});
 	QObject::connect(&bridge, &MessengerBridge::incomingFileRequest, &app,
 		[&app](const QString& userId, const QString& peerName, const QString& /*fileId*/, const QString& fileName, qint64 /*fileSize*/) {
 			if(QGuiApplication::applicationState() == Qt::ApplicationActive)
 				return;
-			AndroidForegroundService::showMessageNotification(int(qHash(userId) & 0x7fffffff), peerName,
+			AndroidForegroundService::showMessageNotification(messageNotificationId(userId), peerName,
 				QGuiApplication::translate("main", "wants to send you \"%1\"").arg(fileName));
 		});
 

@@ -252,6 +252,16 @@ private:
 	void addRoomParticipant(const QString& threadId, const QString& userId);
 	void removeRoomParticipant(const QString& threadId, const QString& userId);
 	void refreshRoomParticipantModel(const QString& threadId);
+	//	Re-syncs the participant model of every room userId is currently
+	//	in - call after a presence field (status/name/note/avatar) that
+	//	isn't itself room-scoped traffic changes, so an open room's own
+	//	participant list doesn't go stale until the next join/leave.
+	void refreshRoomParticipantsFor(const QString& userId);
+	//	A real disconnect (MT_Depart with a NULL pMessage - see the
+	//	switch case comment) removes userId from every room they were in,
+	//	same as Windows/lmc/src/lmc.cpp's routeGroupMessage() calling
+	//	lmcChatRoomWindow::removeUser() for each room containing them.
+	void departUserFromRooms(const QString& userId);
 	User* userById(const QString& userId) const;
 
 	//	peerName is who the *conversation* is with (matching how Windows

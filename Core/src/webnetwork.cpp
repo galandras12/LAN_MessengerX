@@ -89,7 +89,15 @@ void lmcWebNetwork::sendMessage(const QUrl &url) {
 	active = true;
 
     QNetworkReply* reply = manager->get(QNetworkRequest(url));
-	connect(reply, SIGNAL(error(QNetworkReply::NetworkError)),
+	//	QNetworkReply::error(QNetworkReply::NetworkError) was the signal
+	//	name through Qt5 (deprecated since 5.15) - Qt6 removed it outright
+	//	in favor of errorOccurred(), keeping only the unrelated error()
+	//	getter method (still used above in replyFinished()). The old
+	//	string-based SIGNAL()/SLOT() connect below compiled but silently
+	//	failed at runtime under Qt6 (no such signal to find), so
+	//	slotError() - and therefore raiseError(ET_Error)/the update-check
+	//	failure path - would never have actually fired.
+	connect(reply, SIGNAL(errorOccurred(QNetworkReply::NetworkError)),
 			this, SLOT(slotError(QNetworkReply::NetworkError)));
 }
 
