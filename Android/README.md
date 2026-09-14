@@ -34,9 +34,10 @@ bekötött** első verziót írt meg, nem csak UI-vázat:
 - ✅ `src/roomlistmodel.h/.cpp` — a csoportos chat szobák listája (lásd
   külön szakasz lent).
 - ✅ `qml/Main.qml`, `qml/ContactListPage.qml`, `qml/ChatPage.qml`,
-  `qml/NewGroupChatPage.qml`, `qml/GroupChatPage.qml` — Qt Quick Controls
-  + Material stílusú kontaktlista, chat-buborék és csoportos chat nézetek,
-  `StackView`-val közöttük.
+  `qml/NewGroupChatPage.qml`, `qml/GroupChatPage.qml`,
+  `qml/SettingsPage.qml` — Qt Quick Controls + Material stílusú
+  kontaktlista, chat-buborék, csoportos chat és profil-beállítások
+  nézetek, `StackView`-val közöttük.
 - ✅ `Android.pro` — a `lmccore` (`/Core`) statikus library-t linkeli,
   `QT += quick qml`, Android target beállítások.
 - ✅ `android/AndroidManifest.xml` — a szükséges engedélyekkel
@@ -82,15 +83,51 @@ előtt) még nincs implementálva.
 
 ### Amit ez az első verzió *nem* tud (nincs bekötve)
 
-- Beállítások képernyő (felhasználónév/avatar/állapot szerkesztése —
-  jelenleg a `lmcMessaging::init()` automatikusan generált alapértékeket
-  használ: bejelentkezési név + gépnév alapján képzett user id).
 - Új üzenetről szóló push-jellegű értesítés (csak a folyamatosan látható
   "a háttérben fut" értesítés van meg, lásd lent — egy külön, "X üzenete
   érkezett" tartalmú értesítés még nincs bekötve az `incomingMessage`/
   `incomingFileRequest` jelekre).
 - Üzenetelőzmény-perzisztencia (a `ChatModel` csak memóriában tárol,
   `/Core/src/history.cpp` már létezik erre, de nincs bekötve).
+
+## Beállítások képernyő (profil szerkesztése)
+
+A kontaktlista fejlécének ⚙ gombja a `SettingsPage.qml`-t nyitja meg:
+megjelenítendő név, állapot (Elérhető/Foglalt/Ne zavarjanak/Mindjárt jövök/
+Távol/Láthatatlan), és egy szabad szöveges megjegyzés ("note"). A Windows
+kliens **három különálló, egymástól független** frissítési útvonalát
+követtem le (nincs egységes "beállítás megváltozott" üzenet a
+protokollban):
+
+- ✅ **Név** (`messenger.setLocalName()`): csak elmenti az `IDS_USERNAME`
+  beállítást, majd meghívja a `lmcMessaging::settingsChanged()`-et
+  (`/Core`) — ez a metódus **már eleve tartalmazza** a névváltozás
+  felismerését és az `MT_UserName` szétküldését (lásd
+  `Core/src/messaging.cpp`), pontosan úgy, ahogy a Windows-os
+  `settingsdialog.cpp` is csak elmenti a beállítást és a `lmc.cpp`
+  hívja meg ugyanezt a metódust — nem kellett újraírnom ezt a logikát,
+  csak a meglévőt hívni.
+- ✅ **Állapot** (`messenger.setLocalStatus()`) és **megjegyzés**
+  (`messenger.setLocalNote()`): közvetlenül módosítják a
+  `lmcMessaging::localUser` mezőit, elmentik a beállítást, és
+  `MT_Status`/`MT_Note` üzenetet küldenek — pontosan úgy, ahogy
+  `lmcMainWindow::statusAction_triggered()`/`txtNote_lostFocus()` teszi
+  Windowson (a `NULL` címzettet is lekövetve: a Core
+  `MT_Status`/`MT_Note` ága eleve figyelmen kívül hagyja a paraméterként
+  kapott userId-t, mindig minden online felhasználónak szétküldi).
+- ✅ `messenger.statusCodes()`/`statusLabels()` — a `/Core`-beli
+  `statusCode[]`/`lmcStrings::statusDesc()` tömböket adja át a QML
+  állapot-választójának (azonos sorrendben).
+
+### Amit ez **nem** tesz
+
+- **Avatar szerkesztése** — ehhez fájlválasztó kellene, ami ugyanabba a
+  `content://` URI-problémába ütközik, mint a fájlküldés (lásd fent), plusz
+  egy `FT_Avatar`-típusú fájlátvitel-folyamat elindítása; szándékosan nincs
+  bekötve.
+- Hálózati/kapcsolati beállítások (portok, multicast cím, stb.) — ezek
+  ritkán módosított, technikai jellegű beállítások, nincsenek a mostani
+  képernyőn.
 
 ## Csoportos chat (group chat room)
 
@@ -224,7 +261,8 @@ Android/
 ├── src/               - main.cpp, MessengerBridge, ContactModel, ChatModel,
 │                         RoomListModel, AndroidForegroundService (JNI wrapper)
 ├── qml/                - Main.qml, ContactListPage.qml, ChatPage.qml,
-│                         NewGroupChatPage.qml, GroupChatPage.qml, qml.qrc
+│                         NewGroupChatPage.qml, GroupChatPage.qml,
+│                         SettingsPage.qml, qml.qrc
 └── android/
     ├── AndroidManifest.xml
     └── src/org/qualiatech/lanmessengerx/

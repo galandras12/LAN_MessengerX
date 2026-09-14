@@ -38,7 +38,26 @@
 ** connected user, MT_PublicMessage) and adding participants to an
 ** already-created room - see /Android/README.md.
 **
-** Scope note: folder transfer and settings are not wired up yet - see
+** Profile settings (display name/status/note) mirror the three separate,
+** independent update paths Windows uses - there is no single "settings
+** changed" message on the wire, each field has its own:
+** - name: setLocalName() only writes IDS_USERNAME and calls
+**   lmcMessaging::settingsChanged() (Core/src/messaging.cpp), which
+**   already detects the change itself (comparing against getUserName())
+**   and broadcasts MT_UserName - the same thing
+**   Windows/lmc/src/settingsdialog.cpp relies on, so no need to duplicate
+**   that compare-and-broadcast logic here.
+** - status/note: setLocalStatus()/setLocalNote() mutate
+**   lmcMessaging::localUser directly and broadcast MT_Status/MT_Note
+**   themselves, matching lmcMainWindow::statusAction_triggered()/
+**   txtNote_lostFocus() in Windows/lmc/src/mainwindow.cpp exactly (right
+**   down to reusing NULL as the recipient - Core's MT_Status/MT_Note
+**   handling in lmcMessaging::sendMessage() already ignores the passed
+**   userId and always fans out to every online user regardless).
+** Not ported: avatar editing (a file picker, on top of the sendFile()
+** content:// URI caveat above - see Android/README.md).
+**
+** Scope note: folder transfer is not wired up yet - see
 ** /Android/README.md, including its unresolved-storage-access caveat for
 ** sendFile() on Android.
 **
@@ -51,6 +70,7 @@
 #include <QMap>
 #include <QUrl>
 #include "messaging.h"
+#include "strings.h"
 #include "contactmodel.h"
 #include "chatmodel.h"
 #include "roomlistmodel.h"
@@ -58,7 +78,9 @@
 class MessengerBridge : public QObject {
 	Q_OBJECT
 	Q_PROPERTY(QString localUserId READ localUserId NOTIFY startedChanged)
-	Q_PROPERTY(QString localUserName READ localUserName NOTIFY startedChanged)
+	Q_PROPERTY(QString localUserName READ localUserName NOTIFY localProfileChanged)
+	Q_PROPERTY(QString localStatus READ localStatus NOTIFY localProfileChanged)
+	Q_PROPERTY(QString localNote READ localNote NOTIFY localProfileChanged)
 	Q_PROPERTY(bool connected READ isConnected NOTIFY connectedChanged)
 	Q_PROPERTY(ContactModel* contacts READ contacts CONSTANT)
 	Q_PROPERTY(RoomListModel* rooms READ rooms CONSTANT)
@@ -69,6 +91,8 @@ public:
 
 	QString localUserId(void) const;
 	QString localUserName(void) const;
+	QString localStatus(void) const;
+	QString localNote(void) const;
 	bool isConnected(void) const;
 	ContactModel* contacts(void) const { return pContactModel; }
 	RoomListModel* rooms(void) const { return pRoomListModel; }
@@ -108,8 +132,20 @@ public:
 	//	screen and doesn't affect the wire protocol at all.
 	Q_INVOKABLE QString roomTitle(const QString& threadId) const;
 
+	//	Status codes ("chat"/"busy"/"dnd"/"brb"/"away"/"gone", the wire
+	//	values) and their matching human-readable, translated labels
+	//	("Available"/"Busy"/...) - same order as Core's statusCode[]/
+	//	lmcStrings::statusDesc(), for a QML status picker to zip together.
+	Q_INVOKABLE QStringList statusCodes(void) const;
+	Q_INVOKABLE QStringList statusLabels(void) const;
+
+	Q_INVOKABLE void setLocalName(const QString& name);
+	Q_INVOKABLE void setLocalStatus(const QString& status);
+	Q_INVOKABLE void setLocalNote(const QString& note);
+
 signals:
 	void startedChanged(void);
+	void localProfileChanged(void);
 	void connectedChanged(void);
 	void incomingMessage(const QString& userId, const QString& senderName, const QString& text);
 	void incomingFileRequest(const QString& userId, const QString& peerName, const QString& fileId, const QString& fileName, qint64 fileSize);

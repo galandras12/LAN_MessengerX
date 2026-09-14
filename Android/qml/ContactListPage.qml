@@ -32,6 +32,12 @@ Page {
                 ToolTip.text: qsTr("New group chat")
                 onClicked: StackView.view.push(Qt.resolvedUrl("NewGroupChatPage.qml"))
             }
+            ToolButton {
+                text: "⚙"
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Settings")
+                onClicked: StackView.view.push(Qt.resolvedUrl("SettingsPage.qml"))
+            }
         }
     }
 

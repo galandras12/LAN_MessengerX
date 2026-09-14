@@ -27,6 +27,7 @@ void MessengerBridge::start(void) {
 	pMessaging->start();
 
 	emit startedChanged();
+	emit localProfileChanged();
 	refreshContacts();
 }
 
@@ -38,8 +39,77 @@ QString MessengerBridge::localUserName(void) const {
 	return pMessaging->localUser ? pMessaging->localUser->name : QString();
 }
 
+QString MessengerBridge::localStatus(void) const {
+	return pMessaging->localUser ? pMessaging->localUser->status : QString();
+}
+
+QString MessengerBridge::localNote(void) const {
+	return pMessaging->localUser ? pMessaging->localUser->note : QString();
+}
+
 bool MessengerBridge::isConnected(void) const {
 	return pMessaging->isConnected();
+}
+
+QStringList MessengerBridge::statusCodes(void) const {
+	QStringList codes;
+	for(int i = 0; i < ST_COUNT; i++)
+		codes.append(statusCode[i]);
+	return codes;
+}
+
+QStringList MessengerBridge::statusLabels(void) const {
+	return lmcStrings::statusDesc();
+}
+
+void MessengerBridge::setLocalName(const QString& name) {
+	QString trimmed = name.trimmed();
+	if(trimmed.isEmpty() || !pMessaging->localUser || trimmed == pMessaging->localUser->name)
+		return;
+
+	//	Write the setting and let lmcMessaging::settingsChanged() do the
+	//	compare-and-broadcast itself (see the class comment) - a separate
+	//	lmcSettings instance is fine here, same as
+	//	Windows/lmc/src/settingsdialog.cpp does: QSettings::IniFormat
+	//	re-reads from the same underlying file each time .value() is
+	//	called, so Core's own internal settings object picks this up.
+	lmcSettings settings;
+	settings.setValue(IDS_USERNAME, trimmed, IDS_USERNAME_VAL);
+	pMessaging->settingsChanged();
+
+	emit localProfileChanged();
+}
+
+void MessengerBridge::setLocalStatus(const QString& status) {
+	if(!pMessaging->localUser || status == pMessaging->localUser->status)
+		return;
+	if(Helper::indexOf(statusCode, ST_COUNT, status) < 0)
+		return;
+
+	pMessaging->localUser->status = status;
+	lmcSettings settings;
+	settings.setValue(IDS_STATUS, status);
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_STATUS, status);
+	pMessaging->sendMessage(MT_Status, nullptr, &xmlMessage);
+
+	emit localProfileChanged();
+}
+
+void MessengerBridge::setLocalNote(const QString& note) {
+	if(!pMessaging->localUser || note == pMessaging->localUser->note)
+		return;
+
+	pMessaging->localUser->note = note;
+	lmcSettings settings;
+	settings.setValue(IDS_NOTE, note, IDS_NOTE_VAL);
+
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_NOTE, note);
+	pMessaging->sendMessage(MT_Note, nullptr, &xmlMessage);
+
+	emit localProfileChanged();
 }
 
 void MessengerBridge::sendMessage(const QString& userId, const QString& text) {
