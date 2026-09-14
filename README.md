@@ -2,15 +2,15 @@
 
 Az eredeti, megszűnt támogatású **LAN Messenger** (QualiaTech / Dilip
 Radhakrishnan, GPLv3) modernizált, folyamatban lévő újrakiadása —
-Windows 11-kompatibilis asztali kliens és egy tervezett, modern
-felületű Android kliens, közös hálózati/protokoll magkóddal.
+Windows 11-kompatibilis asztali kliens és egy modern felületű Android
+kliens, közös hálózati/protokoll magkóddal.
 
 ## Mappa-elrendezés
 
 | Mappa | Tartalom |
 |---|---|
 | [`/Windows`](Windows) | A Qt Widgets-alapú asztali kliens (a modernizált `lmc` + `lmcapp` projekt) |
-| [`/Android`](Android) | A tervezett Qt Quick/QML Android kliens (jelenleg tervezési állapotban, lásd a mappa README-jét) |
+| [`/Android`](Android) | A Qt Quick/QML Android kliens, a `/Core`-ra bekötve (kontaktlista + 1:1 chat működik forráskód-szinten; build még nincs ellenőrizve, lásd a mappa README-jét) |
 | [`/Core`](Core) | A két kliens által megosztott hálózati/protokoll/titkosítási/előzmény réteg |
 
 ## Státusz
@@ -30,7 +30,12 @@ alapján fejlődik, fázisokban:
   library-vé**: ✅ forráskód/build-rendszer szinten kész (`Core.pro`,
   Widgets-mentes — lásd [`Core/README.md`](Core/README.md)), ⏳ tényleges
   build-bel még nincs ellenőrizve, Android (NDK) célzás még nem indult
-- **Fázis 4 — Android kliens (Qt Quick/QML)**: ⏳ tervezve
+- **Fázis 4 — Android kliens (Qt Quick/QML)**: ✅ első, valóban a `/Core`-ra
+  bekötött verzió megírva (kontaktlista, 1:1 chat, broadcast küldés —
+  lásd [`Android/README.md`](Android/README.md)), ⏳ build/futtatás
+  ellenőrizetlen, több funkció (fájlátvitel, csoportos chat, beállítások,
+  háttérbeli működés) még nincs bekötve, **az Android-specifikus OpenSSL
+  linkelés megoldatlan** (lásd Android README "Kritikus" szakasza)
 - **Fázis 5 — Cross-platform interop tesztelés**: ⏳ tervezve
 
 A döntések, amik a tervet alakították:

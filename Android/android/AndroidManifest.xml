@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<!--
+    Hand-written starting point for the LAN Messenger Android client.
+
+    NOTE: Qt Creator's "Add Android support" wizard (or running qmake with
+    an Android kit) normally generates/reconciles this file's Qt-specific
+    <application>/<meta-data> entries against the exact Qt version and NDK
+    installed. The permissions and application shape below are correct in
+    intent, but treat this as a draft to run through that wizard once,
+    rather than a byte-verified manifest - see Android/README.md.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.qualiatech.lanmessenger"
+    android:versionName="1.0"
+    android:versionCode="1"
+    android:installLocation="auto">
+
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34"/>
+
+    <!-- LAN discovery + chat traffic -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <!-- required to receive the UDP broadcast/multicast discovery traffic
+         other LAN Messenger clients (Windows and original) use to find
+         each other -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+    <!-- Android 13+ (API 33+) requires this to post the new-message
+         notification -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- not yet used by this first pass (no foreground service wired up
+         yet - see Android/README.md), listed here as a placeholder for
+         when persistent background discovery/notifications are added -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
+    <application android:label="LAN Messenger"
+        android:icon="@mipmap/ic_launcher"
+        android:extractNativeLibs="true"
+        android:requestLegacyExternalStorage="true">
+
+        <activity android:name="org.qtproject.qt.android.bindings.QtActivity"
+            android:label="LAN Messenger"
+            android:screenOrientation="unspecified"
+            android:launchMode="singleTop"
+            android:exported="true"
+            android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <meta-data android:name="android.app.lib_name" android:value="LANMessenger"/>
+            <meta-data android:name="android.app.qml_import_path" android:value="qml"/>
+        </activity>
+
+    </application>
+
+</manifest>
