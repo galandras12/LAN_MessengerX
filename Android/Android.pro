@@ -26,12 +26,14 @@ SOURCES += \
     src/main.cpp \
     src/messengerbridge.cpp \
     src/contactmodel.cpp \
-    src/chatmodel.cpp
+    src/chatmodel.cpp \
+    src/androidforegroundservice.cpp
 
 HEADERS += \
     src/messengerbridge.h \
     src/contactmodel.h \
-    src/chatmodel.h
+    src/chatmodel.h \
+    src/androidforegroundservice.h
 
 RESOURCES += qml/qml.qrc
 

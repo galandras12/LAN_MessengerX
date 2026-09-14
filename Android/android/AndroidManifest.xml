@@ -25,13 +25,18 @@
          other LAN Messenger clients (Windows and original) use to find
          each other -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
-    <!-- Android 13+ (API 33+) requires this to post the new-message
-         notification -->
+    <!-- Android 13+ (API 33+) requires this to post the persistent
+         "running in background" notification the foreground service
+         shows - see MessengerForegroundService. No runtime request flow
+         for this is implemented yet (see Android/README.md); without it
+         granted, the service still runs and still protects the process,
+         it just won't show a visible notification on API 33+. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- not yet used by this first pass (no foreground service wired up
-         yet - see Android/README.md), listed here as a placeholder for
-         when persistent background discovery/notifications are added -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <!-- Android 14+ (API 34+) requires a permission matching the
+         foreground service type declared below in addition to the
+         generic FOREGROUND_SERVICE permission -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
 
     <application android:label="LAN Messenger X"
         android:icon="@mipmap/ic_launcher"
@@ -52,6 +57,17 @@
             <meta-data android:name="android.app.lib_name" android:value="LANMessengerX"/>
             <meta-data android:name="android.app.qml_import_path" android:value="qml"/>
         </activity>
+
+        <!-- Keeps the process (and with it, the lmcMessaging engine, its
+             sockets and timers) alive and mostly Doze-exempt while the app
+             is backgrounded - see AndroidForegroundService (src/) and
+             MessengerForegroundService.java. Runs in the same process as
+             the activity (no android:process override) since it exists
+             only to hold a foreground-priority state and a notification,
+             not to do independent work of its own. -->
+        <service android:name=".MessengerForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false"/>
 
     </application>
 

@@ -37,7 +37,10 @@ bekötött** első verziót írt meg, nem csak UI-vázat:
   `QT += quick qml`, Android target beállítások.
 - ✅ `android/AndroidManifest.xml` — a szükséges engedélyekkel
   (`INTERNET`, `ACCESS_WIFI_STATE`, `ACCESS_NETWORK_STATE`,
-  `CHANGE_WIFI_MULTICAST_STATE`, `POST_NOTIFICATIONS`).
+  `CHANGE_WIFI_MULTICAST_STATE`, `POST_NOTIFICATIONS`,
+  `FOREGROUND_SERVICE`/`FOREGROUND_SERVICE_DATA_SYNC`).
+- ✅ `src/androidforegroundservice.h/.cpp` + `android/src/.../MessengerForegroundService.java`
+  — háttérbeli működés (lásd külön szakasz lent).
 
 ### Amit ez az első verzió tud
 
@@ -83,12 +86,64 @@ előtt) még nincs implementálva.
 - Beállítások képernyő (felhasználónév/avatar/állapot szerkesztése —
   jelenleg a `lmcMessaging::init()` automatikusan generált alapértékeket
   használ: bejelentkezési név + gépnév alapján képzett user id).
-- Értesítések, foreground service a háttérbeli elérhetőséghez (Android
-  Doze-kezelés) — enélkül a discovery/üzenetfogadás valószínűleg leáll,
-  ha az alkalmazás sokáig háttérben van. A manifestben egy
-  `FOREGROUND_SERVICE` engedély placeholder van előkészítve.
+- Új üzenetről szóló push-jellegű értesítés (csak a folyamatosan látható
+  "a háttérben fut" értesítés van meg, lásd lent — egy külön, "X üzenete
+  érkezett" tartalmú értesítés még nincs bekötve az `incomingMessage`/
+  `incomingFileRequest` jelekre).
 - Üzenetelőzmény-perzisztencia (a `ChatModel` csak memóriában tárol,
   `/Core/src/history.cpp` már létezik erre, de nincs bekötve).
+
+## Háttérbeli működés (foreground service)
+
+Most már bekötve:
+
+- ✅ `android/src/org/qualiatech/lanmessengerx/MessengerForegroundService.java`
+  — egy minimális Android foreground service, aminek egyetlen feladata,
+  hogy életben tartsa az alkalmazás **teljes folyamatát** (így a benne futó
+  `lmcMessaging`-et, a socketjeit és időzítőit is), amíg az app
+  háttérben van — enélkül Android idővel felfüggeszti/kilövi a háttérbe
+  került folyamatot, ami csendben leállítaná a discovery-t és az
+  üzenet-/fájlkézbesítést. Emellett megszerzi és az app teljes
+  élettartamára tartja a Wi-Fi multicast lockot is (`CHANGE_WIFI_MULTICAST_STATE`
+  engedélyt korábban már deklaráltuk a manifestben, de **ténylegesen nem
+  volt megszerezve sehol** — ezt a hibát is ez a munkamenet javította ki:
+  bizonyos Wi-Fi chipek/driverek eldobják a multicast csomagokat ez
+  nélkül, függetlenül attól, hogy az app előtérben van-e).
+- ✅ `src/androidforegroundservice.h/.cpp` — vékony JNI wrapper C++ oldalról
+  (`QJniObject`/`QNativeInterface::QAndroidApplication::context()`), amit
+  a `main.cpp` hív: a multicast lockot induláskor egyszer megszerzi (az
+  app teljes élettartamára), a foreground service-t pedig
+  `QGuiApplication::applicationStateChanged`-re hallgatva csak akkor
+  indítja el, amikor az app ténylegesen háttérbe kerül
+  (`Qt::ApplicationHidden`), és leállítja, amint visszatér előtérbe
+  (`Qt::ApplicationActive`) — így az értesítés nem látszik feleslegesen,
+  amíg a felhasználó ténylegesen használja az appot.
+- ✅ `AndroidManifest.xml`: regisztrálva a service (`foregroundServiceType="dataSync"`),
+  hozzáadva az Android 14+ által megkövetelt típus-specifikus engedély
+  (`FOREGROUND_SERVICE_DATA_SYNC`) a már meglévő általános
+  `FOREGROUND_SERVICE` mellé.
+
+### Amit ez **nem** old meg teljesen
+
+- **Nincs futásidejű engedélykérés** a `POST_NOTIFICATIONS`-hoz Android
+  13+ (API 33+) alatt — a service enélkül is fut és véd (a folyamat életben
+  marad), csak az értesítés nem feltétlenül látszik a felhasználónak, ha
+  nem adta meg az engedélyt. Ennek rendes megoldása (Qt6 engedély-API
+  vagy közvetlen JNI `Activity.requestPermissions()` hívás) még nincs
+  implementálva.
+- **OEM-specifikus agresszív akkumulátor-kezelés** (pl. Xiaomi/MIUI,
+  Huawei, egyes Samsung-beállítások) sok esetben a hivatalos Android
+  foreground service védelmet is felülbírálja, hacsak a felhasználó
+  kézzel ki nem veszi az appot az adott gyártó saját
+  "akkumulátor-optimalizálás" listájából. Ez platform-szintű korlát, nem
+  ezen a kódon múlik.
+- A `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` engedély (amivel az app
+  kérhetné, hogy Android saját Doze-listájáról is levegye) szándékosan
+  nincs bekötve — ez egy invázívabb, Play Store-felülvizsgálatot igénylő
+  engedély, külön felhasználói döntést igényelne.
+- Az értesítés kis ikonja jelenleg az app launcher-ikonját használja
+  (működik, de nem a szokásos fehér-sziluett stílus) — kozmetikai
+  hiányosság, lásd a Java fájl megjegyzését.
 
 ## ⚠️ Kritikus, ellenőrizetlen pont: OpenSSL Androidon
 
@@ -118,8 +173,15 @@ akadály a tényleges Android build előtt.
 ```
 Android/
 ├── Android.pro
-├── src/               - main.cpp, MessengerBridge, ContactModel, ChatModel
+├── src/               - main.cpp, MessengerBridge, ContactModel, ChatModel,
+│                         AndroidForegroundService (JNI wrapper)
 ├── qml/                - Main.qml, ContactListPage.qml, ChatPage.qml, qml.qrc
 └── android/
-    └── AndroidManifest.xml
+    ├── AndroidManifest.xml
+    └── src/org/qualiatech/lanmessengerx/
+        └── MessengerForegroundService.java
 ```
+
+(`android/src/` is where `ANDROID_PACKAGE_SOURCE_DIR` - set in `Android.pro`
+- tells Qt's Android build to pick up extra Java sources; no separate
+build step needed for it beyond the normal Android build.)

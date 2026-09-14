@@ -36,10 +36,11 @@ alapján fejlődik, fázisokban:
   build-bel még nincs ellenőrizve, Android (NDK) célzás még nem indult
 - **Fázis 4 — Android kliens (Qt Quick/QML)**: ✅ valóban a `/Core`-ra
   bekötött verzió (kontaktlista, 1:1 chat, broadcast küldés, egyfájlos
-  fájlátvitel kérés/elfogadás/elutasítás/megszakítás/folyamatjelzéssel —
+  fájlátvitel kérés/elfogadás/elutasítás/megszakítás/folyamatjelzéssel,
+  foreground service + Wi-Fi multicast lock a háttérbeli működéshez —
   lásd [`Android/README.md`](Android/README.md)), ⏳ build/futtatás
   ellenőrizetlen, néhány funkció (mappaátvitel, csoportos chat,
-  beállítások, háttérbeli működés) még nincs bekötve, **az
+  beállítások, új-üzenet push-értesítés) még nincs bekötve, **az
   Android-specifikus OpenSSL linkelés megoldatlan** (lásd Android README
   "Kritikus" szakasza), a fájlküldés pedig csak `file://` elérési útra
   működik (`content://` SAF URI-kra még nem)
