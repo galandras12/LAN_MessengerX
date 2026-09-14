@@ -25,12 +25,14 @@
          other LAN Messenger clients (Windows and original) use to find
          each other -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
-    <!-- Android 13+ (API 33+) requires this to post the persistent
-         "running in background" notification the foreground service
-         shows - see MessengerForegroundService. No runtime request flow
-         for this is implemented yet (see Android/README.md); without it
-         granted, the service still runs and still protects the process,
-         it just won't show a visible notification on API 33+. -->
+    <!-- Android 13+ (API 33+) requires this to post either notification
+         this app shows: the persistent "running in background" one from
+         the foreground service, and the per-message/file-request one -
+         see MessengerForegroundService and AndroidForegroundService::
+         requestNotificationPermission() (called once at startup from
+         main.cpp) for the runtime request flow. Without it granted,
+         the service still runs and still protects the process, it just
+         won't show either notification on API 33+. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <!-- Android 14+ (API 34+) requires a permission matching the

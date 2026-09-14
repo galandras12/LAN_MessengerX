@@ -12,8 +12,13 @@
 ** Also doubles as the message timeline for group chat rooms (see
 ** MessengerBridge's createGroupChat()/GMO_ handling), which additionally
 ** use appendSystemMessage() for join/leave notices.
-** Kept intentionally simple (in-memory only, no persistence/history yet)
-** for this first pass - see Android/README.md.
+** Purely an in-memory, per-open-conversation view - it does not itself
+** read from or write to disk. Message history persistence is a separate,
+** parallel write path (MessengerBridge::saveMessageToHistory(), via
+** /Core's History class) triggered alongside appendMessage() calls, not
+** something this model reads back from - reopening a conversation starts
+** with an empty model regardless of what's in history. See
+** Android/README.md.
 **
 ****************************************************************************/
 
