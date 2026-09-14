@@ -2,11 +2,28 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import LanMessenger 1.0
 
 Page {
     id: page
     title: qsTr("Settings")
+
+    //	localAvatarPath itself never changes (see MessengerBridge's class
+    //	comment - it's a fixed path, only its file content does), so bump
+    //	this after every setAvatar() call to force the Image source below
+    //	to re-fetch instead of showing a cached copy of the old picture.
+    property int avatarVersion: 0
+
+    FileDialog {
+        id: avatarDialog
+        title: qsTr("Choose a profile picture")
+        nameFilters: [qsTr("Images (*.png *.jpg *.jpeg)")]
+        onAccepted: {
+            messenger.setAvatar(selectedFile)
+            page.avatarVersion++
+        }
+    }
 
     header: ToolBar {
         Material.foreground: "white"
@@ -29,6 +46,60 @@ Page {
         anchors.fill: parent
         anchors.margins: 16
         spacing: 20
+
+        ColumnLayout {
+            Layout.alignment: Qt.AlignHCenter
+            spacing: 6
+
+            Rectangle {
+                id: avatarPreview
+                Layout.alignment: Qt.AlignHCenter
+                width: 96
+                height: 96
+                radius: 48
+                clip: true
+                color: Material.dividerColor
+
+                Image {
+                    //	QQuickImage only re-fetches when the source URL
+                    //	string itself changes, not merely when its binding
+                    //	re-evaluates - since localAvatarPath is a fixed
+                    //	path that only changes *content* (see
+                    //	MessengerBridge's class comment), a "#v=N" fragment
+                    //	(stripped by QUrl before it ever reaches the file
+                    //	path) is appended so picking a new picture actually
+                    //	produces a different source string and forces a
+                    //	reload instead of showing the previously cached image.
+                    anchors.fill: parent
+                    source: messenger.localAvatarPath.length > 0
+                            ? "file://" + messenger.localAvatarPath + "#v=" + page.avatarVersion
+                            : ""
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    cache: false
+                }
+
+                Label {
+                    anchors.centerIn: parent
+                    visible: messenger.localAvatarPath.length === 0
+                    text: messenger.localUserName.length > 0 ? messenger.localUserName.charAt(0).toUpperCase() : "?"
+                    font.pixelSize: 32
+                    font.bold: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: avatarDialog.open()
+                }
+            }
+
+            Label {
+                Layout.alignment: Qt.AlignHCenter
+                text: qsTr("Tap to change picture")
+                font.pixelSize: 11
+                opacity: 0.6
+            }
+        }
 
         ColumnLayout {
             Layout.fillWidth: true

@@ -144,13 +144,33 @@ Page {
                         Layout.preferredWidth: 40
                         Layout.preferredHeight: 40
                         radius: 20
+                        clip: true
                         color: (status === "chat") ? "#2e7d32"
                              : (status === "away" || status === "brb") ? "#f9a825"
                              : (status === "busy" || status === "dnd") ? "#c62828"
                              : "#9e9e9e"
 
+                        //	avatarPath (ContactModel's AvatarPathRole) is
+                        //	only populated once a contact's picture has
+                        //	actually finished downloading - see
+                        //	MessengerBridge's class comment on MT_Avatar.
+                        //	No cache-busting for peer pictures here (unlike
+                        //	the local one in SettingsPage.qml) - an
+                        //	updated picture from the same peer later in
+                        //	the same session may not visibly refresh until
+                        //	this page is recreated; a known minor gap, see
+                        //	Android/README.md.
+                        Image {
+                            anchors.fill: parent
+                            visible: avatarPath.length > 0
+                            source: avatarPath.length > 0 ? "file://" + avatarPath : ""
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+
                         Text {
                             anchors.centerIn: parent
+                            visible: avatarPath.length === 0
                             text: name.length > 0 ? name.charAt(0).toUpperCase() : "?"
                             color: "white"
                             font.bold: true

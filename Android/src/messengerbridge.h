@@ -54,8 +54,23 @@
 **   down to reusing NULL as the recipient - Core's MT_Status/MT_Note
 **   handling in lmcMessaging::sendMessage() already ignores the passed
 **   userId and always fans out to every online user regardless).
-** Not ported: avatar editing (a file picker, on top of the sendFile()
-** content:// URI caveat above - see Android/README.md).
+** Avatar editing (setAvatar()) hands the whole thing to /Core exactly as
+** Windows/lmc/src/mainwindow.cpp's setAvatar()/sendAvatar() do: save the
+** (scaled) picture to StdLocation::avatarFile() - a single fixed path,
+** always the same file, so localAvatarPath() never needs to change, only
+** its *content* does - persist IDS_AVATAR = -1 ("custom"), then call
+** lmcMessaging::sendMessage(MT_Avatar, nullptr, ...) once. Traced through
+** Core/src/messagingproc.cpp + filemessagingproc.cpp: that single call is
+** enough - Core internally self-echoes a messageReceived(MT_Avatar,
+** &localUser->id, ...) for UI refresh, fans the picture out to every
+** online user as its own auto-accepted file transfer (FT_Avatar; the
+** receiving side never prompts the user, see addFileTransfer()'s
+** FT_Avatar branch), and on completion saves each peer's picture to
+** <cacheDir>/avt_<userId>.png and updates User::avatarPath itself - all
+** of which reaches us for free through the existing MT_Avatar case in
+** messaging_messageReceived() (already grouped with the other presence-
+** refresh types) and ContactModel's avatarPath role. Same content://
+** URI caveat as sendFile() above for picking the source picture.
 **
 ** Scope note: folder transfer is not wired up yet - see
 ** /Android/README.md, including its unresolved-storage-access caveat for
@@ -101,6 +116,7 @@ class MessengerBridge : public QObject {
 	Q_PROPERTY(QString localUserName READ localUserName NOTIFY localProfileChanged)
 	Q_PROPERTY(QString localStatus READ localStatus NOTIFY localProfileChanged)
 	Q_PROPERTY(QString localNote READ localNote NOTIFY localProfileChanged)
+	Q_PROPERTY(QString localAvatarPath READ localAvatarPath NOTIFY localProfileChanged)
 	Q_PROPERTY(bool connected READ isConnected NOTIFY connectedChanged)
 	Q_PROPERTY(ContactModel* contacts READ contacts CONSTANT)
 	Q_PROPERTY(RoomListModel* rooms READ rooms CONSTANT)
@@ -115,6 +131,7 @@ public:
 	QString localUserName(void) const;
 	QString localStatus(void) const;
 	QString localNote(void) const;
+	QString localAvatarPath(void) const;
 	bool isConnected(void) const;
 	ContactModel* contacts(void) const { return pContactModel; }
 	RoomListModel* rooms(void) const { return pRoomListModel; }
@@ -181,6 +198,12 @@ public:
 	Q_INVOKABLE void setLocalName(const QString& name);
 	Q_INVOKABLE void setLocalStatus(const QString& status);
 	Q_INVOKABLE void setLocalNote(const QString& note);
+
+	//	fileUrl is expected to be a local file:// URL, same caveat as
+	//	sendFile() above. Scales/saves the picture to
+	//	StdLocation::avatarFile() and sends it - see the class comment for
+	//	the full round trip, entirely driven by /Core from a single call.
+	Q_INVOKABLE void setAvatar(const QUrl& fileUrl);
 
 	//	Reloads the history list from disk (History::getList()) - call
 	//	from QML when a history page becomes active, not eagerly, since

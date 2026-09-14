@@ -174,13 +174,41 @@ protokollban):
 - ✅ `messenger.statusCodes()`/`statusLabels()` — a `/Core`-beli
   `statusCode[]`/`lmcStrings::statusDesc()` tömböket adja át a QML
   állapot-választójának (azonos sorrendben).
+- ✅ **Avatar (profilkép) szerkesztése** (`messenger.setAvatar(fileUrl)`):
+  a `SettingsPage.qml` tetején lévő kör alakú kép megérintésével egy
+  `FileDialog` nyílik; a kiválasztott képet 96×96-ra skálázva elmenti a
+  `StdLocation::avatarFile()` (`/Core`-beli, mindig ugyanaz a fájl, csak a
+  *tartalma* változik) útvonalra, elmenti az `IDS_AVATAR = -1` ("egyéni
+  kép") beállítást, majd **egyetlen** `lmcMessaging::sendMessage(MT_Avatar,
+  nullptr, ...)` hívást tesz — a `/Core` innentől mindent maga csinál: a
+  `Windows/lmc/src/mainwindow.cpp::setAvatar()`/`sendAvatar()` és a
+  `Core/src/filemessagingproc.cpp`/`messagingproc.cpp` gondos átvizsgálása
+  alapján ez egyetlen hívás elindít egy saját magának küldött
+  "frissült az avatarom" visszajelzést (UI-frissítéshez), majd minden
+  online felhasználónak egy **automatikusan elfogadott**, felhasználói
+  megerősítést nem igénylő fájlátvitelt (`FT_Avatar`) — a fogadó oldalon
+  ez `<cache>/avt_<userId>.png`-ként mentődik és a `User::avatarPath`
+  mezőt is frissíti, ami a meglévő `ContactModel`-en (új `avatarPath`
+  role) és a kontaktlista körkép-megjelenítésén keresztül minden további
+  Android-kódolás nélkül megjelenik. A helyi profilkép-előnézet
+  (`messenger.localAvatarPath`) mindig ugyanaz az útvonal — csak a
+  tartalma változik —, ezért a QML oldal egy `#v=N` URL-töredékkel
+  kényszeríti ki a kép újratöltését kép­cserénél (lásd `SettingsPage.qml`
+  kommentjét).
 
 ### Amit ez **nem** tesz
 
-- **Avatar szerkesztése** — ehhez fájlválasztó kellene, ami ugyanabba a
-  `content://` URI-problémába ütközik, mint a fájlküldés (lásd fent), plusz
-  egy `FT_Avatar`-típusú fájlátvitel-folyamat elindítása; szándékosan nincs
-  bekötve.
+- **Beépített, számozott avatar-galéria** — Windowson a felhasználó egy
+  előre csomagolt kép-készletből is választhat (`nAvatar` index,
+  `avtPic[]`), nem csak egyéni képet tölthet fel; ehhez a Windows-os
+  Widgets UI-specifikus erőforrás-fájlok (`uidefinitions.h`) kellenének,
+  amik nincsenek portolva Androidra — csak az egyéni kép ("custom
+  avatar", `nAvatar = -1`) útvonal van bekötve.
+- **Kontakt-avatarok élő frissítése** — ha egy már látott kontakt
+  lecseréli a képét ugyanabban a munkamenetben, a kontaktlista
+  `Image`-je nem kényszeríti ki az újratöltést (nincs a helyi
+  előnézetéhez hasonló verziószámláló bekötve rá) — az oldal
+  újranyitásáig a régi kép látszódhat.
 - Hálózati/kapcsolati beállítások (portok, multicast cím, stb.) — ezek
   ritkán módosított, technikai jellegű beállítások, nincsenek a mostani
   képernyőn.

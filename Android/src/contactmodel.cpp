@@ -20,6 +20,7 @@ QVariant ContactModel::data(const QModelIndex& index, int role) const {
 	case StatusRole: return user.status;
 	case NoteRole: return user.note;
 	case GroupRole: return user.group;
+	case AvatarPathRole: return user.avatarPath;
 	default: return QVariant();
 	}
 }
@@ -31,6 +32,7 @@ QHash<int, QByteArray> ContactModel::roleNames() const {
 	roles[StatusRole] = "status";
 	roles[NoteRole] = "note";
 	roles[GroupRole] = "group";
+	roles[AvatarPathRole] = "avatarPath";
 	return roles;
 }
 

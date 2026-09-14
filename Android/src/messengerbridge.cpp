@@ -1,6 +1,10 @@
 #include <QDateTime>
 #include <QFile>
+#include <QFileInfo>
+#include <QDir>
+#include <QImage>
 #include "messengerbridge.h"
+#include "stdlocation.h"
 
 MessengerBridge::MessengerBridge(QObject* parent) : QObject(parent) {
 	pMessaging = new lmcMessaging();
@@ -47,6 +51,15 @@ QString MessengerBridge::localStatus(void) const {
 
 QString MessengerBridge::localNote(void) const {
 	return pMessaging->localUser ? pMessaging->localUser->note : QString();
+}
+
+QString MessengerBridge::localAvatarPath(void) const {
+	//	Always StdLocation::avatarFile() - a single fixed path set once at
+	//	lmcMessaging::init() (see Core/src/messaging.cpp) and never
+	//	changed after that, only overwritten in place by setAvatar()
+	//	below - so this never needs its own change notification beyond
+	//	localProfileChanged() firing for an unrelated reason.
+	return pMessaging->localUser ? pMessaging->localUser->avatarPath : QString();
 }
 
 bool MessengerBridge::isConnected(void) const {
@@ -157,6 +170,49 @@ void MessengerBridge::setLocalNote(const QString& note) {
 	pMessaging->sendMessage(MT_Note, nullptr, &xmlMessage);
 
 	emit localProfileChanged();
+}
+
+void MessengerBridge::setAvatar(const QUrl& fileUrl) {
+	if(!pMessaging->localUser || fileUrl.isEmpty())
+		return;
+
+	//	Same content:// URI caveat as sendFile() - see the class comment.
+	QString sourcePath = fileUrl.toLocalFile();
+	if(sourcePath.isEmpty())
+		return;
+
+	QImage image(sourcePath);
+	if(image.isNull())
+		return;
+
+	//	96x96 is this client's own choice - Windows' equivalent constant
+	//	(AVT_WIDTH/AVT_HEIGHT) lives in its Widgets-only uidefinitions.h,
+	//	not in /Core, so there is nothing shared to reuse here; the wire
+	//	format doesn't care about the exact size, only that it's a PNG at
+	//	the path this message points to.
+	image = image.scaled(96, 96, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+
+	QString avatarPath = StdLocation::avatarFile();
+	QDir avatarDir = QFileInfo(avatarPath).dir();
+	if(!avatarDir.exists())
+		avatarDir.mkpath(avatarDir.absolutePath());
+	if(!image.save(avatarPath, "PNG"))
+		return;
+
+	//	-1 means "custom picture", matching nAvatar in
+	//	Windows/lmc/src/mainwindow.cpp::setAvatar() - the built-in
+	//	numbered avatar gallery it also supports isn't ported here (no
+	//	equivalent picture set shipped with the Android client).
+	lmcSettings settings;
+	settings.setValue(IDS_AVATAR, -1);
+
+	//	One call does the rest - see the class comment for the full
+	//	self-echo/fan-out/auto-accept sequence Core runs from here.
+	XmlMessage xmlMessage;
+	xmlMessage.addData(XN_FILETYPE, FileTypeNames[FT_Avatar]);
+	xmlMessage.addData(XN_FILEOP, FileOpNames[FO_Request]);
+	xmlMessage.addData(XN_FILEPATH, avatarPath);
+	pMessaging->sendMessage(MT_Avatar, nullptr, &xmlMessage);
 }
 
 void MessengerBridge::sendMessage(const QString& userId, const QString& text) {
@@ -488,7 +544,20 @@ void MessengerBridge::messaging_messageReceived(MessageType type, QString* lpszU
 	case MT_Status:
 	case MT_UserName:
 	case MT_Note:
+		refreshContacts();
+		break;
+
+	//	Fires both for the self-echo lmcMessaging::sendMessage() emits
+	//	right when we call setAvatar() (userId == our own id, before any
+	//	network round trip) and for a peer's avatar finishing download -
+	//	see the class comment. localAvatarPath() itself never changes (a
+	//	fixed path, only its file content does), so there is nothing to
+	//	refresh there beyond letting bound QML Image sources know to
+	//	re-fetch; refreshContacts() covers peers via ContactModel's
+	//	avatarPath role.
 	case MT_Avatar:
+		if(lpszUserId && *lpszUserId == localUserId())
+			emit localProfileChanged();
 		refreshContacts();
 		break;
 

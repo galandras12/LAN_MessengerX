@@ -26,7 +26,8 @@ public:
 		NameRole,
 		StatusRole,
 		NoteRole,
-		GroupRole
+		GroupRole,
+		AvatarPathRole
 	};
 
 	explicit ContactModel(QObject* parent = nullptr);
