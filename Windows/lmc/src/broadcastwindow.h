@@ -28,6 +28,11 @@
 #include <QWidget>
 #include <QToolBar>
 #include <QMenu>
+//	QAction/QActionGroup moved to QtGui in Qt6, and qaction.h only
+//	forward-declares QActionGroup - pFontGroup below needs the full
+//	definition (mainwindow.h's own statusGroup member already includes
+//	this the same way).
+#include <QActionGroup>
 #include <qevent.h>
 #include "ui_broadcastwindow.h"
 #include "shared.h"

@@ -656,6 +656,14 @@ vannak oldva:
   javítva, `windowText()`-re átírva.
 - `'qVariantFromValue' was not declared in this scope` → már javítva,
   `QVariant::fromValue(...)`-ra átírva.
+- `'QDesktopServices' has not been declared` (`messagelog.cpp`) → már
+  javítva, hiányzó `#include <QDesktopServices>` pótolva.
+- `invalid use of incomplete type 'class QActionGroup'`
+  (`broadcastwindow.cpp`) — esetleg egy hosszú, zavaró
+  `connect(...)`-túlterhelés-hibával együtt → már javítva, hiányzó
+  `#include <QActionGroup>` pótolva a `broadcastwindow.h`-ban (Qt6-ban
+  a `QAction`/`QActionGroup` a QtGui-ba költözött, és a fejléc
+  mostantól csak előre deklarálja).
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
