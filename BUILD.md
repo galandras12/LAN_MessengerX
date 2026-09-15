@@ -641,6 +641,21 @@ vannak oldva:
   futtatniuk, csak buildelni kell őket (kalapács ikon / Ctrl+B). Lásd
   az [1.6](#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)
   A) Qt Creator-os lépéseit.
+- `fatal error: openssl/rand.h: No such file or directory` az `lmc`
+  (nem a `Core`) fordításánál, `main.cpp`-nél vagy `lmc.cpp`-nél, **annak
+  ellenére, hogy az OpenSSL már a helyén van** és a `Core` már sikeresen
+  lefordult → már javítva: az `lmc.pro`-ból hiányzott a saját
+  `INCLUDEPATH` az `openssl/include`-hoz — a `Core.pro` saját
+  `INCLUDEPATH`-ja nem "öröklődik át" az `lmc.pro`-ra csak azért, mert
+  linkeli a `lmccore`-t, és az `lmc`-beli fájlok is transzitíven elérik
+  a `crypto.h`-t. Lásd [1.2](#12-openssl-beszerzése-és-elhelyezése).
+- `'class QTextStream' has no member named 'setCodec'` → már javítva —
+  Qt6-ban a `QTextStream` mindig UTF-8, a `setCodec("UTF-8")` hívás
+  feleslegessé vált, törölve.
+- `'const class QPalette' has no member named 'foreground'` → már
+  javítva, `windowText()`-re átírva.
+- `'qVariantFromValue' was not declared in this scope` → már javítva,
+  `QVariant::fromValue(...)`-ra átírva.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és

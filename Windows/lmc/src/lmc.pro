@@ -152,12 +152,19 @@ DEPENDPATH += $$PWD/../../lmcapp/include
 
 win32-msvc*: LIBS += advapi32.lib # for GetUserNameW(...) in Helper::getLogonName(..)
 
-# OpenSSL 3.x: only needed at final link time here (lmccore's crypto.cpp is
-# what actually calls into it - see Core/Core.pro). Modern Windows builds/
-# packages name the import library "libcrypto.lib" (older 1.0.2-era
-# packages used "libeay32.lib" - adjust to match whatever OpenSSL 3.x
-# distribution you install if this differs). Expected at repo-root
-# /openssl, i.e. a sibling of /Core and /Windows.
+# OpenSSL 3.x. lmccore's crypto.cpp is what actually calls into it (see
+# Core/Core.pro), but this project needs the headers too, not just the
+# lib at link time: main.cpp pulls in Core/src/crypto.h transitively
+# (lmc.h -> messaging.h -> network.h/udpnetwork.h -> crypto.h), and
+# crypto.h's own #include <openssl/rand.h> has to resolve when *this*
+# project's .cpp files are compiled - linking lmccore later doesn't
+# retroactively hand its INCLUDEPATH to this project. Modern Windows
+# builds/packages name the import library "libcrypto.lib" (older
+# 1.0.2-era packages used "libeay32.lib" - adjust to match whatever
+# OpenSSL 3.x distribution you install if this differs). Expected at
+# repo-root /openssl, i.e. a sibling of /Core and /Windows.
+INCLUDEPATH += $$PWD/../../../openssl/include
+DEPENDPATH += $$PWD/../../../openssl/include
 #
 # An OpenSSL source build installed via "nmake install" (the standard
 # MSVC build route - see BUILD.md) lays lib/ out as

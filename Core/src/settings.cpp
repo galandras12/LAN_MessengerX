@@ -241,7 +241,9 @@ void lmcSettings::setAutoStart(bool on) {
 	if(!file.open(QIODevice::WriteOnly | QIODevice::Text))
 		return;
 	QTextStream stream(&file);
-	stream.setCodec("UTF-8");
+	//	QTextCodec/QTextStream::setCodec() were removed from QtCore in
+	//	Qt6 (moved to the optional Qt5Compat module) - QTextStream is
+	//	always UTF-8 now, which is what this was already requesting.
 	stream.setGenerateByteOrderMark(false);
 	stream << "[Desktop Entry]\n";
 	stream << "Encoding=UTF-8\n";
