@@ -190,8 +190,33 @@ qmake lmc.pro -spec win32-g++ CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
 mingw32-make
 ```
 
-MSVC-vel ugyanez `nmake`-kel, `-spec win32-g++` nélkül (lásd a
-`build_windows.bat` `:msvc2022_64` ágát).
+**MSVC-vel** ugyanez `nmake`-kel, `-spec win32-g++` nélkül — de itt egy
+sima `PATH`-bővítés **nem elég** (ellentétben a MinGW-ággal fent):
+`nmake`/`cl.exe` nem a Qt-vel jön, hanem a Visual Studio-val, és nem
+csak `PATH`-ra van szükségük, hanem a fordítóhoz/linkeléshez kellő
+`INCLUDE`/`LIB` környezeti változókra is — ezeket egyszerű `set PATH=`
+sorral nem lehet pótolni. Két lehetőség:
+
+1. **Nyisd meg a Start menüből** a Visual Studio-hoz tartozó "**x64
+   Native Tools Command Prompt for VS 2022**" parancsikont (ez már egy
+   kész, mindent beállított konzol) — **ebben** futtasd a `qmake`/
+   `nmake` parancsokat, ne egy sima `cmd.exe`-ben.
+2. Vagy egy sima `cmd.exe`-ben hívd meg kézzel ugyanazt, amit a
+   `build_windows.bat` `:msvc2022_64` ága is tesz, **a `qmake`/`nmake`
+   parancsok előtt**:
+   ```bat
+   set PATH=C:\Qt\6.8.0\msvc2022_64\bin;%PATH%
+   call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
+   ```
+   (A `Community`-t igazítsd, ha Professional/Enterprise kiadásod van;
+   a `vcvarsall.bat` pontos elérési útja VS-verziónként eltérhet.)
+
+Mindkét esetben csak **ugyanabban a konzol-ablakban**, a `vcvarsall.bat`
+lefutása/a Native Tools parancsikon megnyitása **után** fognak működni
+a `qmake Core.pro CONFIG+=...` / `nmake` parancsok — egy újranyitott
+sima `cmd.exe`-ben ismét `'nmake' is not recognized...` hibát fogsz
+kapni, mert ez a beállítás nem tartós, csak az adott konzol-munkamenetre
+vonatkozik.
 
 A kész `lmc.exe` a `Windows\lmc\src\` mappában (vagy — Qt Creator-os
 shadow build esetén — a Qt Creator által választott build-mappában)
@@ -412,6 +437,15 @@ vannak oldva:
   `mingw32-make` parancsot kiadnád. Az A) automatikus szkript
   (`build_windows.bat`) ezt saját maga beállítja, ott nem kell vele
   külön foglalkozni.
+- `'nmake' is not recognized as an internal or external command` (MSVC
+  build esetén) → **nem kódhiba**, és **nem** ugyanaz a hiba, mint a
+  fenti `qmake`-es — egy sima `set PATH=...` itt nem elég, mert az
+  `nmake`/`cl.exe` a Visual Studio-val jön, nem a Qt-vel, és a
+  fordításhoz/linkeléshez `INCLUDE`/`LIB` környezeti változók is
+  kellenek, amiket csak a Visual Studio saját `vcvarsall.bat`-ja (vagy
+  a "x64 Native Tools Command Prompt for VS 2022" parancsikon) állít
+  be. Lásd az [1.3](#13-fordítás) szakasz MSVC-alszakaszát a pontos
+  parancsért.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
