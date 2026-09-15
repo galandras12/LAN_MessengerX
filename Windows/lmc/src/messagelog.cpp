@@ -28,6 +28,11 @@
 #include <QTextBlock>
 #include <QRegularExpression>
 #include <QLocale>
+//	QDesktopServices::openUrl() below has no explicit include here -
+//	likely compiled by accident under Qt5 via another header's
+//	transitive include, which Qt6's headers are markedly less likely
+//	to leak (same class of issue as main.cpp's QSslSocket earlier).
+#include <QDesktopServices>
 #include "messagelog.h"
 
 const QString acceptOp("accept");

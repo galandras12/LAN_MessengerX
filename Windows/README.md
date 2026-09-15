@@ -345,6 +345,27 @@ Qt6-eltávolítási hibát hozott fel:
   taghívás javára, Qt6-ban megszűnt → mindkét előfordulás
   `QVariant::fromValue(...)`-ra átírva.
 
+### Két további hiányzó include (`messagelog.cpp`, `broadcastwindow.h`)
+
+- ✅ Hiányzó `#include <QDesktopServices>` (`messagelog.cpp`, 3
+  `QDesktopServices::openUrl(...)` hívás egy linkre kattintás
+  kezelésében) — ugyanaz a mintázat, mint korábban a `main.cpp`-nél
+  talált hiányzó `QSslSocket`-include: valószínűleg egy másik fejléc
+  transzitív include-ja fedte el Qt5 alatt, Qt6 fejlécei viszont
+  ezt jóval kevésbé "szivárogtatják".
+- ✅ `invalid use of incomplete type 'class QActionGroup'` +
+  ebből következően egy zavaróan hosszú, de másodlagos
+  `connect(...)`-túlterhelés-feloldási hiba (`broadcastwindow.cpp`,
+  `pFontGroup` tag) — Qt6-ban a `QAction`/`QActionGroup` a QtWidgets-ből
+  a QtGui-ba költözött, és a `qaction.h` mostantól csak *előre
+  deklarálja* a `QActionGroup`-ot, nem definiálja — a teljes típushoz
+  explicit `#include <QActionGroup>` kell. A `mainwindow.h`-ban a
+  hasonló `statusGroup` tagnál ez már helyesen szerepelt, csak a
+  `broadcastwindow.h`-ból maradt ki — pótolva, ugyanúgy. (A `connect()`
+  körüli hosszú túlterhelés-hiba csak a hiányzó definíció
+  mellékhatása volt, nem önálló probléma — a fenti include-tól
+  magától is eltűnik.)
+
 ## Magyar (hu_HU) fordítás
 
 Hozzáadva [`lmc/src/hu_HU.ts`](lmc/src/hu_HU.ts) — a teljes UI mind a 284
