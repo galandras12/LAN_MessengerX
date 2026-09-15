@@ -610,6 +610,17 @@ vannak oldva:
   az `lmc.exe` linkelése ezért a régi, "2"-es nevű fájlt nem találta.
   Most már a helyes, aktuális könyvtárban (`Windows\lmcapp\src`) nevezi
   át — lásd [1.3](#13-fordítás).
+- `fatal error: QDesktopServices: No such file or directory` a `Core`
+  fordításánál (`stdlocation.h`-n vagy `history.cpp`-n keresztül,
+  jellemzően több `.cpp` fájlban egyszerre, mert mindegyik a
+  `trace.h`-n át húzza be) → már javítva: két felejtett,
+  **ténylegesen sehol nem használt** `#include <QDesktopServices>` sor
+  volt a `Core/src/stdlocation.h`-ban és a `Core/src/history.cpp`-ban.
+  A `QDesktopServices` a QtGui modulban van, a `Core.pro` viszont
+  szándékosan `QT -= gui`-t állít be (hogy az Android QML-kliens is
+  linkelhesse) — ez a két sor emiatt soha nem is fordulhatott volna le,
+  bármilyen Qt-verzióval. Mindkét include törölve, funkcionális
+  változás nélkül.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és

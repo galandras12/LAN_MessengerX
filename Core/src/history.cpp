@@ -24,7 +24,6 @@
 
 #include <QFileInfo>
 #include <QDir>
-#include <QDesktopServices>
 #include <QStandardPaths>
 #include "history.h"
 
