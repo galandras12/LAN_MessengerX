@@ -27,6 +27,14 @@
 #include "stdlocation.h"
 #include <QResource>
 #include <QMessageBox>
+//	QSslSocket::supportsSsl() below has no other user anywhere in this
+//	codebase (Core/src/crypto.cpp calls OpenSSL directly over a plain
+//	QTcpSocket instead of using Qt's own QSslSocket/TLS layer) and
+//	nothing else in the include chain happens to pull this header in -
+//	an explicit include was missing here, relying on it leaking in
+//	transitively, which Qt6's headers are markedly less likely to do
+//	than Qt5's were.
+#include <QSslSocket>
 
 //	Define a unique application id. This is a combination of two GUIDs
 const QString appId = "93fab548-2cf5-4a1e-8758-a416a5ec2120-6fc5009f-84e8-4489-a444-7f934bcf9166";
