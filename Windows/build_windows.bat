@@ -30,7 +30,13 @@ mingw32-make
 cd ..\Windows\lmcapp\src
 qmake lmcapp.pro -spec win32-g++ CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
 mingw32-make
-if exist ..\lib\liblmcapp2.a move ..\lib\liblmcapp2.a ..\lib\liblmcapp.a
+REM lmcapp.pro has no win32 DESTDIR (only a unix one - see the .pro), so
+REM the build output lands right here in .\src, not in a ..\lib that
+REM doesn't even exist. lmc.pro's LMCAPP_PATH lookup (OUT_PWD with "lmc"
+REM replaced by "lmcapp") expects it here too - renaming into a ..\lib
+REM that was never created just silently no-ops and lmc's link step
+REM then fails with "cannot find -llmcapp".
+if exist liblmcapp2.a move liblmcapp2.a liblmcapp.a
 
 cd ..\..\lmc\src
 qmake lmc.pro -spec win32-g++ CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
@@ -50,7 +56,9 @@ nmake
 cd ..\Windows\lmcapp\src
 qmake lmcapp.pro CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
 nmake
-if exist ..\lib\lmcapp2.lib move ..\lib\lmcapp2.lib ..\lib\lmcapp.lib
+REM see the mingw64 branch above for why this renames in the current
+REM directory rather than in a ..\lib that lmcapp.pro never creates on win32
+if exist lmcapp2.lib move lmcapp2.lib lmcapp.lib
 
 cd ..\..\lmc\src
 qmake lmc.pro CONFIG+=x86_64 CONFIG-=debug CONFIG+=release

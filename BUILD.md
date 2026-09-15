@@ -25,7 +25,9 @@ egy átadható, végleges program.
 
 - [Mappa-elrendezés emlékeztető](#mappa-elrendezés-emlékeztető)
 - [1. Windows .exe build](#1-windows-exe-build)
+  - [1.6 Opcionális: parancssor nélkül, Qt Creator-ral vagy Visual Studio-val](#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)
 - [2. Android .apk build](#2-android-apk-build)
+  - [2.6 Opcionális: parancssor nélkül, Qt Creator-ral és/vagy Android Studio-val](#26-opcionális-parancssor-nélkül-qt-creator-ral-ésvagy-android-studio-val)
 - [Gyakori hibák](#gyakori-hibák)
 
 ## Mappa-elrendezés emlékeztető
@@ -182,8 +184,11 @@ mingw32-make
 cd ..\Windows\lmcapp\src
 qmake lmcapp.pro -spec win32-g++ CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
 mingw32-make
-REM MinGW-nél a kimenet neve "liblmcapp2.a" - át kell nevezni:
-move ..\lib\liblmcapp2.a ..\lib\liblmcapp.a
+REM MinGW-nél a kimenet neve "liblmcapp2.a" - át kell nevezni. Fontos: a
+REM jelenlegi könyvtárban (.\src), NEM egy "..\lib" alatt - a lmcapp.pro
+REM csak a unix ágon állít be DESTDIR-t, win32-n nem, és a Windows\lmcapp\lib
+REM mappa nem is létezik a repóban:
+move liblmcapp2.a liblmcapp.a
 
 cd ..\..\lmc\src
 qmake lmc.pro -spec win32-g++ CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
@@ -279,6 +284,88 @@ NSIS → Inno Setup" szakaszát a részletekért).
 Ha nincs szükséged telepítőre, csak egy hordozható mappára, a 1.4.
 lépés eredménye (`Windows\build-release-deploy\`) önmagában is elég —
 azt zippelve, bárhova kicsomagolva `lmc.exe`-vel elindítható.
+
+### 1.6 Opcionális: parancssor nélkül, Qt Creator-ral vagy Visual Studio-val
+
+Az 1.3. lépés (Core → lmcapp → lmc fordítása) parancssor helyett egy
+GUI-s IDE-ből is elvégezhető, ha nem szeretnél `cmd.exe`-t használni.
+Mindkét alábbi út ugyanazt a három projektet építi föl, csak
+kattintásokkal; az 1.4–1.5. lépések (`windeployqt`, telepítő) ezután
+változatlanul, ugyanúgy következnek.
+
+**A) Qt Creator-ral** (a legegyszerűbb, ez a Qt saját hivatalos IDE-je):
+
+1. Telepítsd/nyisd meg a Qt Creatort (a Qt Online Installer/Maintenance
+   Tool telepíti, a Qt-vel együtt általában már megvan).
+2. **File → Open File or Project...** → válaszd ki a `Core/Core.pro`-t.
+3. A megjelenő "Configure Project" képernyőn pipáld ki a kívánt Qt 6
+   kit(ek)et (MinGW vagy MSVC) — ha egyik sincs felkínálva, előbb
+   **Edit → Preferences → Kits** alatt kell lennie egy Qt 6-os kitnek
+   (a Qt telepítő ezt általában automatikusan létrehozza).
+4. **Fontos**: itt (vagy utólag a bal oldali "Projects" mód → "Build &
+   Run" → a kit → "Build Settings" alatt) **kapcsold ki a "Shadow
+   build" opciót**. Ez biztosítja, hogy a build kimenete pontosan oda
+   kerüljön, ahol a `.pro` fájlok egymásra mutató relatív útvonalai
+   (pl. hogy `lmc.pro` megtalálja a lefordított `lmcapp`-ot) számítanak
+   rá — shadow build bekapcsolva hagyva a build lefuthat, de a lenti
+   lépések csak kikapcsolt shadow build mellett garantáltan működnek.
+5. Válaszd a bal alsó sarokban a **"Release"** build módot (ne
+   "Debug"-ot, ha végleges .exe-t akarsz).
+6. Kattints a bal oldali kalapács ikonra (Build Project), vagy
+   **Ctrl+B**. Ez legyártja a `Core/lib/lmccore.a` (vagy `.lib`) fájlt.
+7. Ismételd meg ugyanezt a `Windows/lmcapp/src/lmcapp.pro`-val
+   (ugyanaz a kit, Release mód, shadow build kikapcsolva).
+   - Ha a kimenet neve `liblmcapp2.a`/`lmcapp2.lib` lett (nem
+     `liblmcapp.a`/`lmcapp.lib`) — nyisd meg Intézőben a
+     `Windows\lmcapp\src` mappát, és nevezd át kézzel. Ez egy ismert,
+     dokumentált qmake-viselkedés (lásd a
+     [Gyakori hibák](#gyakori-hibák) "cannot find -llmcapp" pontját) —
+     előfordulhat, hogy nálad a friss `CONFIG += staticlib` javítás
+     után már eleve a helyes néven jön létre, ekkor ezt a pontot
+     hagyd ki.
+8. Nyisd meg a `Windows/lmc/src/lmc.pro`-t, ugyanígy (kit, Release,
+   shadow build ki), és buildeld.
+9. A kész `lmc.exe` a `Windows\lmc\src\` mappában jelenik meg (jobb
+   klikk a projekten → "Open Containing Folder", vagy nézd meg a
+   "Compile Output" panel alján kiírt pontos útvonalat).
+10. Innentől ugyanaz az [1.4](#14-futtatható-átadható-mappa-összeállítása-windeployqt)
+    (`windeployqt`) és [1.5](#15-telepítő-készítése-inno-setup) lépés
+    következik, mint a parancssoros útnál — ezekhez nincs Qt Creator-
+    beli GUI-gomb, a `windeployqt <exe útvonala>` parancsot egyszer
+    még ki kell adni (vagy felvehető Qt Creator "Tools → External"
+    egyéni eszközként, ha teljesen kattintás-only utat szeretnél).
+
+**B) Visual Studio-val** (ha inkább azt használnád — csak MSVC kit-hez,
+a **Qt Visual Studio Tools** bővítménnyel):
+
+1. Visual Studio → **Extensions → Manage Extensions** → keress rá "Qt
+   Visual Studio Tools"-ra, telepítsd, indítsd újra a Visual Studio-t.
+2. **Extensions → Qt VS Tools → Qt Versions...** → "Add" gombbal add
+   hozzá a telepített Qt verzió `qmake.exe`-jének útvonalát (pl.
+   `C:\Qt\6.8.0\msvc2022_64\bin\qmake.exe`), adj neki egy nevet.
+3. **Extensions → Qt VS Tools → Open Qt Project File (.pro)...** →
+   válaszd ki a `Core/Core.pro`-t. Ez legenerál egy `.vcxproj`-t, és
+   hozzáadja egy (új vagy meglévő) Solution-höz.
+4. Ismételd meg a `Windows/lmcapp/src/lmcapp.pro` és
+   `Windows/lmc/src/lmc.pro` fájlokkal — mindhármat **ugyanabba a
+   Solution-be**.
+5. Solution Explorer-ben jobb klikk a Solution-ön →
+   **"Project Dependencies..."** → állítsd be, hogy `lmcapp` függjön a
+   `Core`-tól, és `lmc` függjön mindkettőtől — enélkül Visual Studio
+   rossz sorrendben próbálná linkelni őket.
+6. A felső eszköztár konfiguráció-választójában állítsd **"Release" +
+   "x64"**-re.
+7. **Build → Build Solution** (Ctrl+Shift+B).
+8. Az `lmc.exe` a Visual Studio saját kimeneti mappájában jön létre
+   (jellemzően `Windows\lmc\src\x64\Release\` vagy hasonló — az
+   "Output" panel alján pontosan kiírja).
+
+⚠️ Ezt a B) Visual Studio-s utat **nem tudtam ténylegesen kipróbálni**
+ebben a szandboxban (nincs Visual Studio/Qt VS Tools telepítve) — a
+lépések a Qt VS Tools hivatalos dokumentációja és a projekt `.pro`
+fájljainak ismerete alapján készültek. Ha valamelyik lépésnél eltérést
+tapasztalsz, az A) Qt Creator-os út a jobban ellenőrzött/ajánlott
+opció.
 
 ---
 
@@ -407,6 +494,74 @@ Kiadásra szánt (release) APK-hoz:
    Store-ba szánod) — ez telepíthető bármely, a `minSdkVersion`-nak
    megfelelő Android eszközre.
 
+### 2.6 Opcionális: parancssor nélkül, Qt Creator-ral és/vagy Android Studio-val
+
+A 2.3–2.5. lépések (Core ABI-nkénti fordítása, az Android kliens
+fordítása, aláírás) parancssor helyett teljes egészében GUI-ból is
+elvégezhetők. A 2.4-ben ez már röviden szerepelt — itt egy részletesebb,
+lépésről lépésre változat, plusz tisztázva, hol jön (ha jön) a képbe az
+Android Studio.
+
+⚠️ Emlékeztető: a [2.2-ben](#22-a-blokkoló-openssl-androidra) leírt
+OpenSSL-Android blokkoló ettől a GUI-s úttól **függetlenül fennáll** —
+GUI-ból ugyanúgy meg kell előbb oldanod, különben a `Core` Android
+ABI-nkénti fordítása (1. lépés lent) linker-hibával elszáll.
+
+**Qt Creator-ral, lépésről lépésre:**
+
+1. Nyisd meg a `Core/Core.pro`-t Qt Creator-ban, és a "Configure
+   Project" képernyőn pipáld ki a telepített Android kit(ek)et (pl.
+   "Android Qt 6.8.0 Clang arm64-v8a") — annyi ABI-t válassz ki, ahány
+   architektúrára buildelni szeretnél (a Play Store-ba szánt kiadáshoz
+   ma jellemzően legalább `arm64-v8a` + `armeabi-v7a` kell).
+2. Válaszd a **Release** build módot, majd Build (Ctrl+B) — ez
+   ABI-nként lefordítja a `lmccore`-t.
+3. Nyisd meg az `Android/Android.pro`-t, **ugyanazokkal** az Android
+   kit(ek)kel (a Configure Project képernyőn ugyanazokat pipáld ki,
+   mint a Core-nál).
+4. Ha az `android/AndroidManifest.xml` metaadatai nem egyeznek pontosan
+   a telepített Qt verziód elvárásával (lásd a manifest tetején lévő
+   megjegyzést), futtasd le a Qt Creator Android-varázslóját — jobb
+   klikk a projekten a Projects panelen, vagy a Build beállítások
+   "Android" szekciójában találod, Qt-verziónként kicsit eltérő helyen.
+5. Válaszd a Release build módot, majd Build → a Qt Creator elkészíti
+   a `.apk`-t (alapból **debug-aláírással** — lásd 6. pont a
+   release-hez).
+6. Az aláírt release APK-hoz: Build beállítások → "Build Android APK" →
+   "Application Signature" fülön add meg a keystore fájlt, jelszavát és
+   aliast (a keystore-t magát egyszer, a 2.5-ben leírt `keytool`
+   paranccsal kell létrehozni — ehhez sajnos nincs GUI-s Qt Creator
+   varázsló, ez az egyetlen konzol-parancs, ami ezen az úton is
+   megmarad, de csak **egyszer** kell lefuttatni, utána a keystore fájl
+   újra felhasználható).
+
+**Az Android Studio szerepe (opcionális, kiegészítő — nem kötelező):**
+
+Az Android Studio **nem tud közvetlenül Qt/QML C++ projektet
+megnyitni/fordítani** — a tényleges C++ fordítást és a Gradle-projekt
+generálását (`androiddeployqt`) a Qt Creator natív Android-integrációja
+végzi. Az Android Studio szerepe emellett csak kiegészítő lehet:
+
+- A Qt Creator/`androiddeployqt` által **már legenerált** Gradle-projekt
+  (a build után az `Android/android-build/` mappában) megnyitható
+  Android Studio-ban is — ez hasznos lehet, ha a saját, natívabb
+  "**Build → Generate Signed Bundle / APK**" varázslóját szeretnéd
+  használni az aláíráshoz a fenti 6. pont helyett, vagy ha a
+  Gradle-beállításokat/`AndroidManifest.xml`-t egy ismertebb, natív
+  Android-felületen szeretnéd átnézni/szerkeszteni fordítás után.
+- Kényelmes GUI-eszköz lehet az **Android SDK/NDK/platform-csomagok
+  telepítéséhez** is (SDK Manager), és egy virtuális eszköz (AVD)
+  létrehozásához, ha emulátoron akarod tesztelni az elkészült APK-t —
+  ezt a [2.1](#21-szükséges-összetevők) táblázat is említi.
+- Magát a Qt/C++ **fordítást Android Studio-ból nem lehet elindítani** —
+  ehhez mindenképp Qt Creator (vagy a 2.3–2.4-ben leírt parancssoros
+  `qmake` + `androiddeployqt`) kell.
+
+⚠️ Ezt az Android-oldali GUI-utat **szintén nem tudtam ténylegesen
+kipróbálni** ebben a szandboxban (nincs Android SDK/NDK/Qt Creator/
+Android Studio telepítve) — a lépések a Qt Creator és Android Studio
+hivatalos, dokumentált Qt-for-Android munkafolyamata alapján készültek.
+
 ---
 
 ## Gyakori hibák
@@ -446,6 +601,15 @@ vannak oldva:
   a "x64 Native Tools Command Prompt for VS 2022" parancsikon) állít
   be. Lásd az [1.3](#13-fordítás) szakasz MSVC-alszakaszát a pontos
   parancsért.
+- `cannot find -llmcapp` (linker-hiba az `lmc.exe` fordításánál) → már
+  javítva: a `lmcapp` könyvtár átnevezését (`liblmcapp2.a`/`lmcapp2.lib`
+  → `liblmcapp.a`/`lmcapp.lib`) korábban egy nem létező `..\lib\`
+  mappára hivatkozva próbálta végrehajtani mind a `build_windows.bat`,
+  mind ez a leírás — az `if exist` csendben nem talált semmit, így az
+  átnevezés lefutott ugyan hiba nélkül, de valójában semmit sem tett, és
+  az `lmc.exe` linkelése ezért a régi, "2"-es nevű fájlt nem találta.
+  Most már a helyes, aktuális könyvtárban (`Windows\lmcapp\src`) nevezi
+  át — lásd [1.3](#13-fordítás).
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és

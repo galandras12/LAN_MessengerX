@@ -237,6 +237,26 @@ működött volna** senkivel, semmilyen platform-kombinációban — miközben
 a közvetlen (1-az-1) chat, fájlátvitel és discovery nem volt érintve
 (azok nem mennek keresztül ezen a verzió-kapun).
 
+### `lmcapp` hiányzó `CONFIG += staticlib` — az exe elindulna, de rögtön el is szállna
+
+A `Windows/lmcapp/src/lmcapp.pro`-ban `TEMPLATE = lib` szerepelt, de
+**nem** volt mellette `CONFIG += staticlib` (ellentétben a testvér
+`Core/Core.pro`-val, ahol ez explicit ki van téve). A qmake
+dokumentált alapértelmezése erre: `TEMPLATE = lib` `staticlib` nélkül
+**megosztott library-t (DLL-t)** épít, nem statikus archívumot. Sem a
+`build_windows.bat`, sem a `BUILD.md` `windeployqt`-lépése soha nem
+másolt volna egy ilyen `lmcapp` DLL-t az `lmc.exe` mellé — tehát a
+kliens **még a fejlesztő saját gépén is** hiányzó-DLL hibával szállt
+volna el induláskor, közvetlenül egy egyébként "sikeres" build után.
+**Javítás**: `CONFIG += staticlib` hozzáadva, ugyanúgy, ahogy a
+`Core.pro` is teszi — ez egyben valószínűleg (bár ezt itt nem tudtam
+ténylegesen leellenőrizni, mert nincs Qt6 ebben a szandboxban) meg is
+szünteti a kimenet nevében lévő, korábban `move`-val kézzel kezelt "2"
+verziószám-toldalékot is, mivel a statikus és dinamikus lib-ágak
+eltérő qmake/mkspec kódúton mennek Windows alatt — az esetleges
+átnevezési lépés a build szkriptekben/leírásban emiatt megmaradt
+biztonsági hálóként (no-op, ha már nincs rá szükség).
+
 ## Magyar (hu_HU) fordítás
 
 Hozzáadva [`lmc/src/hu_HU.ts`](lmc/src/hu_HU.ts) — a teljes UI mind a 284
