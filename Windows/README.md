@@ -388,34 +388,48 @@ angolul indult. Két, egymást erősítő okot találtam:
    jele) — a többi 17 nyelvhez **soha nem jött létre `.qm` fájl**, a
    `.qrc`-fix önmagában emiatt nem lett volna elég.
 
-   **Javítás**: `lmc.pro`-ba felvéve `CONFIG += lrelease` +
+   **Első javítási kísérlet** (később visszavonva — lásd lent):
+   `lmc.pro`-ba felvéve `CONFIG += lrelease` +
    `QM_FILES_OUTPUT_DIR = $$PWD/resources/lang` — ez a Qt saját
    Linguist Tools qmake-funkciója (a Qt telepítéssel együtt jön, nem
-   igényel külön eszközt), ami build közben minden `TRANSLATIONS`
-   bejegyzést lefordít, és a kimenetet pontosan oda irányítja, ahol a
-   `resource.qrc` már eleve kereste őket. Szándékosan **nem**
-   `CONFIG += embed_translations`-t használtam, mert az a Qt saját,
-   automatikusan generált `:/i18n/` resource-ját hozná létre, ami
-   ütközne/redundáns lenne az alkalmazás már meglévő, kézzel írt
-   `:/lang` + `StdLocation::resLangDir()`/`sysLangDir()`/
+   igényel külön eszközt), aminek build közben minden `TRANSLATIONS`
+   bejegyzést le kellett volna fordítania, a kimenetet pontosan oda
+   irányítva, ahol a `resource.qrc` már eleve kereste őket.
+   Szándékosan **nem** `CONFIG += embed_translations`-t használtam,
+   mert az a Qt saját, automatikusan generált `:/i18n/` resource-ját
+   hozná létre, ami ütközne/redundáns lenne az alkalmazás már meglévő,
+   kézzel írt `:/lang` + `StdLocation::resLangDir()`/`sysLangDir()`/
    `userLangDir()` rendszerével (lásd `stdlocation.h`,
    `Windows/lmcapp/src/application.cpp`).
 
-   ⚠️ Mivel ebben a szandboxban nincs elérhető Qt/`lrelease`, **nem
-   tudtam ténylegesen leellenőrizni**, hogy a `CONFIG += lrelease`
-   qmake-funkció önmagában mindig a helyes sorrendben fut-e le a
-   `RESOURCES = resource.qrc` (azaz `rcc`) lépéshez képest minden
-   build-rendszerben (ez qmake belső "extra compiler" ütemezésén
-   múlik, amit explicit függőség-deklaráció nélkül a két lépés között
-   nem lehet garantálni) — ezért a `build_windows.bat`
-   parancssoros/szkriptes útján **emellett** egy explicit
-   `lrelease`-hurok is fut minden `.ts` fájlra, **közvetlenül a
-   `qmake`/`make` előtt**, hogy a `.qm` fájlok garantáltan létezzenek,
-   mire a `resource.qrc` beágyazásra kerül. A Qt Creator-os GUI útnak
-   (lásd [BUILD.md](../BUILD.md) 1.6-os szakasza) magától a
-   `CONFIG += lrelease`-re kell támaszkodnia — ha ott mégis csak angol
-   nyelv jelenne meg, egy kézi `lrelease lmc.pro` (vagy Qt Creator
-   "Tools → External → Linguist" menüje) a munkakörülírás.
+   ⚠️→🐞 Mivel ebben a szandboxban nincs elérhető Qt/`lrelease`, ezt
+   **nem tudtam ténylegesen leellenőrizni** — és valós build-bel
+   kiderült, hogy hibás volt: a `CONFIG += lrelease` automatikusan
+   generált Makefile-szabálya **rossz relatív útvonalat** számolt ki a
+   `.qm` fájlok helyére (`OUT_PWD`-hez képest, hibás "`../..`"
+   mélységgel), ami
+   `` :-1: error: No rule to make target '../../resources/lang/hu_HU.qm',
+   needed by 'qrc_resource.cpp'. `` hibával állította le a build-et —
+   pontosan azt a fajta, build-sorrendtől/relatív-útvonal-számítástól
+   függő törékenységet igazolva, amit ez a figyelmeztetés eleve
+   feltételezett, csak élesben, tényleges hibaként, nem csak
+   elméletben. A `resource.qrc` saját, kézzel írt
+   `resources/lang/XX_XX.qm` útvonalai ezzel szemben **soha nem voltak
+   hibásak** — azok a `.qrc` fájl saját helyéhez képest oldódnak fel,
+   nem `OUT_PWD`-hez (azaz shadow build-hez) képest, tehát nem
+   ugyanattól a hibaforrástól függenek.
+
+   **Végleges javítás**: a `CONFIG += lrelease`/`QM_FILES_OUTPUT_DIR`
+   teljesen eltávolítva a `lmc.pro`-ból — ehelyett a `.qm` fájlokat
+   kizárólag egy explicit `lrelease`-hurok generálja, **a `qmake`
+   lefutása előtt** (tehát mire a `resource.qrc` beágyazásra kerülne,
+   a fájlok már egyszerűen léteznek a helyükön, nincs szükség semmilyen
+   Makefile-szabályra közöttük). Ez fut a `build_windows.bat`-ban (lásd
+   [BUILD.md](../BUILD.md) [1.3](../BUILD.md#13-fordítás)) és a Qt
+   Creator-os GUI útvonalon is, immár egy explicit, dokumentált
+   lépésként (lásd [BUILD.md](../BUILD.md)
+   [1.6](../BUILD.md#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)),
+   nem egy qmake-funkcióra bízva.
 
 ## Magyar (hu_HU) fordítás
 

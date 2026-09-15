@@ -40,11 +40,13 @@ if exist liblmcapp2.a move liblmcapp2.a liblmcapp.a
 
 cd ..\..\lmc\src
 REM Compile every .ts translation to resources\lang\*.qm BEFORE qmake/make
-REM run, rather than relying solely on lmc.pro's own CONFIG += lrelease
-REM step to race correctly against its RESOURCES = resource.qrc step
-REM (untested in this sandbox - no Qt available - so this explicit,
-REM guaranteed-order pass is a deliberate belt-and-suspenders duplicate,
-REM not a replacement for the .pro-level config).
+REM run, so resource.qrc's hand-written /lang entries find real files.
+REM lmc.pro used to instead have CONFIG += lrelease do this
+REM automatically at build time, but that generated a Makefile rule
+REM with a broken relative path to the .qm files ("No rule to make
+REM target '../../resources/lang/hu_HU.qm'", confirmed by a real
+REM build) - removed in favor of this explicit, unconditionally
+REM correct pre-step.
 for %%f in (en_US ml_IN fr_FR de_DE tr_TR es_ES ko_KR bg_BG ro_RO ar_SA sl_SI pt_BR ru_RU it_IT sv_SE hu_HU ja_JP pl_PL sk_SK) do lrelease %%f.ts -qm resources\lang\%%f.qm
 qmake lmc.pro -spec win32-g++ CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
 mingw32-make

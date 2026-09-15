@@ -333,16 +333,25 @@ változatlanul, ugyanúgy következnek.
      előfordulhat, hogy nálad a friss `CONFIG += staticlib` javítás
      után már eleve a helyes néven jön létre, ekkor ezt a pontot
      hagyd ki.
-8. Nyisd meg a `Windows/lmc/src/lmc.pro`-t, ugyanígy (kit, Release,
-   shadow build ki), és buildeld. A `lmc.pro`-ban lévő
-   `CONFIG += lrelease` miatt Qt Creator ezt buildelve automatikusan
-   le kell, hogy fordítsa az összes `.ts` fordítást is `.qm`-mé — ha a
-   futó programban mégis csak angol nyelv jelenik meg, lásd lent, "Csak
-   angol nyelv jelenik meg futáskor".
-9. A kész `lmc.exe` a `Windows\lmc\src\` mappában jelenik meg (jobb
-   klikk a projekten → "Open Containing Folder", vagy nézd meg a
-   "Compile Output" panel alján kiírt pontos útvonalat).
-10. Innentől ugyanaz az [1.4](#14-futtatható-átadható-mappa-összeállítása-windeployqt)
+8. **A `lmc.pro` buildelése előtt** fordítsd le a fordításokat is —
+   ehhez nincs Qt Creator-beli GUI-gomb (lásd lent, "Csak angol nyelv
+   jelenik meg futáskor", miért nem automatikus ez). Nyiss egy
+   terminált a `Windows\lmc\src` mappában (Qt Creator alsó sávjában is
+   van egy beépített "Terminal" ikon, vagy külön `cmd.exe`/PowerShell
+   is jó — ha a fenti PATH-beállítást még nem tetted meg ebben az
+   ablakban, most tedd meg, lásd [1.3](#13-fordítás)), és futtasd:
+   ```bat
+   for %f in (en_US ml_IN fr_FR de_DE tr_TR es_ES ko_KR bg_BG ro_RO ar_SA sl_SI pt_BR ru_RU it_IT sv_SE hu_HU ja_JP pl_PL sk_SK) do lrelease %f.ts -qm resources\lang\%f.qm
+   ```
+   (Egy `for /f`-fel induló parancssorban a `%%f` kell `%f` helyett —
+   ha `.bat` fájlba mented, cseréld vissza `%%f`-re, lásd
+   `build_windows.bat`.)
+9. Nyisd meg a `Windows/lmc/src/lmc.pro`-t Qt Creator-ban, ugyanígy
+   (kit, Release, shadow build ki), és buildeld.
+10. A kész `lmc.exe` a `Windows\lmc\src\` mappában jelenik meg (jobb
+    klikk a projekten → "Open Containing Folder", vagy nézd meg a
+    "Compile Output" panel alján kiírt pontos útvonalat).
+11. Innentől ugyanaz az [1.4](#14-futtatható-átadható-mappa-összeállítása-windeployqt)
     (`windeployqt`) és [1.5](#15-telepítő-készítése-inno-setup) lépés
     következik, mint a parancssoros útnál — ezekhez nincs Qt Creator-
     beli GUI-gomb, a `windeployqt <exe útvonala>` parancsot egyszer
@@ -680,19 +689,27 @@ vannak oldva:
   fordította le ténylegesen a `.ts` fájlokat `.qm`-mé — az `en_US.qm`
   csak azért létezett, mert egy korábbi, kézzel lefuttatott `lrelease`
   eredményeként be volt checkolva a repóba, a többi nyelvhez **soha
-  nem is jött létre `.qm` fájl**. Javítva: `lmc.pro`-ban
-  `CONFIG += lrelease` (Qt saját, a Qt-vel együtt települő Linguist
-  Tools qmake-funkciója, nem igényel külön telepítést), ami build
-  közben automatikusan lefordítja mind a 18 `.ts` fájlt a
-  `resources/lang/` mappába — ez a Qt Creator-os GUI úton magától is
-  működnie kellene. A parancssoros/`build_windows.bat` úton emellett
-  egy explicit `lrelease`-hurok is fut minden `.ts` fájlra, **még a
-  `qmake`/`make` előtt** — ez biztosítja a helyes sorrendet
-  (a `.qm` fájloknak már a `resource.qrc` beágyazása előtt létezniük
-  kell), amit a `CONFIG += lrelease` önmagában, Qt belső
-  build-sorrendjétől függően, nem feltétlenül garantál minden
-  build-rendszerben (ezt nem tudtam ténylegesen leellenőrizni valós
-  Qt-vel ebben a szandboxban, innen a kettős védelem).
+  nem is jött létre `.qm` fájl**. Javítás: a `.ts` fájlokat **a
+  `qmake` lefutása előtt** kell `.qm`-mé fordítani, lásd
+  [1.3](#13-fordítás) (parancssor/`build_windows.bat`) és
+  [1.6](#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)
+  (Qt Creator) — az `lrelease`-hurok mostantól ott fut.
+- `` :-1: error: No rule to make target '../../resources/lang/XX_XX.qm',
+  needed by 'qrc_resource.cpp'.  Stop. `` → ez egy korábbi, ideiglenes
+  javítási kísérlet (`lmc.pro`-ban `CONFIG += lrelease` +
+  `QM_FILES_OUTPUT_DIR`, ami a fenti pontban leírt hiányzó `.qm`
+  fájlokat lett volna hivatva automatikusan pótolni) hibája volt —
+  valós build-bel kiderült, hogy ennek a qmake-funkciónak a
+  automatikusan generált Makefile-szabálya **rossz relatív útvonalat**
+  számolt ki a `.qm` függőséghez (`OUT_PWD`-hez képest, hibás "`../..`"
+  mélységgel), miközben a `resource.qrc` saját, kézzel írt
+  `resources/lang/XX_XX.qm` útvonalai (amik a `.qrc` fájl saját
+  helyéhez képest, nem `OUT_PWD`-hez képest oldódnak fel) sosem voltak
+  hibásak. **Javítva**: a `CONFIG += lrelease`/`QM_FILES_OUTPUT_DIR`
+  teljesen eltávolítva a `lmc.pro`-ból — a `.qm` fájlokat mostantól
+  kizárólag a `qmake` lefutása **előtti**, explicit `lrelease`-hurok
+  generálja (lásd fent), ami nem függ a törékeny, automatikusan
+  generált Makefile-szabálytól.
 - **A "Frissítések keresése" ("Check for Updates") menüpont egy nem
   létező (vagy az eredeti, megszűnt projekt) oldalára/repóba irányított
   a saját GitHub-repó helyett** → már javítva. A menüpont korábban egy
