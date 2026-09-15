@@ -72,6 +72,35 @@ részét is — a Qt5/Qt4-es, Qt6 alatt már nem létező API-k lecserélve:
   buildet is ugyanúgy megakasztotta volna, csak a korábbi Fázis 2-es
   audit kör nem terjedt ki erre a két fájlra.
 
+### Valós build-bel talált és javított hibák
+
+A felhasználó első tényleges (MinGW/Qt6) build-kísérlete az alábbi,
+korábban észre nem vett fordítási hibákat hozta fel — ezek mind
+javítva lettek:
+
+- ✅ `Qt::WindowFlags flags = 0` (öt konstruktor-deklarációban:
+  `historywindow.h`, `aboutdialog.h`, `mainwindow.h`, `chatwindow.h`,
+  `settingsdialog.h`) → `Qt::WindowFlags flags = Qt::WindowFlags()`.
+  Qt6 alatt a `0`-t `Qt::WindowType`-dá (majd `QFlags`-szá) alakító
+  implicit konverzió `-fpermissive` nélkül fordítási hibát ad
+  (`invalid conversion from 'int' to 'Qt::WindowType'`).
+- ✅ Hívatlan (nem tagfüggvényként hívott) `elidedText(...)` három
+  előfordulása (`usertreewidget.cpp`) → átírva
+  `painter->fontMetrics().elidedText(...)` taghívásra, ami a
+  dokumentált, mindig létező `QFontMetrics::elidedText()` API.
+- ✅ `Qt::SystemLocaleDate`/`Qt::SystemLocaleShortDate` (5 előfordulás:
+  `historywindow.cpp`, `messagelog.cpp`) — ezek a `Qt::DateFormat`
+  enum-értékek Qt6-ban ténylegesen megszűntek (Qt 5.15 óta deprecated
+  voltak) → `QLocale::system().toString(dátum/idő, QLocale::ShortFormat)`.
+
+⚠️ **Az `openssl/rand.h: No such file or directory` hiba NEM kódhiba** —
+ez azt jelzi, hogy a repó gyökerében még nincs létrehozva az
+`openssl/include`+`openssl/lib` mappapár (lásd lent, "Build
+előfeltételek"). Ez egy szükséges, egyszeri, manuális build-előfeltétel
+(az OpenSSL 3.x fejlesztői csomagját nem tartalmazza a repó — se méret,
+se licenc okokból nem íratnám bele), nem valami, amit ez a modernizáció
+elmulasztott volna bekötni.
+
 Emellett ez a munkamenet elvégezte a **Fázis 3** (Core kiemelése önálló
 library-vé) érdemi részét is:
 

@@ -24,6 +24,7 @@
 
 #include <QGuiApplication>
 #include <QScreen>
+#include <QLocale>
 #include "historywindow.h"
 
 lmcHistoryWindow::lmcHistoryWindow(QWidget *parent, Qt::WindowFlags flags) : QWidget(parent, flags) {
@@ -139,7 +140,9 @@ void lmcHistoryWindow::displayList(void) {
 	for(int index = 0; index < msgList.count(); index++) {
 		lmcHistoryTreeWidgetItem* pItem = new lmcHistoryTreeWidgetItem();
 		pItem->setText(0, msgList[index].name);
-		pItem->setText(1, msgList[index].date.toString(Qt::SystemLocaleDate));
+		//	Qt::SystemLocaleDate was removed in Qt6 (deprecated since 5.15) -
+		//	QLocale::system().toString() with a format is its replacement.
+		pItem->setText(1, QLocale::system().toString(msgList[index].date, QLocale::ShortFormat));
 		pItem->setData(0, DataRole, msgList[index].offset);
 		pItem->setData(1, DataRole, msgList[index].date);
 		pItem->setSizeHint(0, QSize(0, 20));
