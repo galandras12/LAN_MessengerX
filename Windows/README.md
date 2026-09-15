@@ -366,6 +366,57 @@ Qt6-eltávolítási hibát hozott fel:
   mellékhatása volt, nem önálló probléma — a fenti include-tól
   magától is eltűnik.)
 
+### A futó program csak angolul jelent meg — a `.qm` fordítások soha nem lettek legenerálva/beágyazva
+
+Első valós, sikeresen futó build után a felhasználó jelezte, hogy a 18
+`.ts` fordítási forrás (`hu_HU.ts` is köztük) ellenére a program csak
+angolul indult. Két, egymást erősítő okot találtam:
+
+1. **`resource.qrc`-ben csak `en_US.qm` volt felsorolva** a `/lang`
+   `qresource`-szekcióban — a másik 17 nyelv `.qm` fájlja, még ha
+   létezett is a lemezen, **soha nem lett beágyazva** a végleges
+   `.exe`-be, mert a Qt resource-rendszer csak azt ágyazza be, amit a
+   `.qrc` explicit felsorol. Pótoltam mind a 18 bejegyzést.
+2. **Semmi a build-folyamatban nem fordította le ténylegesen a `.ts`
+   fájlokat `.qm`-mé.** A `TRANSLATIONS` lista a `lmc.pro`-ban önmagában
+   **nem** vált ki automatikus `lrelease`-fordítást — ehhez explicit
+   `CONFIG += lrelease` (vagy egy kézi `lrelease` hívás) kell, és
+   egyik sem volt jelen. A `resources/lang/en_US.qm` csak azért
+   létezett a repóban, mert valaki egy korábbi ponton kézzel
+   lefuttatott egy `lrelease`-t rá (a fájl 23 bájtos — ami helyénvaló
+   egy forrás-nyelvi, azaz önmagára "fordított" katalógusra, nem hiba
+   jele) — a többi 17 nyelvhez **soha nem jött létre `.qm` fájl**, a
+   `.qrc`-fix önmagában emiatt nem lett volna elég.
+
+   **Javítás**: `lmc.pro`-ba felvéve `CONFIG += lrelease` +
+   `QM_FILES_OUTPUT_DIR = $$PWD/resources/lang` — ez a Qt saját
+   Linguist Tools qmake-funkciója (a Qt telepítéssel együtt jön, nem
+   igényel külön eszközt), ami build közben minden `TRANSLATIONS`
+   bejegyzést lefordít, és a kimenetet pontosan oda irányítja, ahol a
+   `resource.qrc` már eleve kereste őket. Szándékosan **nem**
+   `CONFIG += embed_translations`-t használtam, mert az a Qt saját,
+   automatikusan generált `:/i18n/` resource-ját hozná létre, ami
+   ütközne/redundáns lenne az alkalmazás már meglévő, kézzel írt
+   `:/lang` + `StdLocation::resLangDir()`/`sysLangDir()`/
+   `userLangDir()` rendszerével (lásd `stdlocation.h`,
+   `Windows/lmcapp/src/application.cpp`).
+
+   ⚠️ Mivel ebben a szandboxban nincs elérhető Qt/`lrelease`, **nem
+   tudtam ténylegesen leellenőrizni**, hogy a `CONFIG += lrelease`
+   qmake-funkció önmagában mindig a helyes sorrendben fut-e le a
+   `RESOURCES = resource.qrc` (azaz `rcc`) lépéshez képest minden
+   build-rendszerben (ez qmake belső "extra compiler" ütemezésén
+   múlik, amit explicit függőség-deklaráció nélkül a két lépés között
+   nem lehet garantálni) — ezért a `build_windows.bat`
+   parancssoros/szkriptes útján **emellett** egy explicit
+   `lrelease`-hurok is fut minden `.ts` fájlra, **közvetlenül a
+   `qmake`/`make` előtt**, hogy a `.qm` fájlok garantáltan létezzenek,
+   mire a `resource.qrc` beágyazásra kerül. A Qt Creator-os GUI útnak
+   (lásd [BUILD.md](../BUILD.md) 1.6-os szakasza) magától a
+   `CONFIG += lrelease`-re kell támaszkodnia — ha ott mégis csak angol
+   nyelv jelenne meg, egy kézi `lrelease lmc.pro` (vagy Qt Creator
+   "Tools → External → Linguist" menüje) a munkakörülírás.
+
 ## Magyar (hu_HU) fordítás
 
 Hozzáadva [`lmc/src/hu_HU.ts`](lmc/src/hu_HU.ts) — a teljes UI mind a 284
@@ -418,10 +469,29 @@ Qualia Digital Solutions) és ennek a verziónak a továbbfejlesztőjét
 (`IDA_ORIGINAL_AUTHOR`/`IDA_FORK_AUTHOR`/`IDA_REPOSITORY`). A "Súgó" menü
 "LAN Messenger X online" akciója (`homePageAction_triggered()`,
 `mainwindow.cpp`) is erre a linkre mutat mostantól — a `help.php`/
-`faq.php`/`support.php`/frissítés-ellenőrző URL-ek (`IDA_DOMAIN`) viszont
-szándékosan változatlanok maradtak, mivel azok az eredeti projekt saját,
-külön infrastruktúrájára mutatnak, aminek nincs megfelelője ebben a
-repóban.
+`faq.php`/`support.php` URL-ek (`IDA_DOMAIN`) továbbra is szándékosan
+változatlanok maradtak, mivel azok az eredeti projekt saját, külön
+infrastruktúrájára mutatnak, aminek nincs megfelelője ebben a repóban.
+
+⚠️→✅ **Frissítés**: a felhasználó jelezte, hogy a "Frissítések
+keresése" ("Check for Updates", `updateAction_triggered()`) menüpont
+ténylegesen egy nem-létező/az eredeti projekthez tartozó célra mutatott
+— ez a fenti "nincs megfelelője" döntés egyik konkrét, valós
+következménye volt: a menüpont az `lmcUpdateWindow` ablakot nyitotta
+meg, ami csendben egy `IDA_DOMAIN "/version"`
+(`http://lanmessenger.github.io/version`) HTTP-kérést indított — ennek
+a végpontnak nincs ehhez a fork-hoz tartozó, karbantartott
+megfelelője, tehát a funkció soha nem tudott volna érdemben működni.
+**Javítás**: `updateAction_triggered()` mostantól nem nyitja meg az
+`lmcUpdateWindow`-t, hanem közvetlenül megnyitja ennek a repónak a
+[Releases](https://github.com/galandras12/LAN_MessengerX/releases)
+oldalát a böngészőben — ugyanaz a mintázat, mint a "LAN Messenger X
+online" linknél. Az `lmcUpdateWindow`/`MT_Version`-alapú HTTP-check
+gépezet (`Core/src/messagingproc.cpp`, `updatewindow.cpp`) érintetlenül
+megmaradt a kódban, de a UI-ból mostantól sehonnan nem érhető el —
+szándékosan nem lett teljesen kiszedve, nehogy egy nagyobb, kockázatosabb
+refaktorálássá nőjön egy olyan változás, ami valójában csak egy
+menüpont célját érinti.
 
 ## Telepítő: NSIS → Inno Setup
 

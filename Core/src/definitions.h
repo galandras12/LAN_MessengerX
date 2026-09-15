@@ -51,6 +51,14 @@
 						"LAN Messenger X works on essentially every popular desktop platform."
 #define IDA_COPYRIGHT	"Copyright (C) 2010-2016 Qualia Digital Solutions."
 #define IDA_CONTACT		"lanmsngr@gmail.com"
+//	Original upstream project's own site - still feeds help.php/
+//	faq.php/support.php (see Windows/lmc/src/helpwindow.cpp) and the
+//	legacy MT_Version HTTP version-check (Core/src/messagingproc.cpp,
+//	Windows/lmc/src/updatewindow.cpp) that request has no server for.
+//	This fork's own "Check for Updates" menu action no longer calls
+//	into that legacy check at all - see mainwindow.cpp's
+//	updateAction_triggered() - so it's dead code, reachable from
+//	nowhere in the UI, left in place rather than torn out wholesale.
 #define IDA_DOMAIN		"http://lanmessenger.github.io"
 
 //	Credits shown in the About dialog/screen on both platforms (see

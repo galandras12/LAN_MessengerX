@@ -121,6 +121,21 @@ TRANSLATIONS += \
         pl_PL.ts \
         sk_SK.ts
 
+#	Auto-compile every TRANSLATIONS entry to .qm at build time (the
+#	Qt Linguist Tools qmake feature - ships with Qt itself, no extra
+#	install). Without this, nothing ever produced .qm files for any
+#	language except en_US, whose .qm happened to already be committed
+#	in the repo - so the app only ever had English, regardless of how
+#	many .ts files existed. Output redirected to resources/lang/ (not
+#	the default build-dir) to land exactly where resource.qrc's
+#	existing hand-written /lang prefix already expects each file -
+#	deliberately NOT using CONFIG += embed_translations, which would
+#	generate its own separate :/i18n/ resource and conflict with the
+#	StdLocation::resLangDir()/sysLangDir()/userLangDir() scheme this
+#	app already has (see stdlocation.h, application.cpp).
+CONFIG += lrelease
+QM_FILES_OUTPUT_DIR = $$PWD/resources/lang
+
 win32: RC_FILE = lmcwin32.rc
 macx: ICON = lmc.icns
 

@@ -191,6 +191,9 @@ REM mappa nem is létezik a repóban:
 move liblmcapp2.a liblmcapp.a
 
 cd ..\..\lmc\src
+REM Lefordítja az összes .ts fordítást .qm-mé, a resource.qrc által várt
+REM helyre - lásd lent, "Csak angol nyelv jelenik meg futáskor".
+for %%f in (en_US ml_IN fr_FR de_DE tr_TR es_ES ko_KR bg_BG ro_RO ar_SA sl_SI pt_BR ru_RU it_IT sv_SE hu_HU ja_JP pl_PL sk_SK) do lrelease %%f.ts -qm resources\lang\%%f.qm
 qmake lmc.pro -spec win32-g++ CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
 mingw32-make
 ```
@@ -331,7 +334,11 @@ változatlanul, ugyanúgy következnek.
      után már eleve a helyes néven jön létre, ekkor ezt a pontot
      hagyd ki.
 8. Nyisd meg a `Windows/lmc/src/lmc.pro`-t, ugyanígy (kit, Release,
-   shadow build ki), és buildeld.
+   shadow build ki), és buildeld. A `lmc.pro`-ban lévő
+   `CONFIG += lrelease` miatt Qt Creator ezt buildelve automatikusan
+   le kell, hogy fordítsa az összes `.ts` fordítást is `.qm`-mé — ha a
+   futó programban mégis csak angol nyelv jelenik meg, lásd lent, "Csak
+   angol nyelv jelenik meg futáskor".
 9. A kész `lmc.exe` a `Windows\lmc\src\` mappában jelenik meg (jobb
    klikk a projekten → "Open Containing Folder", vagy nézd meg a
    "Compile Output" panel alján kiírt pontos útvonalat).
@@ -664,6 +671,38 @@ vannak oldva:
   `#include <QActionGroup>` pótolva a `broadcastwindow.h`-ban (Qt6-ban
   a `QAction`/`QActionGroup` a QtGui-ba költözött, és a fejléc
   mostantól csak előre deklarálja).
+- **Csak angol nyelv jelenik meg futáskor**, annak ellenére, hogy 18
+  `.ts` fordítás van a repóban → már javítva, két külön ok miatt volt
+  hibás: (1) a `resource.qrc` `/lang` szakasza korábban **csak**
+  `en_US.qm`-et sorolta fel — a többi 17 nyelv soha nem lett a
+  végleges `.exe`-be beágyazva, még ha létezett is a `.qm` fájl,
+  pótolva mind a 18 nyelvre; (2) semmi a build-folyamatban nem
+  fordította le ténylegesen a `.ts` fájlokat `.qm`-mé — az `en_US.qm`
+  csak azért létezett, mert egy korábbi, kézzel lefuttatott `lrelease`
+  eredményeként be volt checkolva a repóba, a többi nyelvhez **soha
+  nem is jött létre `.qm` fájl**. Javítva: `lmc.pro`-ban
+  `CONFIG += lrelease` (Qt saját, a Qt-vel együtt települő Linguist
+  Tools qmake-funkciója, nem igényel külön telepítést), ami build
+  közben automatikusan lefordítja mind a 18 `.ts` fájlt a
+  `resources/lang/` mappába — ez a Qt Creator-os GUI úton magától is
+  működnie kellene. A parancssoros/`build_windows.bat` úton emellett
+  egy explicit `lrelease`-hurok is fut minden `.ts` fájlra, **még a
+  `qmake`/`make` előtt** — ez biztosítja a helyes sorrendet
+  (a `.qm` fájloknak már a `resource.qrc` beágyazása előtt létezniük
+  kell), amit a `CONFIG += lrelease` önmagában, Qt belső
+  build-sorrendjétől függően, nem feltétlenül garantál minden
+  build-rendszerben (ezt nem tudtam ténylegesen leellenőrizni valós
+  Qt-vel ebben a szandboxban, innen a kettős védelem).
+- **A "Frissítések keresése" ("Check for Updates") menüpont egy nem
+  létező (vagy az eredeti, megszűnt projekt) oldalára/repóba irányított
+  a saját GitHub-repó helyett** → már javítva. A menüpont korábban egy
+  csendes HTTP-lekérést indított az eredeti (nem ehhez a fork-hoz
+  tartozó) `lanmessenger.github.io/version` végpontra — aminek nincs
+  ehhez a fork-hoz tartozó, karbantartott megfelelője. Mostantól
+  egyszerűen megnyitja ennek a repónak a
+  [Releases](https://github.com/galandras12/LAN_MessengerX/releases)
+  oldalát a böngészőben, ugyanúgy, ahogy a "LAN Messenger X online"
+  link is teszi.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és

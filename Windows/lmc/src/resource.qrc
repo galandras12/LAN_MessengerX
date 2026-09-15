@@ -162,6 +162,24 @@
     </qresource>
     <qresource prefix="/lang">
         <file alias="en_US.qm">resources/lang/en_US.qm</file>
+        <file alias="ml_IN.qm">resources/lang/ml_IN.qm</file>
+        <file alias="fr_FR.qm">resources/lang/fr_FR.qm</file>
+        <file alias="de_DE.qm">resources/lang/de_DE.qm</file>
+        <file alias="tr_TR.qm">resources/lang/tr_TR.qm</file>
+        <file alias="es_ES.qm">resources/lang/es_ES.qm</file>
+        <file alias="ko_KR.qm">resources/lang/ko_KR.qm</file>
+        <file alias="bg_BG.qm">resources/lang/bg_BG.qm</file>
+        <file alias="ro_RO.qm">resources/lang/ro_RO.qm</file>
+        <file alias="ar_SA.qm">resources/lang/ar_SA.qm</file>
+        <file alias="sl_SI.qm">resources/lang/sl_SI.qm</file>
+        <file alias="pt_BR.qm">resources/lang/pt_BR.qm</file>
+        <file alias="ru_RU.qm">resources/lang/ru_RU.qm</file>
+        <file alias="it_IT.qm">resources/lang/it_IT.qm</file>
+        <file alias="sv_SE.qm">resources/lang/sv_SE.qm</file>
+        <file alias="hu_HU.qm">resources/lang/hu_HU.qm</file>
+        <file alias="ja_JP.qm">resources/lang/ja_JP.qm</file>
+        <file alias="pl_PL.qm">resources/lang/pl_PL.qm</file>
+        <file alias="sk_SK.qm">resources/lang/sk_SK.qm</file>
     </qresource>
     <qresource prefix="/themes">
         <file alias="Classic/Broadcast.html">resources/themes/Classic/Broadcast.html</file>
