@@ -191,12 +191,14 @@ REM mappa nem is létezik a repóban:
 move liblmcapp2.a liblmcapp.a
 
 cd ..\..\lmc\src
-REM Lefordítja az összes .ts fordítást .qm-mé, a resource.qrc által várt
-REM helyre - lásd lent, "Csak angol nyelv jelenik meg futáskor".
-for %%f in (en_US ml_IN fr_FR de_DE tr_TR es_ES ko_KR bg_BG ro_RO ar_SA sl_SI pt_BR ru_RU it_IT sv_SE hu_HU ja_JP pl_PL sk_SK) do lrelease %%f.ts -qm resources\lang\%%f.qm
 qmake lmc.pro -spec win32-g++ CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
 mingw32-make
 ```
+
+(A fenti `qmake lmc.pro ...` lépés a fordításokat is automatikusan
+lefordítja `.qm`-mé — ez a `lmc.pro` fájl saját, beépített lépése,
+nincs hozzá külön teendőd, lásd lent, "Csak angol nyelv jelenik meg
+futáskor".)
 
 **MSVC-vel** ugyanez `nmake`-kel, `-spec win32-g++` nélkül — de itt egy
 sima `PATH`-bővítés **nem elég** (ellentétben a MinGW-ággal fent):
@@ -333,25 +335,16 @@ változatlanul, ugyanúgy következnek.
      előfordulhat, hogy nálad a friss `CONFIG += staticlib` javítás
      után már eleve a helyes néven jön létre, ekkor ezt a pontot
      hagyd ki.
-8. **A `lmc.pro` buildelése előtt** fordítsd le a fordításokat is —
-   ehhez nincs Qt Creator-beli GUI-gomb (lásd lent, "Csak angol nyelv
-   jelenik meg futáskor", miért nem automatikus ez). Nyiss egy
-   terminált a `Windows\lmc\src` mappában (Qt Creator alsó sávjában is
-   van egy beépített "Terminal" ikon, vagy külön `cmd.exe`/PowerShell
-   is jó — ha a fenti PATH-beállítást még nem tetted meg ebben az
-   ablakban, most tedd meg, lásd [1.3](#13-fordítás)), és futtasd:
-   ```bat
-   for %f in (en_US ml_IN fr_FR de_DE tr_TR es_ES ko_KR bg_BG ro_RO ar_SA sl_SI pt_BR ru_RU it_IT sv_SE hu_HU ja_JP pl_PL sk_SK) do lrelease %f.ts -qm resources\lang\%f.qm
-   ```
-   (Egy `for /f`-fel induló parancssorban a `%%f` kell `%f` helyett —
-   ha `.bat` fájlba mented, cseréld vissza `%%f`-re, lásd
-   `build_windows.bat`.)
-9. Nyisd meg a `Windows/lmc/src/lmc.pro`-t Qt Creator-ban, ugyanígy
-   (kit, Release, shadow build ki), és buildeld.
-10. A kész `lmc.exe` a `Windows\lmc\src\` mappában jelenik meg (jobb
-    klikk a projekten → "Open Containing Folder", vagy nézd meg a
-    "Compile Output" panel alján kiírt pontos útvonalat).
-11. Innentől ugyanaz az [1.4](#14-futtatható-átadható-mappa-összeállítása-windeployqt)
+8. Nyisd meg a `Windows/lmc/src/lmc.pro`-t Qt Creator-ban, ugyanígy
+   (kit, Release, shadow build ki), és buildeld. A fordítások
+   (`.ts` → `.qm`) automatikusan lefordulnak ennek a build-nek a
+   részeként — a `lmc.pro` maga gondoskodik erről (`qmake` lefutásakor
+   fut le, amit Qt Creator amúgy is automatikusan megtesz build előtt),
+   nincs hozzá külön teendőd.
+9. A kész `lmc.exe` a `Windows\lmc\src\` mappában jelenik meg (jobb
+   klikk a projekten → "Open Containing Folder", vagy nézd meg a
+   "Compile Output" panel alján kiírt pontos útvonalat).
+10. Innentől ugyanaz az [1.4](#14-futtatható-átadható-mappa-összeállítása-windeployqt)
     (`windeployqt`) és [1.5](#15-telepítő-készítése-inno-setup) lépés
     következik, mint a parancssoros útnál — ezekhez nincs Qt Creator-
     beli GUI-gomb, a `windeployqt <exe útvonala>` parancsot egyszer
@@ -378,21 +371,7 @@ a **Qt Visual Studio Tools** bővítménnyel):
    rossz sorrendben próbálná linkelni őket.
 6. A felső eszköztár konfiguráció-választójában állítsd **"Release" +
    "x64"**-re.
-7. **Fontos, a `lmc` buildelése előtt**: fordítsd le a fordításokat is
-   — ezt a Visual Studio/Qt VS Tools build sem csinálja meg helyetted
-   (lásd lent, "Csak angol nyelv jelenik meg futáskor", illetve az
-   `rcc exited with code 1` hibát a Gyakori hibák között — ha ezt
-   kihagyod, pontosan ezt fogod kapni, mert a `resource.qrc` 18 `.qm`
-   fájlra hivatkozik, amik enélkül nem léteznek). Nyiss egy terminált a
-   `Windows\lmc\src` mappában, és futtasd:
-   ```bat
-   for %f in (en_US ml_IN fr_FR de_DE tr_TR es_ES ko_KR bg_BG ro_RO ar_SA sl_SI pt_BR ru_RU it_IT sv_SE hu_HU ja_JP pl_PL sk_SK) do lrelease %f.ts -qm resources\lang\%f.qm
-   ```
-   (Ha nincs `lrelease` a PATH-on ebben a terminálban, add hozzá,
-   ugyanúgy, mint az [1.3](#13-fordítás)-ban leírt `set PATH=...` sor —
-   az `lrelease.exe` a Qt saját `bin` mappájában van, a `qmake.exe`
-   mellett.)
-8. **Fontos**: Solution Explorer-ben jobb klikk a `lmc` projekten →
+7. **Fontos**: Solution Explorer-ben jobb klikk a `lmc` projekten →
    **"Set as Startup Project"**. A Solution-höz elsőként hozzáadott
    projekt (jellemzően `Core`) lesz alapból a startup project — a
    `Core`/`lmcapp` viszont statikus library-k (nincs `main()`-jük),
@@ -403,16 +382,17 @@ a **Qt Visual Studio Tools** bővítménnyel):
    jelenség, mint a Qt Creator-os A) útnál a "No executable configured"
    hiba: ezeken a projekteken csak buildelni lehet, futtatni nem. Csak
    a `lmc` (a tényleges kliens) futtatható.
-9. **Build → Build Solution** (Ctrl+Shift+B) — ez buildeli mindhárom
-   projektet az 5. pontban beállított függőségi sorrendben. (A
-   Run/Debug (F5) gomb a Startup Projectet buildeli **és** el is
-   indítja — ha csak buildelni akarsz futtatás nélkül, a Build
-   Solution a biztos választás.) Ellenőrizd az "Error List"/"Output"
-   panelt — ha `rcc exited with code 1` hibát látsz, lásd a 7. pontot
-   (kihagytad az `lrelease`-t).
-10. Az `lmc.exe` a Visual Studio saját kimeneti mappájában jön létre
-    (jellemzően `Windows\lmc\src\x64\Release\` vagy hasonló — az
-    "Output" panel alján pontosan kiírja).
+8. **Build → Build Solution** (Ctrl+Shift+B) — ez buildeli mindhárom
+   projektet az 5. pontban beállított függőségi sorrendben. A
+   fordítások (`.ts` → `.qm`) automatikusan lefordulnak ennek a
+   build-nek a részeként (a `lmc.pro` maga gondoskodik erről, akkor is,
+   amikor a Qt VS Tools a saját belső `qmake`-jét futtatja) — nincs
+   hozzá külön teendőd. (A Run/Debug (F5) gomb a Startup Projectet
+   buildeli **és** el is indítja — ha csak buildelni akarsz futtatás
+   nélkül, a Build Solution a biztos választás.)
+9. Az `lmc.exe` a Visual Studio saját kimeneti mappájában jön létre
+   (jellemzően `Windows\lmc\src\x64\Release\` vagy hasonló — az
+   "Output" panel alján pontosan kiírja).
 
 ⚠️ Ezt a B) Visual Studio-s utat **nem tudtam ténylegesen kipróbálni**
 ebben a szandboxban (nincs Visual Studio/Qt VS Tools telepítve) — a
@@ -696,17 +676,19 @@ vannak oldva:
   "Set as Startup Project", utána a Run/Debug (F5) már `lmc.exe`-t
   indítja. Lásd az [1.6](#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)
   B) Visual Studio-s lépéseit.
-- Visual Studio: `Unable to start program '...\lmc\src\lmc.exe'... A
-  rendszer nem találja a megadott fájlt` (a fenti "Set as Startup
-  Project" lépés után is) **egy `rcc exited with code 1` hibával
-  együtt** az Error List-ben → **nem ugyanaz** a hiba, mint a fenti
-  "not a valid Win32 application" — itt a `lmc.exe` fizikailag nem jött
-  létre, mert a build maga elszállt a resource-compilálásnál. Szinte
-  biztosan azért, mert kimaradt az `lrelease`-lépés (lásd az
-  [1.6](#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)
-  B) 7. pontját) — a `resource.qrc` 18 `.qm` fájlra hivatkozik, és az
-  `rcc` hibával leáll, ha akár egy is hiányzik közülük. Futtasd le az
-  `lrelease`-hurkot, majd Build Solution újra.
+- Visual Studio/Qt Creator: `Unable to start program '...\lmc.exe'... A
+  rendszer nem találja a megadott fájlt`, **egy `rcc exited with code 1`
+  hibával együtt** az Error List-ben → **nem ugyanaz** a hiba, mint a
+  fenti "not a valid Win32 application" — itt a `lmc.exe` fizikailag
+  nem jött létre, mert a build maga elszállt a resource-compilálásnál,
+  mert a `resource.qrc` 18 `.qm` fájlra hivatkozik, és az `rcc` hibával
+  leáll, ha akár egy is hiányzik közülük. Ha ezt a legfrissebb
+  `lmc.pro`-val (lásd lent, "Csak angol nyelv jelenik meg futáskor")
+  mégis megkapod, ellenőrizd, hogy az `lrelease.exe` valóban elérhető-e
+  onnan, ahonnan a Qt Creator/Visual Studio a `qmake`-et futtatja (a Qt
+  telepítésed `bin` mappájában van, a `qmake.exe` mellett) — a `.pro`
+  fájl `system(lrelease ...)` hívása ugyanazt a folyamat-környezetet
+  örökli, amiben a `qmake` fut.
 - `fatal error: openssl/rand.h: No such file or directory` az `lmc`
   (nem a `Core`) fordításánál, `main.cpp`-nél vagy `lmc.cpp`-nél, **annak
   ellenére, hogy az OpenSSL már a helyén van** és a `Core` már sikeresen
@@ -731,35 +713,39 @@ vannak oldva:
   a `QAction`/`QActionGroup` a QtGui-ba költözött, és a fejléc
   mostantól csak előre deklarálja).
 - **Csak angol nyelv jelenik meg futáskor**, annak ellenére, hogy 18
-  `.ts` fordítás van a repóban → már javítva, két külön ok miatt volt
-  hibás: (1) a `resource.qrc` `/lang` szakasza korábban **csak**
-  `en_US.qm`-et sorolta fel — a többi 17 nyelv soha nem lett a
+  `.ts` fordítás van a repóban → már javítva. Eredetileg két külön ok
+  miatt volt hibás: (1) a `resource.qrc` `/lang` szakasza korábban
+  **csak** `en_US.qm`-et sorolta fel — a többi 17 nyelv soha nem lett a
   végleges `.exe`-be beágyazva, még ha létezett is a `.qm` fájl,
   pótolva mind a 18 nyelvre; (2) semmi a build-folyamatban nem
   fordította le ténylegesen a `.ts` fájlokat `.qm`-mé — az `en_US.qm`
   csak azért létezett, mert egy korábbi, kézzel lefuttatott `lrelease`
   eredményeként be volt checkolva a repóba, a többi nyelvhez **soha
-  nem is jött létre `.qm` fájl**. Javítás: a `.ts` fájlokat **a
-  `qmake` lefutása előtt** kell `.qm`-mé fordítani, lásd
-  [1.3](#13-fordítás) (parancssor/`build_windows.bat`) és
-  [1.6](#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)
-  (Qt Creator) — az `lrelease`-hurok mostantól ott fut.
+  nem is jött létre `.qm` fájl**. A végleges javítás: a `lmc.pro` maga
+  fordítja le mind a 18 `.ts` fájlt `resources/lang/*.qm`-mé, egy
+  `system(lrelease ...)` hívással, ami minden `qmake`-lefutáskor
+  automatikusan lefut — sem parancssoron, sem Qt Creator-ban, sem
+  Visual Studio-ban nincs hozzá külön, kézzel elvégzendő lépés.
+  Korábban két másik megoldást is kipróbáltam, mindkettő okkal esett
+  ki (lásd lent a következő pontot, illetve a fenti `rcc exited with
+  code 1` pontot).
 - `` :-1: error: No rule to make target '../../resources/lang/XX_XX.qm',
-  needed by 'qrc_resource.cpp'.  Stop. `` → ez egy korábbi, ideiglenes
-  javítási kísérlet (`lmc.pro`-ban `CONFIG += lrelease` +
-  `QM_FILES_OUTPUT_DIR`, ami a fenti pontban leírt hiányzó `.qm`
-  fájlokat lett volna hivatva automatikusan pótolni) hibája volt —
-  valós build-bel kiderült, hogy ennek a qmake-funkciónak a
-  automatikusan generált Makefile-szabálya **rossz relatív útvonalat**
-  számolt ki a `.qm` függőséghez (`OUT_PWD`-hez képest, hibás "`../..`"
-  mélységgel), miközben a `resource.qrc` saját, kézzel írt
-  `resources/lang/XX_XX.qm` útvonalai (amik a `.qrc` fájl saját
-  helyéhez képest, nem `OUT_PWD`-hez képest oldódnak fel) sosem voltak
-  hibásak. **Javítva**: a `CONFIG += lrelease`/`QM_FILES_OUTPUT_DIR`
-  teljesen eltávolítva a `lmc.pro`-ból — a `.qm` fájlokat mostantól
-  kizárólag a `qmake` lefutása **előtti**, explicit `lrelease`-hurok
-  generálja (lásd fent), ami nem függ a törékeny, automatikusan
-  generált Makefile-szabálytól.
+  needed by 'qrc_resource.cpp'.  Stop. `` → egy korábbi, azóta
+  elvetett javítási kísérlet hibája volt (`lmc.pro`-ban
+  `CONFIG += lrelease` + `QM_FILES_OUTPUT_DIR`, a Qt saját, erre szánt
+  qmake-funkciója) — valós build-bel kiderült, hogy ennek a
+  qmake-funkciónak az automatikusan generált Makefile-szabálya **rossz
+  relatív útvonalat** számolt ki a `.qm` függőséghez (`OUT_PWD`-hez
+  képest, hibás "`../..`" mélységgel), miközben a `resource.qrc` saját,
+  kézzel írt `resources/lang/XX_XX.qm` útvonalai (amik a `.qrc` fájl
+  saját helyéhez képest, nem `OUT_PWD`-hez képest oldódnak fel) sosem
+  voltak hibásak. Egy második kísérlet (explicit `lrelease`-hurok
+  parancssorból, `qmake` előtt) működött, de terminált igényelt Qt
+  Creator-ban/Visual Studio-ban is, ami ellentmondott a konzol nélküli
+  GUI-utak egész céljának. **A végleges megoldás** (lásd az előző
+  pontot): a `.pro` fájlba írt `system(lrelease ...)` hívás — sem a
+  törékeny, automatikusan generált Makefile-szabálytól nem függ, sem
+  kézi lépést nem igényel.
 - **A "Frissítések keresése" ("Check for Updates") menüpont egy nem
   létező (vagy az eredeti, megszűnt projekt) oldalára/repóba irányított
   a saját GitHub-repó helyett** → már javítva. A menüpont korábban egy

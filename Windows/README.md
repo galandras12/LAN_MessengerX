@@ -419,17 +419,38 @@ angolul indult. Két, egymást erősítő okot találtam:
    nem `OUT_PWD`-hez (azaz shadow build-hez) képest, tehát nem
    ugyanattól a hibaforrástól függenek.
 
-   **Végleges javítás**: a `CONFIG += lrelease`/`QM_FILES_OUTPUT_DIR`
-   teljesen eltávolítva a `lmc.pro`-ból — ehelyett a `.qm` fájlokat
-   kizárólag egy explicit `lrelease`-hurok generálja, **a `qmake`
-   lefutása előtt** (tehát mire a `resource.qrc` beágyazásra kerülne,
-   a fájlok már egyszerűen léteznek a helyükön, nincs szükség semmilyen
-   Makefile-szabályra közöttük). Ez fut a `build_windows.bat`-ban (lásd
-   [BUILD.md](../BUILD.md) [1.3](../BUILD.md#13-fordítás)) és a Qt
-   Creator-os GUI útvonalon is, immár egy explicit, dokumentált
-   lépésként (lásd [BUILD.md](../BUILD.md)
-   [1.6](../BUILD.md#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)),
-   nem egy qmake-funkcióra bízva.
+   **Második javítási kísérlet** (szintén visszavonva — lásd lent): a
+   `CONFIG += lrelease`/`QM_FILES_OUTPUT_DIR` teljesen eltávolítva a
+   `lmc.pro`-ból, helyette a `.qm` fájlokat egy explicit
+   `lrelease`-hurok generálta, **a `qmake` lefutása előtt** — ez futott
+   `build_windows.bat`-ban és a manuális parancssoros lépésekben,
+   technikailag helyesen (a fájlok egyszerűen léteztek a helyükön, mire
+   a `resource.qrc` beágyazásra került volna, nincs szükség semmilyen
+   Makefile-szabályra közöttük).
+
+   ⚠️→🐞 Ezt a lépést a Qt Creator-os és Visual Studio-s GUI-utakhoz is
+   hozzáadtam — de a felhasználó jogosan szólt rá, hogy ez **ellentmond**
+   annak, amit kifejezetten kért: egy **konzol nélküli** opcionális
+   build-utat, és mégis egy terminálban futtatandó parancsra
+   hivatkoztam mindkét GUI-s leírásban. Ez tervezési hiba volt, nem
+   csak dokumentációs pontatlanság.
+
+   **Végleges javítás**: a fordítás-generálás magába a `lmc.pro`
+   fájlba építve, egy `system(lrelease ...)` hívással egy
+   `for(ts_file, TRANSLATIONS) { ... }` cikluson belül — ez **minden
+   `qmake`-lefutás mellékhatásaként automatikusan lefut**, amit Qt
+   Creator és a Visual Studio/Qt VS Tools is magától elindít build
+   előtt, tehát sem parancssorban, sem semmilyen IDE-ben nincs hozzá
+   kézzel elvégzendő lépés — elég a megszokott Build/Run gombot
+   megnyomni. Ez egyszerre kerüli el mindkét korábbi probléma okát: nem
+   függ `lrelease.prf` törékeny, automatikusan generált
+   Makefile-szabályától (a `system()` hívás abszolút útvonalakkal,
+   explicit megadva fut le, nem qmake belső relatív-útvonal-számításától
+   függően), és nem igényel kézi/terminálos lépést egyik build-úton sem
+   — konzisztensen a `build_windows.bat`/manuális parancssoros útról is
+   eltávolítottam a redundánssá vált explicit `lrelease`-hurkot,
+   mostantól egyetlen, közös mechanizmus fedi le mind a négy build-utat
+   (parancssor, szkript, Qt Creator, Visual Studio).
 
 ## Magyar (hu_HU) fordítás
 

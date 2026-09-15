@@ -121,20 +121,32 @@ TRANSLATIONS += \
         pl_PL.ts \
         sk_SK.ts
 
-#	Every TRANSLATIONS entry needs to be compiled to resources/lang/*.qm
-#	BEFORE qmake runs, to match what resource.qrc's hand-written /lang
-#	prefix expects (see BUILD.md 1.3/1.6 - build_windows.bat and the
-#	manual command-line steps run an explicit lrelease loop for exactly
-#	this). This used to instead be CONFIG += lrelease +
-#	QM_FILES_OUTPUT_DIR, letting qmake auto-generate that step - but
-#	its Makefile rule computed the .qm dependency path relative to
-#	OUT_PWD using what turned out to be the wrong number of ".." hops
-#	(confirmed by a real build: "No rule to make target
-#	'../../resources/lang/hu_HU.qm'"), which resource.qrc's own paths
-#	(resolved relative to the .qrc file itself, not OUT_PWD) never had
-#	a problem with in the first place. Pre-generating the .qm files
-#	before qmake runs sidesteps that broken rule entirely rather than
-#	trying to fix its path math from outside a working Qt install.
+#	Every TRANSLATIONS entry needs a compiled resources/lang/*.qm before
+#	rcc embeds resource.qrc's hand-written /lang entries. This runs
+#	automatically here, as a side effect of qmake parsing this file -
+#	which Qt Creator and Visual Studio/Qt VS Tools both already do on
+#	their own before every build - so no manual step, in a terminal or
+#	otherwise, is needed in any IDE.
+#
+#	Earlier attempts here, both abandoned for concrete reasons:
+#	- CONFIG += lrelease + QM_FILES_OUTPUT_DIR (the qmake feature
+#	  meant for exactly this) generated a Makefile rule for the .qm
+#	  dependency with a broken relative path against OUT_PWD, crashing
+#	  the build ("No rule to make target '../../resources/lang/
+#	  hu_HU.qm'", confirmed by a real build) - resource.qrc's own
+#	  paths were never the problem, only that auto-generated rule was.
+#	- A manual lrelease loop documented as a BUILD.md step worked, but
+#	  required opening a terminal before building in Qt Creator/Visual
+#	  Studio - defeating the entire point of documenting a console-free
+#	  path for those two in the first place.
+#	Calling system() directly here sidesteps both: no dependency on
+#	lrelease.prf's rule generation, and no action required from
+#	whoever is building this beyond a normal build.
+for(ts_file, TRANSLATIONS) {
+    qm_file = $$replace(ts_file, \.ts$, .qm)
+    system(lrelease \"$$PWD/$$ts_file\" -qm \"$$PWD/resources/lang/$$qm_file\")
+}
+
 win32: RC_FILE = lmcwin32.rc
 macx: ICON = lmc.icns
 
