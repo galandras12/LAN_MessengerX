@@ -185,6 +185,58 @@ library-vé) érdemi részét is:
 ⏳ **Még nincs ellenőrizve valós build-bel** (ehhez a szandboxban nincs Qt6/
 OpenSSL3 telepítve).
 
+### Cross-platform (Windows ↔ Android) kompatibilitási audit
+
+A felhasználó explicit kérésére ("fontos hogy működjenek együtt cross
+platform-ba") átnéztem, hogy a Windows és Android kliens ténylegesen
+együtt tud-e működni ugyanazon a hálózaton. Mivel mindkét platform
+ugyanazt a `/Core` (`lmccore`) statikus library-t linkeli, a hálózati/
+protokoll-réteg elvileg eleve közös — de ez két, valóban súlyos, közös
+hibát nem véd ki:
+
+- 🐞→✅ **`Helper::getOSName()` (`Core/src/shared.cpp`) nem fordult volna
+  le Qt6 alatt** — a `QSysInfo::WindowsVersion`/`WV_*` és
+  `QSysInfo::MacintoshVersion`/`MV_*` enumok **megszűntek Qt6-ban**. Ez
+  nem "csak" egy hibás OS-név megjelenítés lett volna, hanem a teljes
+  `/Core` library (tehát mindkét platform) build-jét megállította volna.
+  Ráadásul Androidra (`Q_OS_ANDROID`) korábban egyáltalán nem volt ág,
+  csak `Q_OS_X11`, ami Androidon soha nem igaz → `"Unknown"` esett volna
+  ki. Lecserélve `QSysInfo::prettyProductName()`-re — ez az egyetlen
+  hívás minden célplatformot (Windows, macOS, Linux, Android) helyesen
+  lefed, platform-specifikus ág nélkül.
+- 🐞→✅ **A Public/Group Chat funkció mindkét platformon, minden
+  peer-re, örökre le volt tiltva.** A `chatroomwindow.cpp`
+  `addUser()`-je (és az Android-oldali megfelelője,
+  `messengerbridge.cpp`) szándékosan kizárja azokat a peereket, akiknek
+  a verziója `<= 1.2.10` — ez az eredeti LAN Messenger azon régi
+  kiadásait szűri ki, amik még nem támogatták a Public Chat-et. A
+  probléma: ennek a fork-nak a saját `IDA_VERSION`-je
+  (`Core/src/definitions.h`) **`"1.0.1"`** volt, ami *numerikusan
+  kisebb*, mint `"1.2.10"` — tehát a `Helper::compareVersions()`
+  minden egyes klienst (Windows-t **és** Android-ot egyaránt, hiszen
+  ugyanazt a konstanst osztják meg) régi, nem-támogatott kliensként
+  azonosított, és **mindig** kizárta a Public/Group Chatből — Windows↔
+  Windows, Android↔Android és Windows↔Android esetén is, kivétel
+  nélkül. Ugyanez a szám a `settings.cpp` beállítás-migrációs
+  biztonsági ellenőrzését is elrontotta volna (a `IDA_VERSION < mentett
+  verzió` esetén a teljes beállítás-fájlt törli, mert "jövőbeli
+  formátumnak" véli) egy valódi régi telepítésről történő frissítéskor.
+  **Javítás**: `IDA_VERSION` felemelve `"2.0.0"`-ra — ez biztosan
+  nagyobb, mint a Core kódban ellenőrzött összes történeti küszöbérték
+  (`1.2.10`, `1.2.25`, `1.2.28`, `1.2.30`), és egyben jelzi, hogy ez egy
+  önálló, major fork verziószáma, nem az eredeti projekt folytatása. A
+  verziószámot máshol is (telepítő szkriptek, `.rc` fájl,
+  `AndroidManifest.xml`, `Android/src/main.cpp` egy külön, most már
+  eltávolított duplikált literálja, dokumentáció) szinkronban
+  frissítettem — ez a duplikáció volt pontosan az oka, hogy a szám
+  egyáltalán szét tudott csúszni.
+
+Ez a két hiba együtt azt jelentette, hogy jelenlegi állapotban (a
+javítás előtt) a Public Chat/csoportos beszélgetés funkció **soha nem
+működött volna** senkivel, semmilyen platform-kombinációban — miközben
+a közvetlen (1-az-1) chat, fájlátvitel és discovery nem volt érintve
+(azok nem mennek keresztül ezen a verzió-kapun).
+
 ## Magyar (hu_HU) fordítás
 
 Hozzáadva [`lmc/src/hu_HU.ts`](lmc/src/hu_HU.ts) — a teljes UI mind a 284

@@ -227,7 +227,7 @@ NSIS → Inno Setup" szakaszát a részletekért).
    (Ez az `ISCC.exe`-t hívja meg — ha máshova telepítetted az Inno
    Setup-ot, mint `C:\Program Files (x86)\Inno Setup 6\`, igazítsd az
    elérési utat a `.bat` fájlban.)
-4. Az eredmény: `lanmessengerx-1.0.1-win32-setup.exe` a
+4. Az eredmény: `lanmessengerx-2.0.0-win32-setup.exe` a
    `Windows\setup\` mappában — **ez már egy önmagában átadható, kattints
    -és-települ telepítő**, amit bárkinek oda lehet adni.
 

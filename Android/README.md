@@ -262,6 +262,16 @@ ténylegesen a Windows kliens `chatroomwindow.cpp`-je:
   jelentő partnerek nem kerülnek be a szoba résztvevői közé (ők még nem
   ismerik ezt a funkciót) — pontosan úgy, ahogy
   `lmcChatRoomWindow::addUser()` is teszi.
+  ⚠️→✅ **Ez a helyesen lekövetett ellenőrzés a gyakorlatban mégis
+  mindenkit kizárt**, mert a fork saját `IDA_VERSION`-je
+  (`Core/src/definitions.h`) `"1.0.1"` volt — numerikusan *kisebb*, mint
+  a `"1.2.10"` küszöb, amivel összehasonlítja. Mivel Android és Windows
+  is ugyanezt a konstanst osztja meg, ez minden peert (a saját magát is)
+  régi, Public-Chat-et nem ismerő kliensként azonosított, tehát a
+  csoportos chat **soha nem tudott volna működni**, se Android↔Android,
+  se Windows↔Android, se Windows↔Windows kombinációban. Lásd a részletes
+  javítást a `Windows/README.md` "Cross-platform (Windows ↔ Android)
+  kompatibilitási audit" szakaszában — `IDA_VERSION` most `"2.0.0"`.
 - ✅ **Már létrehozott szobához utólagos meghívás**
   (`messenger.addParticipantsToRoom(threadId, userIds)`): a
   `GroupChatPage.qml` fejlécének 👥+ gombja a `NewGroupChatPage.qml`-t

@@ -16,7 +16,7 @@
 ; Inno Setup's preprocessor cannot #include a C++ header directly.
 
 #define ProductName "LAN Messenger X"
-#define ProductVersion "1.0.1"
+#define ProductVersion "2.0.0"
 #define CompanyName "LAN Messenger X"
 #define AppExeName "lmc.exe"
 #define ProductUrl "http://lanmessenger.github.io"

@@ -31,6 +31,7 @@
 #endif
 #include <QStringList>
 #include <QFile>
+#include <QSysInfo>
 
 int Helper::indexOf(const QString array[], int size, const QString& value) {
 	for(int index = 0; index < size; index++) {
@@ -90,67 +91,16 @@ QString Helper::getHostName(void) {
 }
 
 QString Helper::getOSName(void) {
-	QString osName = "Unknown";
-
-#if defined Q_OS_WIN
-	switch(QSysInfo::WindowsVersion) {
-	case QSysInfo::WV_NT:
-		osName = "Windows NT";
-		break;
-	case QSysInfo::WV_2000:
-		osName = "Windows 2000";
-		break;
-	case QSysInfo::WV_XP:
-		osName = "Windows XP";
-		break;
-	case QSysInfo::WV_2003:
-		osName = "Windows Server 2003";
-		break;
-	case QSysInfo::WV_VISTA:
-		osName = "Windows Vista";
-		break;
-	case QSysInfo::WV_WINDOWS7:
-		osName = "Windows 7";
-		break;
-    default:
-        osName = "Windows";
-        break;
-	}
-#elif defined Q_OS_MAC
-    switch(QSysInfo::MacintoshVersion) {
-    case QSysInfo::MV_CHEETAH:
-        osName = "Mac OS X 10.0";
-        break;
-    case QSysInfo::MV_PUMA:
-        osName = "Mac OS X 10.1";
-        break;
-    case QSysInfo::MV_JAGUAR:
-        osName = "Mac OS X 10.2";
-        break;
-    case QSysInfo::MV_PANTHER:
-        osName = "Mac OS X 10.3";
-        break;
-    case QSysInfo::MV_TIGER:
-        osName = "Mac OS X 10.4";
-        break;
-    case QSysInfo::MV_LEOPARD:
-        osName = "Mac OS X 10.5";
-        break;
-    case QSysInfo::MV_SNOWLEOPARD:
-        osName = "Mac OS X 10.6";
-        break;
-	case QSysInfo::MV_LION:
-		osName = "Mac OS X 10.7";
-		break;
-    default:
-        osName = "Mac OS X";
-        break;
-    }
-#elif defined Q_OS_X11
-	osName = "Linux/X11";
-#endif
-
-	return osName;
+	//	QSysInfo::WindowsVersion/WV_* and MacintoshVersion/MV_* (used here
+	//	previously) were removed in Qt6 - this didn't just misreport the
+	//	OS, it failed to compile at all, which broke the Core library
+	//	build (and therefore both the Windows and Android apps, since
+	//	both link lmccore) regardless of platform. prettyProductName()
+	//	is the Qt5.4+/Qt6 replacement and, unlike the old per-platform
+	//	switch statements it replaces, already covers every target this
+	//	project builds for (Windows, macOS, Linux, Android) with no
+	//	per-platform code needed here at all.
+	return QSysInfo::prettyProductName();
 }
 
 QString Helper::escapeDelimiter(QString *lpszData) {
