@@ -104,6 +104,47 @@ library-vé) érdemi részét is:
 ⏳ **Még nincs ellenőrizve valós build-bel** (ehhez a szandboxban nincs Qt6/
 OpenSSL3 telepítve).
 
+## Magyar (hu_HU) fordítás
+
+Hozzáadva [`lmc/src/hu_HU.ts`](lmc/src/hu_HU.ts) — a teljes UI mind a 284
+egyedi forrásszövegét lefordítva (341 üzenet, 28 kontextus — pontosan
+ugyanannyi, mint a meglévő `en_US.ts` forrás-katalógusban), a már meglévő 17
+fordítás (`de_DE`, `fr_FR` stb.) formátumát és konvencióit követve. Bekötve
+a `lmc.pro` `TRANSLATIONS` listájába — ettől kezdve minden normál
+`qmake && make`/`nmake` build automatikusan lefordítja `.qm`-mé (`lrelease`),
+és a nyelvválasztó (`SettingsDialog`) **kódmódosítás nélkül**, futásidőben
+fel is veszi a listájára: a nyelvlista a `lang/` mappában talált `.qm`
+fájlokból épül fel dinamikusan (`Application::loadTranslations()`,
+`Windows/lmcapp/src/application.cpp`), a megjelenített névhez pedig
+`QLocale::languageToString()`-ot hív a fájlnévből kiolvasott nyelvkódra —
+tehát `hu_HU.qm` jelenléte esetén "Hungarian" néven automatikusan
+megjelenik a listában, mint minden más nyelv esetén.
+
+Emellett észrevettem és bekötöttem a `lmc.pro`-ba három, a lemezen már
+meglévő, de a `TRANSLATIONS` listából korábban kimaradt fordítást is
+(`ja_JP.ts`, `pl_PL.ts`, `sk_SK.ts`) — ezek eddig egyáltalán nem kerültek
+be egyetlen buildbe sem, ez egy, a modernizációtól független, régebbi
+mulasztás volt az eredeti projektben.
+
+⚠️ **Nincs ellenőrizve valós `lupdate`/`lrelease`-szel** (ugyanaz a
+korlátozás, mint a program többi részénél — nincs Qt ebben a
+környezetben). A fordítás kézzel, az `en_US.ts` forrás-katalógus alapján
+készült, XML-szinten ellenőrizve (jólformáltság, üzenetszám-egyezés az
+`en_US.ts`-sel), de tényleges Qt Linguist-tel/futó alkalmazással nincs
+kipróbálva.
+
+⚠️ **A forrás-katalógus elavult a "LAN Messenger X" átnevezéshez képest**
+— ez nem a hu_HU fordítás hibája, hanem egy már meglévő, minden nyelvi
+fájlt érintő állapot: az `en_US.ts` (és a többi 17 nyelv) `<source>`
+szövegei még a régi "LAN Messenger" nevet tartalmazzák néhány helyen (pl.
+`lmcStrings` kontextus), mert senki nem futtatott `lupdate`-et az `X`
+átnevezés óta. A hu_HU fordítás **szándékosan pontosan ugyanazokat a
+forrásszövegeket** fordítja le, mint a többi 17 nyelv (a fordítási
+infrastruktúra csak pontos szövegegyezésnél alkalmazza a fordítást), így
+nem lóg ki a sorból — de ha valaki egyszer futtat egy valódi `lupdate`-et,
+minden nyelv (a hu_HU is) frissítésre fog szorulni ott, ahol a forrásszöveg
+változott.
+
 ## Szerzőség a Névjegyben
 
 A Névjegy ("About") ablak "About" füle mostantól az eredeti `IDA_COPYRIGHT`
