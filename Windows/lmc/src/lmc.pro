@@ -121,21 +121,20 @@ TRANSLATIONS += \
         pl_PL.ts \
         sk_SK.ts
 
-#	Auto-compile every TRANSLATIONS entry to .qm at build time (the
-#	Qt Linguist Tools qmake feature - ships with Qt itself, no extra
-#	install). Without this, nothing ever produced .qm files for any
-#	language except en_US, whose .qm happened to already be committed
-#	in the repo - so the app only ever had English, regardless of how
-#	many .ts files existed. Output redirected to resources/lang/ (not
-#	the default build-dir) to land exactly where resource.qrc's
-#	existing hand-written /lang prefix already expects each file -
-#	deliberately NOT using CONFIG += embed_translations, which would
-#	generate its own separate :/i18n/ resource and conflict with the
-#	StdLocation::resLangDir()/sysLangDir()/userLangDir() scheme this
-#	app already has (see stdlocation.h, application.cpp).
-CONFIG += lrelease
-QM_FILES_OUTPUT_DIR = $$PWD/resources/lang
-
+#	Every TRANSLATIONS entry needs to be compiled to resources/lang/*.qm
+#	BEFORE qmake runs, to match what resource.qrc's hand-written /lang
+#	prefix expects (see BUILD.md 1.3/1.6 - build_windows.bat and the
+#	manual command-line steps run an explicit lrelease loop for exactly
+#	this). This used to instead be CONFIG += lrelease +
+#	QM_FILES_OUTPUT_DIR, letting qmake auto-generate that step - but
+#	its Makefile rule computed the .qm dependency path relative to
+#	OUT_PWD using what turned out to be the wrong number of ".." hops
+#	(confirmed by a real build: "No rule to make target
+#	'../../resources/lang/hu_HU.qm'"), which resource.qrc's own paths
+#	(resolved relative to the .qrc file itself, not OUT_PWD) never had
+#	a problem with in the first place. Pre-generating the .qm files
+#	before qmake runs sidesteps that broken rule entirely rather than
+#	trying to fix its path math from outside a working Qt install.
 win32: RC_FILE = lmcwin32.rc
 macx: ICON = lmc.icns
 
