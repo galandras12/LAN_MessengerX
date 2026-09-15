@@ -154,6 +154,26 @@ A szkript sorrendben lefordítja:
 
 **B) Manuálisan**, ugyanezt a sorrendet betartva:
 
+⚠️ **Előbb be kell állítani a `PATH`-ot**, különben a `qmake`/
+`mingw32-make` parancsok "`'qmake' is not recognized as an internal or
+external command`" hibával elszállnak — ez **nem** kódhiba, egyszerűen
+egy sima `cmd.exe`-ben (nem a Qt saját "Qt 6.x (MinGW ...)" Start
+menü-parancsikonjával nyitott konzolban) a Windows nem tudja, hol
+keresse ezeket. Nyiss egy sima parancssort a repó gyökerében, és — a
+saját Qt-telepítésed elérési útjára igazítva — fusd le ezt **minden**
+munkamenet elején, mielőtt bármelyik `qmake`/`mingw32-make` parancsot
+kiadnád:
+
+```bat
+set PATH=C:\Qt\6.8.0\mingw_64\bin;C:\Qt\Tools\mingw1310_64\bin;%PATH%
+```
+
+(A második mappa, a `Qt\Tools\mingw...\bin`, a MinGW fordító/
+`mingw32-make` miatt kell — csak a Qt saját `mingw_64\bin`-t PATH-ra
+tenni nem elég, mert az csak a Qt-eszközöket tartalmazza, a fordítót
+nem.) Ez pontosan az a sor, amit a `build_windows.bat` is beállít saját
+magának — ha az A) opciót használod, ezzel nem kell külön foglalkoznod.
+
 ```bat
 cd Core
 qmake Core.pro -spec win32-g++ CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
@@ -384,6 +404,14 @@ vannak oldva:
   (`QStandardPaths::AppLocalDataLocation`-re átírva).
 - `QNetworkReply::error(QNetworkReply::NetworkError)` jel csendben nem
   kapcsolódik → már javítva (`errorOccurred`-re átnevezve).
+- `'qmake' is not recognized as an internal or external command` (vagy
+  ugyanez `mingw32-make`-re) a manuális (B) fordítási lépéseknél → **nem
+  kódhiba**, a `PATH` nincs beállítva egy sima `cmd.exe`-ben. Lásd az
+  [1.3](#13-fordítás) szakasz elején a `set PATH=...` sort — ezt minden
+  új parancssor-ablakban le kell futtatni, mielőtt bármelyik `qmake`/
+  `mingw32-make` parancsot kiadnád. Az A) automatikus szkript
+  (`build_windows.bat`) ezt saját maga beállítja, ott nem kell vele
+  külön foglalkozni.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
