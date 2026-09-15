@@ -26,8 +26,13 @@
 #include <Windows.h>
 #include <QLibrary>
 #else
-#include <QSound>
-#include <QAudioDeviceInfo>
+//	QSound and QAudioDeviceInfo were both removed from QtMultimedia in
+//	Qt6 (QSound had no direct fire-and-forget replacement - see play()
+//	below; QAudioDeviceInfo's replacement is QMediaDevices).
+#include <QSoundEffect>
+#include <QMediaDevices>
+#include <QAudioDevice>
+#include <QUrl>
 #endif
 #include "soundplayer.h"
 
@@ -56,7 +61,14 @@ bool lmcSoundPlayer::isAvailable()
 #ifdef Q_OS_WIN
     return sndPlaySoundFromDll != nullptr;
 #else
-    return QAudioDeviceInfo::availableDevices(QAudio::AudioOutput).isEmpty();
+    //	Fixed while migrating this line off the Qt6-removed
+    //	QAudioDeviceInfo: the original returned .isEmpty() directly, i.e.
+    //	"available" when there are NO output devices and "not available"
+    //	when there are some - inverted from what the one caller
+    //	(settingsdialog.cpp, which disables the Sounds settings group
+    //	when !isAvailable()) actually wants. A pre-existing logic bug,
+    //	not something this Qt6 migration introduced, but caught here.
+    return !QMediaDevices::audioOutputs().isEmpty();
 #endif
 }
 
@@ -66,7 +78,21 @@ void lmcSoundPlayer::play(const QString &filename)
     if(sndPlaySoundFromDll)
         sndPlaySoundFromDll(filename.toStdString().c_str(), SND_ASYNC);
 #else
-    QSound::play(filename);
+    //	QSound::play() was a fire-and-forget static call - QSoundEffect
+    //	(its Qt6 replacement) needs a live QObject instance for the
+    //	duration of playback, so this heap-allocates one and has it
+    //	delete itself once playback actually stops (playingChanged()
+    //	fires on both the start and stop transition, hence the
+    //	isPlaying() check - deleting on the start transition would kill
+    //	the sound before it plays).
+    QSoundEffect* effect = new QSoundEffect();
+    effect->setSource(QUrl::fromLocalFile(filename));
+    effect->setLoopCount(1);
+    QObject::connect(effect, &QSoundEffect::playingChanged, effect, [effect]() {
+        if(!effect->isPlaying())
+            effect->deleteLater();
+    });
+    effect->play();
 #endif
 }
 

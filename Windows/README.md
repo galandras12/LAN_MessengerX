@@ -101,6 +101,35 @@ előfeltételek"). Ez egy szükséges, egyszeri, manuális build-előfeltétel
 se licenc okokból nem íratnám bele), nem valami, amit ez a modernizáció
 elmulasztott volna bekötni.
 
+A felhasználó valós OpenSSL-elrendezése (`openssl/lib/VC/x64/{MD,MDd,MT,MTd}/`
+— a hivatalos OpenSSL `nmake install` MSVC build kimenete, nem a
+feltételezett "lapos" `lib/libcrypto.lib`) alapján a `lmc.pro` OpenSSL
+linkelő sora mostantól MSVC kit esetén automatikusan a megfelelő
+(Release: `MD`, Debug: `MDd` — a Qt saját MSVC kitjei dinamikusan
+linkelik a CRT-t, ezért **nem** a statikus `MT`/`MTd` pár kell)
+alkönyvtárat választja — lásd a [`BUILD.md`](../BUILD.md) OpenSSL
+szakaszát a részletekért.
+
+Egy további, **saját kezdeményezésű, folytatólagos Qt6-audit körben**
+(nem a felhasználó build-logjából, mert ez a kódág jelenleg nem
+Windows-specifikus, tehát a Windows build-et nem érinti) talált hiba:
+
+- ✅ `QSound`/`QAudioDeviceInfo` (`soundplayer.cpp`, **csak a
+  `unix`/`macx` kódágon** — Windows alatt a `sndPlaySoundA` WinAPI-t
+  hívja közvetlenül, ezt nem érinti) — mindkettő megszűnt a Qt6-os
+  QtMultimedia-ból. `QSound::play()` → `QSoundEffect` (élő `QObject`
+  példányt igényel a lejátszás idejére, ezért egy heap-en létrehozott,
+  lejátszás végén saját magát törlő példánnyal helyettesítve).
+  `QAudioDeviceInfo::availableDevices(...)` → `QMediaDevices::audioOutputs()`.
+  **Eközben egy önálló, a Qt6-migrációtól független logikai hibát is
+  találtam**: az eredeti `isAvailable()` a `.isEmpty()` eredményét adta
+  vissza *fordítva* (elérhetőnek jelezte, ha **nincs** hangeszköz, és
+  nem-elérhetőnek, ha **van**) — ez a `settingsdialog.cpp`-ben a
+  "Sounds" beállítás-csoportot tévesen inaktiválta olyan gépeken, ahol
+  ténylegesen volt hangeszköz. Ez nem Qt6-fordítási hiba volt (mindkét
+  irány lefordult volna), csak egy hibás futásidejű eredmény — a Qt6-os
+  átírással egy menetben javítva.
+
 Emellett ez a munkamenet elvégezte a **Fázis 3** (Core kiemelése önálló
 library-vé) érdemi részét is:
 
