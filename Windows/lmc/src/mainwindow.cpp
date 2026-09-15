@@ -475,14 +475,23 @@ void lmcMainWindow::helpAction_triggered(void) {
 void lmcMainWindow::homePageAction_triggered(void) {
 	//	This fork's project page/contact point - not IDA_DOMAIN, which
 	//	stays pointed at the original upstream project's own site for the
-	//	other links that still depend on it (help/FAQ/support pages,
-	//	update-check URL - see Core/src/definitions.h's comment).
+	//	other links that still depend on it (help/FAQ/support pages -
+	//	see Core/src/definitions.h's comment). The update-check link
+	//	used to be one of those too; see updateAction_triggered() below
+	//	for why that one now points here instead.
 	QDesktopServices::openUrl(QUrl(IDA_REPOSITORY));
 }
 
 void lmcMainWindow::updateAction_triggered(void) {
-	QRect rect = geometry();
-	emit showUpdate(&rect);
+	//	The original in-app "Check for Updates" window (lmcUpdateWindow)
+	//	silently HTTP-GETs IDA_DOMAIN "/version" - the original upstream
+	//	project's own now-defunct version-check endpoint, which this
+	//	fork has no equivalent server for. Rather than leave that broken
+	//	(users end up wondering why it errors, or - worse - why it
+	//	redirects somewhere unrelated), this fork's "Check for Updates"
+	//	just opens its own GitHub Releases page, same pattern as
+	//	homePageAction_triggered() above.
+	QDesktopServices::openUrl(QUrl(IDA_REPOSITORY "/releases"));
 }
 
 void lmcMainWindow::trayIcon_activated(QSystemTrayIcon::ActivationReason reason) {

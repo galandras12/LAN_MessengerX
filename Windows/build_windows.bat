@@ -39,6 +39,13 @@ REM then fails with "cannot find -llmcapp".
 if exist liblmcapp2.a move liblmcapp2.a liblmcapp.a
 
 cd ..\..\lmc\src
+REM Compile every .ts translation to resources\lang\*.qm BEFORE qmake/make
+REM run, rather than relying solely on lmc.pro's own CONFIG += lrelease
+REM step to race correctly against its RESOURCES = resource.qrc step
+REM (untested in this sandbox - no Qt available - so this explicit,
+REM guaranteed-order pass is a deliberate belt-and-suspenders duplicate,
+REM not a replacement for the .pro-level config).
+for %%f in (en_US ml_IN fr_FR de_DE tr_TR es_ES ko_KR bg_BG ro_RO ar_SA sl_SI pt_BR ru_RU it_IT sv_SE hu_HU ja_JP pl_PL sk_SK) do lrelease %%f.ts -qm resources\lang\%%f.qm
 qmake lmc.pro -spec win32-g++ CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
 mingw32-make
 goto endmake
@@ -61,6 +68,8 @@ REM directory rather than in a ..\lib that lmcapp.pro never creates on win32
 if exist lmcapp2.lib move lmcapp2.lib lmcapp.lib
 
 cd ..\..\lmc\src
+REM see the mingw64 branch above for why this explicit pass exists
+for %%f in (en_US ml_IN fr_FR de_DE tr_TR es_ES ko_KR bg_BG ro_RO ar_SA sl_SI pt_BR ru_RU it_IT sv_SE hu_HU ja_JP pl_PL sk_SK) do lrelease %%f.ts -qm resources\lang\%%f.qm
 qmake lmc.pro CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
 nmake
 goto endmake
