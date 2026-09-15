@@ -130,6 +130,29 @@ Windows-specifikus, tehát a Windows build-et nem érinti) talált hiba:
   irány lefordult volna), csak egy hibás futásidejű eredmény — a Qt6-os
   átírással egy menetben javítva.
 
+Egy **teljes `lmc.cpp`/`main.cpp` átolvasás** (ezek a fájlok a build
+sorrendjében közvetlenül az OpenSSL-linkelés utáni lépések — még nem
+jutott el hozzájuk a felhasználó tényleges build-je, csak most, ebben a
+folytatólagos audit körben derültek ki) az alábbi, szinte biztosan a
+következő fordítási hibákat okozó problémákat találta és javította:
+
+- ✅ `QList::toSet()`/`QSet::toList()` (`lmc.cpp`, két előfordulás:
+  `init()` a parancssori argumentumok, `receiveAppMessage()` a
+  single-instance IPC üzenetek deduplikálásánál) — ez a QList↔QSet
+  konverziós kényelmi függvénypár **megszűnt Qt6-ban** (a konténer-
+  könyvtár Qt6-os átalakításának része). Lecserélve a QSet/QList
+  range-konstruktoraira: `QSet<QString>(lista.begin(), lista.end())`,
+  majd vissza `QStringList(halmaz.begin(), halmaz.end())` — a duplikátum-
+  szűrés viselkedése (sorrend nem garantált) változatlan.
+- ✅ Hiányzó `#include <QSslSocket>` (`main.cpp`) — a
+  `QSslSocket::supportsSsl()` hívás (egy induláskori "van-e SSL-
+  támogatás" ellenőrzés) sehol máshol nincs használva/inklúdolva ebben a
+  kódbázisban (a tényleges titkosítás `Core/src/crypto.cpp`-ban
+  közvetlen OpenSSL-hívásokkal történik, `QTcpSocket` fölött, nem
+  `QSslSocket`-en keresztül) — a hiányzó explicit include-ot
+  valószínűleg egy másik fejléc transzitív include-ja fedte el Qt5
+  alatt, Qt6 fejlécei viszont jóval kevésbé "szivárogtatnak" ilyet.
+
 Emellett ez a munkamenet elvégezte a **Fázis 3** (Core kiemelése önálló
 library-vé) érdemi részét is:
 

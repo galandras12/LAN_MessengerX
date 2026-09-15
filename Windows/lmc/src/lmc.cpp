@@ -24,6 +24,7 @@
 
 #include <QMessageBox>
 #include <QTranslator>
+#include <QSet>
 #include "trace.h"
 #include "lmc.h"
 
@@ -74,8 +75,12 @@ void lmcCore::init(const QString& szCommandArgs) {
 	qApp->setQuitOnLastWindowClosed(false);
 
 	QStringList arguments = szCommandArgs.split("\n", Qt::SkipEmptyParts);
-	//	remove duplicates
-	arguments = arguments.toSet().toList();
+	//	remove duplicates - QList::toSet()/QSet::toList() were removed in
+	//	Qt6 (the cross-container convenience conversions Qt5's QList/QSet
+	//	both had), replaced by constructing through the range constructors
+	//	directly. Order is not preserved by either the old or new form.
+	QSet<QString> uniqueArguments(arguments.begin(), arguments.end());
+	arguments = QStringList(uniqueArguments.begin(), uniqueArguments.end());
 
 	pInitParams = new XmlMessage();
 	if(arguments.contains("/silent", Qt::CaseInsensitive))
@@ -346,8 +351,9 @@ bool lmcCore::receiveAppMessage(const QString& szMessage) {
 	}
 
 	QStringList messageList = szMessage.split("\n", Qt::SkipEmptyParts);
-	//	remove duplicates
-	messageList = messageList.toSet().toList();
+	//	remove duplicates - see the identical comment in init() above
+	QSet<QString> uniqueMessages(messageList.begin(), messageList.end());
+	messageList = QStringList(uniqueMessages.begin(), uniqueMessages.end());
 
 	if(messageList.contains("/new", Qt::CaseInsensitive)) {
 		if(messageList.contains("/loopback", Qt::CaseInsensitive))
