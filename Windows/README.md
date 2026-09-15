@@ -257,6 +257,24 @@ eltérő qmake/mkspec kódúton mennek Windows alatt — az esetleges
 átnevezési lépés a build szkriptekben/leírásban emiatt megmaradt
 biztonsági hálóként (no-op, ha már nincs rá szükség).
 
+### `Core`-ban felejtett `#include <QDesktopServices>` — a `Core` build meg sem indult volna
+
+A felhasználó valós build-kísérlete a `Core` fordításánál (`datagram.o`,
+`history.cpp`, `messagingproc.cpp`, `network.cpp` stb.) egységesen
+`fatal error: QDesktopServices: No such file or directory` hibával
+állt le, mindegyik a `trace.h` → `stdlocation.h` include-láncon
+keresztül. **Ez nem is fordulhatott volna le** semmilyen Qt-verzióval:
+a `Core.pro` szándékosan `QT -= gui`-t állít be (lásd fentebb, "Fázis
+3" — a `/Core`-nak Widgets/GUI-mentesnek kell maradnia, hogy az Android
+QML-kliens is tudja linkelni), a `QDesktopServices` viszont a QtGui
+modulban van — enélkül a modul enélkül soha nem lett volna elérhető
+ebben a fordítási egységben. Ellenőrizve: a `Core/src/stdlocation.h`-
+ban és a `Core/src/history.cpp`-ban ez az include **sehol nem volt
+ténylegesen használva** (nincs egyetlen `QDesktopServices::` hívás sem
+egyik fájlban sem) — feleslegesen ottfelejtett, funkció nélküli sor
+mindkét helyen. **Javítás**: mindkét include törölve, funkcionális
+változás nélkül.
+
 ## Magyar (hu_HU) fordítás
 
 Hozzáadva [`lmc/src/hu_HU.ts`](lmc/src/hu_HU.ts) — a teljes UI mind a 284
