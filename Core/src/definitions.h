@@ -34,7 +34,18 @@
 #define IDA_PRODUCT		"lanmessengerx"
 #define IDA_COMPANY		"lanmessengerx"
 #endif
-#define IDA_VERSION		"1.0.1"
+//	Must compare (via Helper::compareVersions) as newer than every
+//	historical version string the shared Core code checks it against:
+//	the settings-migration chain in settings.cpp goes up to "1.2.30",
+//	and chatroomwindow.cpp/messengerbridge.cpp gate Public/Group Chat
+//	participation on "> 1.2.10". A fork version below either threshold
+//	(the previous "1.0.1" was below both) is silently miscompared as an
+//	old, pre-Public-Chat client: every peer - on both Windows and
+//	Android, since they share this same constant - gets excluded from
+//	group chat, and an upgrade over a real old install's settings file
+//	looks like a downgrade and gets wiped by the safety check at
+//	settings.cpp:267. "2.0.0" clears all of that with room to spare.
+#define IDA_VERSION		"2.0.0"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."

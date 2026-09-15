@@ -33,7 +33,10 @@ int main(int argc, char* argv[]) {
 	QGuiApplication::setOrganizationName("LAN Messenger X");
 	QGuiApplication::setOrganizationDomain("lanmessengerx");
 	QGuiApplication::setApplicationName("LAN Messenger X");
-	QGuiApplication::setApplicationVersion("1.0.1");
+	//	IDA_VERSION (Core/src/definitions.h), not a separate literal here -
+	//	a second copy is exactly how this number drifted out of sync with
+	//	the wire-protocol version gate in the first place.
+	QGuiApplication::setApplicationVersion(IDA_VERSION);
 
 	//	Held for the whole app lifetime, not just while backgrounded - see
 	//	androidforegroundservice.h. A no-op on non-Android builds.
