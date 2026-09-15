@@ -378,7 +378,21 @@ a **Qt Visual Studio Tools** bővítménnyel):
    rossz sorrendben próbálná linkelni őket.
 6. A felső eszköztár konfiguráció-választójában állítsd **"Release" +
    "x64"**-re.
-7. **Fontos**: Solution Explorer-ben jobb klikk a `lmc` projekten →
+7. **Fontos, a `lmc` buildelése előtt**: fordítsd le a fordításokat is
+   — ezt a Visual Studio/Qt VS Tools build sem csinálja meg helyetted
+   (lásd lent, "Csak angol nyelv jelenik meg futáskor", illetve az
+   `rcc exited with code 1` hibát a Gyakori hibák között — ha ezt
+   kihagyod, pontosan ezt fogod kapni, mert a `resource.qrc` 18 `.qm`
+   fájlra hivatkozik, amik enélkül nem léteznek). Nyiss egy terminált a
+   `Windows\lmc\src` mappában, és futtasd:
+   ```bat
+   for %f in (en_US ml_IN fr_FR de_DE tr_TR es_ES ko_KR bg_BG ro_RO ar_SA sl_SI pt_BR ru_RU it_IT sv_SE hu_HU ja_JP pl_PL sk_SK) do lrelease %f.ts -qm resources\lang\%f.qm
+   ```
+   (Ha nincs `lrelease` a PATH-on ebben a terminálban, add hozzá,
+   ugyanúgy, mint az [1.3](#13-fordítás)-ban leírt `set PATH=...` sor —
+   az `lrelease.exe` a Qt saját `bin` mappájában van, a `qmake.exe`
+   mellett.)
+8. **Fontos**: Solution Explorer-ben jobb klikk a `lmc` projekten →
    **"Set as Startup Project"**. A Solution-höz elsőként hozzáadott
    projekt (jellemzően `Core`) lesz alapból a startup project — a
    `Core`/`lmcapp` viszont statikus library-k (nincs `main()`-jük),
@@ -389,14 +403,16 @@ a **Qt Visual Studio Tools** bővítménnyel):
    jelenség, mint a Qt Creator-os A) útnál a "No executable configured"
    hiba: ezeken a projekteken csak buildelni lehet, futtatni nem. Csak
    a `lmc` (a tényleges kliens) futtatható.
-8. **Build → Build Solution** (Ctrl+Shift+B) — ez buildeli mindhárom
-   projektet a 5. pontban beállított függőségi sorrendben. (A
+9. **Build → Build Solution** (Ctrl+Shift+B) — ez buildeli mindhárom
+   projektet az 5. pontban beállított függőségi sorrendben. (A
    Run/Debug (F5) gomb a Startup Projectet buildeli **és** el is
    indítja — ha csak buildelni akarsz futtatás nélkül, a Build
-   Solution a biztos választás.)
-9. Az `lmc.exe` a Visual Studio saját kimeneti mappájában jön létre
-   (jellemzően `Windows\lmc\src\x64\Release\` vagy hasonló — az
-   "Output" panel alján pontosan kiírja).
+   Solution a biztos választás.) Ellenőrizd az "Error List"/"Output"
+   panelt — ha `rcc exited with code 1` hibát látsz, lásd a 7. pontot
+   (kihagytad az `lrelease`-t).
+10. Az `lmc.exe` a Visual Studio saját kimeneti mappájában jön létre
+    (jellemzően `Windows\lmc\src\x64\Release\` vagy hasonló — az
+    "Output" panel alján pontosan kiírja).
 
 ⚠️ Ezt a B) Visual Studio-s utat **nem tudtam ténylegesen kipróbálni**
 ebben a szandboxban (nincs Visual Studio/Qt VS Tools telepítve) — a
@@ -680,6 +696,17 @@ vannak oldva:
   "Set as Startup Project", utána a Run/Debug (F5) már `lmc.exe`-t
   indítja. Lásd az [1.6](#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)
   B) Visual Studio-s lépéseit.
+- Visual Studio: `Unable to start program '...\lmc\src\lmc.exe'... A
+  rendszer nem találja a megadott fájlt` (a fenti "Set as Startup
+  Project" lépés után is) **egy `rcc exited with code 1` hibával
+  együtt** az Error List-ben → **nem ugyanaz** a hiba, mint a fenti
+  "not a valid Win32 application" — itt a `lmc.exe` fizikailag nem jött
+  létre, mert a build maga elszállt a resource-compilálásnál. Szinte
+  biztosan azért, mert kimaradt az `lrelease`-lépés (lásd az
+  [1.6](#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)
+  B) 7. pontját) — a `resource.qrc` 18 `.qm` fájlra hivatkozik, és az
+  `rcc` hibával leáll, ha akár egy is hiányzik közülük. Futtasd le az
+  `lrelease`-hurkot, majd Build Solution újra.
 - `fatal error: openssl/rand.h: No such file or directory` az `lmc`
   (nem a `Core`) fordításánál, `main.cpp`-nél vagy `lmc.cpp`-nél, **annak
   ellenére, hogy az OpenSSL már a helyén van** és a `Core` már sikeresen
