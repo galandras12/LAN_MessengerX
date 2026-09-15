@@ -275,6 +275,24 @@ egyik fájlban sem) — feleslegesen ottfelejtett, funkció nélküli sor
 mindkét helyen. **Javítás**: mindkét include törölve, funkcionális
 változás nélkül.
 
+### `messaging.cpp`: `QString::append(QString*)` — sosem fordulhatott volna le
+
+A `QDesktopServices`-hiba javítása után a felhasználó build-je egy
+fordítási egységgel mélyebbre jutott, és egy új, **teljesen a Qt6-tól
+független, eredeti kódbeli hibát** hozott fel:
+`error: no matching function for call to 'QString::append(QString*&)'`
+(`Core/src/messaging.cpp:260`, `lmcMessaging::createUserId()`-ben). A
+kód egy `QString*` mutatót adott át közvetlenül `QString::append()`-nek
+(`userId.append(lpszUserName)`), miközben a metódusnak nincs, és soha
+nem is volt ilyen túlterhelt változata — ez egyszerűen **elfelejtett
+dereferálás**. `git log`-gal ellenőrizve: ez a sor az eredeti,
+legelső importált verzió óta változatlan, tehát nem ebben a
+munkamenetben (sem a Qt6-migráció során) keletkezett hiba, hanem egy
+mindig is jelen lévő, eredeti hiba, ami eddig egyszerűen sosem jutott
+el a fordítóig (mert korábban minden build a `QDesktopServices`-nél
+elakadt, mielőtt idáig ért volna). **Javítás**:
+`userId.append(*lpszUserName)` — a mutató dereferálva.
+
 ## Magyar (hu_HU) fordítás
 
 Hozzáadva [`lmc/src/hu_HU.ts`](lmc/src/hu_HU.ts) — a teljes UI mind a 284

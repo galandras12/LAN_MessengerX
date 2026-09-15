@@ -621,6 +621,13 @@ vannak oldva:
   linkelhesse) — ez a két sor emiatt soha nem is fordulhatott volna le,
   bármilyen Qt-verzióval. Mindkét include törölve, funkcionális
   változás nélkül.
+- `no matching function for call to 'QString::append(QString*&)'`
+  (`Core/src/messaging.cpp`, `createUserId()`) → már javítva — **nem
+  Qt6-hiba**, egy eredeti, mindig is jelen lévő elgépelés
+  (`userId.append(lpszUserName)` → `userId.append(*lpszUserName)`,
+  hiányzó dereferálás). Csak azért nem került elő korábban, mert a
+  build korábban a `QDesktopServices`-hibánál elakadt, mielőtt idáig
+  ért volna.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
