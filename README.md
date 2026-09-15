@@ -17,6 +17,12 @@ verziószám egyetlen helyről ([`Core/src/definitions.h`](Core/src/definitions.
 | [`/Android`](Android) | A Qt Quick/QML Android kliens, a `/Core`-ra bekötve (kontaktlista, 1:1 chat, egyfájlos fájlátvitel működik forráskód-szinten; build még nincs ellenőrizve, lásd a mappa README-jét) |
 | [`/Core`](Core) | A két kliens által megosztott hálózati/protokoll/titkosítási/előzmény réteg |
 
+## Build
+
+Lépésről lépésre útmutató Windows `.exe` telepítő és Android `.apk`
+készítéséhez (szükséges eszközök, build-sorrend, csomagolás átadható
+formába): [`BUILD.md`](BUILD.md).
+
 ## Státusz
 
 Ez a repó a felhasználóval egyeztetett, jóváhagyott modernizációs terv
