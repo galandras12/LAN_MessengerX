@@ -64,32 +64,68 @@ Windows-os OpenSSL 3.x fejlesztői csomag kell (fejlécek + import
 library).
 
 1. Tölts le egy Windows-os OpenSSL 3.x disztribúciót a Qt kitedhez illő
-   architektúrához (64-bit) — pl. a [slproweb.com Win64 OpenSSL
-   csomagjai](https://slproweb.com/products/Win32OpenSSL.html) közül a
-   **"Win64 OpenSSL … (nem light)"** verziót (a "Light" verzióból
-   hiányozhatnak a fejlécek), vagy fordítsd le saját magad
-   (`vcpkg install openssl:x64-windows` is egy lehetőség, ekkor a
-   `vcpkg`-telepítés `include`/`lib` mappáit kell átmásolni/linkelni).
-2. Hozd létre a repó gyökerében az `openssl` mappát, és másold bele úgy,
-   hogy a végeredmény:
+   architektúrához (64-bit), vagy fordítsd le saját magad forrásból
+   `nmake`-kel (MSVC-hez ez az OpenSSL saját, hivatalos build-módja —
+   ha így csináltad, a végeredmény mappaszerkezete a 2. pontban leírt
+   `VC\x64\...` alstruktúrát fogja adni). `vcpkg install
+   openssl:x64-windows` is egy lehetőség.
+2. Hozd létre a repó gyökerében az `openssl` mappát, és másold bele az
+   `include`-ot és a `lib`-et úgy, hogy a `crypto.h` megtalálja a
+   fejléceket. Kétféle `lib`-elrendezéssel találkozhatsz a
+   disztribúciódtól függően:
+
+   **A) "Lapos" elrendezés** (pl. előre csomagolt bináris disztribúciók
+   esetén gyakori) — `libcrypto.lib` közvetlenül a `lib` mappában:
    ```
    LAN_MessengerX/
    └── openssl/
        ├── include/
        │   └── openssl/   (rand.h, rsa.h, pem.h, aes.h, evp.h, ...)
        └── lib/
-           └── libcrypto.lib   (vagy más néven, lásd lent)
+           └── libcrypto.lib
    ```
+   Ez a `lmc.pro`-ban a nem-MSVC (pl. MinGW) ágon számít alapból.
+
+   **B) `VC\x64\{MD,MDd,MT,MTd}\` elrendezés** — ha az OpenSSL-t saját
+   magad fordítottad `nmake`-kel (vagy egy olyan disztribúciót
+   használsz, ami ezt a hivatalos MSVC build-elrendezést követi), akkor
+   a `lib` mappa **négy alkönyvtárat** tartalmaz, mindegyikben egy
+   teljes, önálló `libcrypto.lib`-bel (+ sok más fájllal — `.pdb`,
+   statikus `.lib`-ek stb.):
+
+   | Alkönyvtár | Mit jelent |
+   |---|---|
+   | **`MD`** | Release, dinamikusan linkelt CRT (`/MD`) — **ezt használd** |
+   | `MDd` | Debug, dinamikusan linkelt CRT (`/MDd`) — csak Debug build-hez |
+   | `MT` | Release, statikusan linkelt CRT (`/MT`) — **nem ezt** |
+   | `MTd` | Debug, statikusan linkelt CRT (`/MTd`) — **nem ezt** |
+
+   A Qt saját MSVC kitjei (és ezért ez az app is) a CRT-t **dinamikusan**
+   linkelik — ezért kell az `MD` (Release build-hez) / `MDd` (Debug
+   build-hez), **nem** az `MT`/`MTd` pár: ha statikusan linkelt CRT-jű
+   OpenSSL-t linkelnél egy dinamikus-CRT-s Qt build-hez, az vagy
+   linker-hibát, vagy (rosszabb esetben) futásidőben nehezen
+   diagnosztizálható, kettős-CRT-állapotú összeomlást okozna.
+
+   Ezt az elrendezést **nem kell szétbontanod/átmásolnod** — a
+   `Windows/lmc/src/lmc.pro` már fel van készítve rá: MSVC kit esetén
+   automatikusan az `openssl/lib/VC/x64/MD` (Release) vagy
+   `openssl/lib/VC/x64/MDd` (Debug) alkönyvtárból linkel, a
+   `CONFIG(debug, debug|release)` ág alapján. Tehát ha ilyen
+   elrendezésű OpenSSL-ed van, elég az `openssl/lib/VC/x64/...`
+   mappákat a helyükön hagyni, nincs szükség kézi átmásolásra vagy a
+   `.pro` módosítására.
 3. Ha a te disztribúciód az import library-t más néven adja (pl. a régebbi
    1.0.2-es csomagok `libeay32.lib` néven), igazítsd a
-   `Windows/lmc/src/lmc.pro` legvégén lévő sort:
-   ```
-   win32: LIBS += -L$$PWD/../../../openssl/lib/ -llibcrypto
-   ```
+   `Windows/lmc/src/lmc.pro` OpenSSL-szakaszának megfelelő `-llibcrypto`
+   sorát/sorait a saját elrendezésed alapján.
 4. **Futásidőben** is kell a tényleges `libcrypto-3-x64.dll` (és
    `libssl-3-x64.dll`, ha a disztribúciód külön adja) — ezt a `lmc.exe`
-   mellé kell majd másolni (lásd 1.4. lépés), a fenti `include`/`lib`
-   csak a *fordításhoz* kell.
+   mellé kell majd másolni (lásd 1.4. lépés). A `VC\x64\...` elrendezésű
+   `nmake install` kimenetnél a DLL-eket jellemzően egy külön `bin`
+   mappában találod (nem a `lib` alatt) — keresd meg, ahol az OpenSSL
+   build/telepítés létrehozta őket. A fenti `include`/`lib` csak a
+   *fordításhoz* kell, a DLL a *futtatáshoz*.
 
 Enélkül a build az alábbi hibával fog leállni:
 ```

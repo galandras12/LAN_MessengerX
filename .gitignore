@@ -43,6 +43,15 @@ Makefile*
 /Core/release*/
 /Core/build/
 
+# Qt Creator shadow builds - these can land anywhere a .pro file lives
+# (e.g. Windows/lmc/src/build/Desktop_Qt_.../, Windows/lmcapp/src/build/...),
+# not just the specific paths above, and carry machine-specific absolute
+# paths (.qmake.stash, compile_commands.json) that should never be
+# committed. Catches all of them regardless of nesting depth.
+**/build/Desktop_Qt_*/
+**/.qtc_clangd/
+object_script.*
+
 # Android / Qt for Android / Gradle build output
 /Android/build/
 /Android/.gradle/

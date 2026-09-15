@@ -158,5 +158,23 @@ win32-msvc*: LIBS += advapi32.lib # for GetUserNameW(...) in Helper::getLogonNam
 # packages used "libeay32.lib" - adjust to match whatever OpenSSL 3.x
 # distribution you install if this differs). Expected at repo-root
 # /openssl, i.e. a sibling of /Core and /Windows.
-win32: LIBS += -L$$PWD/../../../openssl/lib/ -llibcrypto
+#
+# An OpenSSL source build installed via "nmake install" (the standard
+# MSVC build route - see BUILD.md) lays lib/ out as
+# lib/VC/x64/{MD,MDd,MT,MTd}/, one per CRT-linkage/config combination,
+# not a flat lib/libcrypto.lib. Qt's own MSVC kits (and therefore this
+# app) link the CRT dynamically, so MD (release) / MDd (debug) - not the
+# static MT/MTd pair - are the ones that are ABI-compatible with a Qt
+# build here. A flat lib/libcrypto.lib (e.g. from a prebuilt slproweb-
+# style distribution instead of a from-source nmake install) still works
+# unchanged via the win32-but-not-msvc fallback below.
+win32-msvc* {
+    CONFIG(debug, debug|release) {
+        LIBS += -L$$PWD/../../../openssl/lib/VC/x64/MDd -llibcrypto
+    } else {
+        LIBS += -L$$PWD/../../../openssl/lib/VC/x64/MD -llibcrypto
+    }
+} else:win32 {
+    LIBS += -L$$PWD/../../../openssl/lib/ -llibcrypto
+}
 unix:!symbian: LIBS += -L$$PWD/../../../openssl/lib/ -lcrypto
