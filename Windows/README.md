@@ -293,6 +293,58 @@ el a fordítóig (mert korábban minden build a `QDesktopServices`-nél
 elakadt, mielőtt idáig ért volna). **Javítás**:
 `userId.append(*lpszUserName)` — a mutató dereferálva.
 
+### `lmc.pro`-ból hiányzott az OpenSSL `INCLUDEPATH` — `openssl/rand.h` hiba a `Core` javítása UTÁN is
+
+A `Core` sikeres fordítása után a felhasználó build-je most már az
+`lmc` (a tényleges Windows-kliens) projektnél állt le, **ugyanazzal**
+a `fatal error: openssl/rand.h: No such file or directory` hibával,
+amit korábban a `Core`-nál már megoldottunk (lásd az OpenSSL-elhelyezési
+szakaszt fentebb) — ez most `main.cpp`-nél, majd `lmc.cpp`-nél jött elő,
+annak ellenére, hogy az OpenSSL a helyén volt a repó gyökerében.
+
+Az ok: a `Core/src/crypto.h` (`#include <openssl/rand.h>`) **nem
+csak** a `Core.pro`-ból, hanem az `lmc.pro`-ból is transzitíven
+be van húzva — `lmc.h` → `messaging.h` → `network.h`/`udpnetwork.h` →
+`crypto.h` láncon keresztül, mert ezek a Core-fejlécek `#include
+"crypto.h"`-t tartalmaznak. A `Core.pro`-nak megvan a saját
+`INCLUDEPATH += $$PWD/../openssl/include` sora, ez azonban **csak a
+`Core` fordítási egységeire vonatkozik** — a `lmccore` statikus
+library-t linkelni (`-llmccore`) nem "örökölteti" automatikusan a
+Core saját `INCLUDEPATH`-ját az `lmc.pro`-val, mert az két külön
+qmake-projekt. Az `lmc.pro`-ban eddig csak a link-időben szükséges
+`LIBS += -L.../openssl/lib -llibcrypto` sor szerepelt, a fordítási
+időben szükséges `INCLUDEPATH` hiányzott — emiatt bármelyik `lmc`-beli
+`.cpp` fájl, ami akár csak közvetve is eléri a `crypto.h`-t (ami
+gyakorlatilag mindegyik, mivel a `messaging.h`/`network.h` szinte
+mindenhonnan be van húzva), ugyanezzel a hibával állt volna le.
+**Javítás**: `INCLUDEPATH += $$PWD/../../../openssl/include` (és a
+hozzá tartozó `DEPENDPATH`) hozzáadva az `lmc.pro`-hoz, ugyanoda
+mutatva, mint a már meglévő `LIBS`-sor.
+
+### Négy további, valós Qt6-hiba az `lmc`-ben
+
+A fenti javítás után a build tovább jutott, és négy újabb, klasszikus
+Qt6-eltávolítási hibát hozott fel:
+
+- ✅ `QTextStream::setCodec("UTF-8")` (3 előfordulás:
+  `Core/src/settings.cpp`, `Windows/lmc/src/chatwindow.cpp`,
+  `Windows/lmc/src/chatroomwindow.cpp` — mindhárom "beszélgetés
+  mentése"/asztali parancsikon-írás művelet) — a `QTextCodec`-rendszer
+  (és vele a `QTextStream::setCodec()`) kikerült a QtCore-ból Qt6-ban
+  (az opcionális Qt5Compat modulba költözött); a `QTextStream` Qt6
+  alatt mindig UTF-8-at használ, ami pontosan az volt, amit ez a sor
+  amúgy is kért — egyszerűen törölve, funkcionális változás nélkül
+  (a mellette lévő `setGenerateByteOrderMark()` hívás továbbra is
+  érvényes Qt6 alatt, az megmaradt).
+- ✅ `QPalette::foreground()` (`filemodelview.cpp`, a fájlátvitel-lista
+  egyéni kirajzolásában) — ez már Qt5-ben is csak elavult alias volt a
+  `windowText()`-hez, Qt6-ban véglegesen megszűnt → `windowText()`-re
+  átírva.
+- ✅ `qVariantFromValue(...)` (`filemodelview.cpp`, 2 előfordulás) — ez
+  a szabad függvény már Qt5-ben is elavult volt a `QVariant::fromValue()`
+  taghívás javára, Qt6-ban megszűnt → mindkét előfordulás
+  `QVariant::fromValue(...)`-ra átírva.
+
 ## Magyar (hu_HU) fordítás
 
 Hozzáadva [`lmc/src/hu_HU.ts`](lmc/src/hu_HU.ts) — a teljes UI mind a 284
