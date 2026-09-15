@@ -313,6 +313,13 @@ változatlanul, ugyanúgy következnek.
    "Debug"-ot, ha végleges .exe-t akarsz).
 6. Kattints a bal oldali kalapács ikonra (Build Project), vagy
    **Ctrl+B**. Ez legyártja a `Core/lib/lmccore.a` (vagy `.lib`) fájlt.
+   ⚠️ **Ne** a zöld "Run" (▶) gombot nyomd meg — a `Core` (és lent a
+   `lmcapp` is) egy **statikus library**, nincs mit futtatni rajta.
+   Run-ra kattintva Qt Creator "`No executable configured in the
+   custom run configuration`" hibát ad, mert egy library-projekthez
+   nincs is mit futtatnia — ez nem hiba a kódban, egyszerűen ezeken a
+   projekteken csak a **Build** gombot használd. Csak a lenti, 8.
+   pontban megnyitott `lmc.pro` egy tényleges futtatható program.
 7. Ismételd meg ugyanezt a `Windows/lmcapp/src/lmcapp.pro`-val
    (ugyanaz a kit, Release mód, shadow build kikapcsolva).
    - Ha a kimenet neve `liblmcapp2.a`/`lmcapp2.lib` lett (nem
@@ -628,6 +635,12 @@ vannak oldva:
   hiányzó dereferálás). Csak azért nem került elő korábban, mert a
   build korábban a `QDesktopServices`-hibánál elakadt, mielőtt idáig
   ért volna.
+- Qt Creator: `No executable configured in the custom run
+  configuration` → **nem hiba**, csak a zöld "Run" (▶) gombot nyomtad
+  meg egy library-projekten (`Core` vagy `lmcapp`) — ezeknek nincs mit
+  futtatniuk, csak buildelni kell őket (kalapács ikon / Ctrl+B). Lásd
+  az [1.6](#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)
+  A) Qt Creator-os lépéseit.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
