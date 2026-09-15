@@ -378,8 +378,23 @@ a **Qt Visual Studio Tools** bővítménnyel):
    rossz sorrendben próbálná linkelni őket.
 6. A felső eszköztár konfiguráció-választójában állítsd **"Release" +
    "x64"**-re.
-7. **Build → Build Solution** (Ctrl+Shift+B).
-8. Az `lmc.exe` a Visual Studio saját kimeneti mappájában jön létre
+7. **Fontos**: Solution Explorer-ben jobb klikk a `lmc` projekten →
+   **"Set as Startup Project"**. A Solution-höz elsőként hozzáadott
+   projekt (jellemzően `Core`) lesz alapból a startup project — a
+   `Core`/`lmcapp` viszont statikus library-k (nincs `main()`-jük),
+   ha ezeken hagyva nyomod meg a Run/Debug (F5) gombot, Visual Studio
+   megpróbálja "elindítani" a `.lib` fájlt, és
+   **"Unable to start program '...\lmccore.lib'... is not a valid
+   Win32 application"** hibát ad — ez nem hiba a kódban, ugyanaz a
+   jelenség, mint a Qt Creator-os A) útnál a "No executable configured"
+   hiba: ezeken a projekteken csak buildelni lehet, futtatni nem. Csak
+   a `lmc` (a tényleges kliens) futtatható.
+8. **Build → Build Solution** (Ctrl+Shift+B) — ez buildeli mindhárom
+   projektet a 5. pontban beállított függőségi sorrendben. (A
+   Run/Debug (F5) gomb a Startup Projectet buildeli **és** el is
+   indítja — ha csak buildelni akarsz futtatás nélkül, a Build
+   Solution a biztos választás.)
+9. Az `lmc.exe` a Visual Studio saját kimeneti mappájában jön létre
    (jellemzően `Windows\lmc\src\x64\Release\` vagy hasonló — az
    "Output" panel alján pontosan kiírja).
 
@@ -657,6 +672,14 @@ vannak oldva:
   futtatniuk, csak buildelni kell őket (kalapács ikon / Ctrl+B). Lásd
   az [1.6](#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)
   A) Qt Creator-os lépéseit.
+- Visual Studio: `Unable to start program '...\lmccore.lib'... is not
+  a valid Win32 application` → **nem hiba**, ugyanaz a jelenség, mint a
+  fenti Qt Creator-os pont — a Solution "Startup Project"-je `Core`-ra
+  (vagy `lmcapp`-ra) van állítva, ezek statikus library-k, nincs mit
+  futtatni rajtuk. Solution Explorer-ben jobb klikk a `lmc` projekten →
+  "Set as Startup Project", utána a Run/Debug (F5) már `lmc.exe`-t
+  indítja. Lásd az [1.6](#16-opcionális-parancssor-nélkül-qt-creator-ral-vagy-visual-studio-val)
+  B) Visual Studio-s lépéseit.
 - `fatal error: openssl/rand.h: No such file or directory` az `lmc`
   (nem a `Core`) fordításánál, `main.cpp`-nél vagy `lmc.cpp`-nél, **annak
   ellenére, hogy az OpenSSL már a helyén van** és a `Core` már sikeresen
