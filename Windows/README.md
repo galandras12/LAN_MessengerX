@@ -643,13 +643,18 @@ A hálózati/protokoll/titkosítási/előzmény kód a [`/Core`](../Core) mappá
 van, önálló `lmccore` statikus library-ként épül, amit a `lmc.pro` linkel
 (lásd [`Core/Core.pro`](../Core/Core.pro) és [`Core/README.md`](../Core/README.md)).
 
-## 2.0.2 — build-warning takarítás
+## 2.0.2 / 2.0.3 — build-warning takarítás
 
 Egy valós Qt Creator build (`Core.pro`, `lmcapp.pro`, `lmc.pro`, mind
 `release`) sok warningot adott — egyik sem állította meg a buildet (egyik
 `.pro` fájlban sincs `-Werror`), de a legtöbb tényleg kitakarítható volt.
 Nem érintett wire-protokollt vagy beállítás-formátumot, ezért `IDA_VERSION`
-csak egy patch-verzióval nőtt (`2.0.0` → `2.0.2`).
+csak patch-verziókkal nőtt (`2.0.0` → `2.0.2` → `2.0.3`) — utóbbi azért,
+mert a `2.0.2`-es javítás egyik része (lásd lent, az `OPENSSL_API_COMPAT`
+pont) egy valós build-bel kiderülően maga is hibás volt, és egy újabb,
+ezúttal ellenőrizhető javítást igényelt: a szabály innentől az, hogy
+minden tényleges hibajavítás (nem csak funkció) kap egy patch-verzió
+emelést, akkor is, ha egy korábbi, még ki nem adott javítást korrigál.
 
 - **OpenSSL 3.0 deprecated RSA/PEM-API** (`RSA_free`, `RSA_new`,
   `RSA_generate_key`, `RSA_size`, `RSA_public_encrypt`,
