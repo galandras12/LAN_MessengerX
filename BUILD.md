@@ -513,11 +513,40 @@ vissza kell menned hozzá:
      létre egy üres mappát (pl. `C:\Android\Sdk`), és azt add meg
      "Android SDK location"-ként — Qt Creator (a 20.0.1 is) egy üres
      mappa esetén felajánlja a hiányzó parancssori eszközök
-     (`cmdline-tools`) letöltését/telepítését, utána pedig egy beépített
-     Android SDK Manager panelen (checkbox-lista: SDK Platforms, SDK
-     Tools, build-tools stb.) engedi kiválasztani és telepíteni a
-     szükséges csomagokat egy "Apply"/"Install" gombbal — ehhez
-     internetkapcsolat kell, de külön Android Studio nem.
+     (`cmdline-tools`) letöltését/telepítését ("Set Up SDK" gomb),
+     utána pedig egy beépített Android SDK Manager panelen
+     (checkbox-lista: SDK Platforms, SDK Tools, build-tools stb.) engedi
+     kiválasztani és telepíteni a szükséges csomagokat egy "Apply"/
+     "Install" gombbal — ehhez internetkapcsolat kell, de külön Android
+     Studio nem.
+
+     ⚠️ **Valós build-bel tapasztalt hiba**: a "Set Up SDK" gomb a
+     `cmdline-tools`-t sikeresen telepíti, utána viszont a többi csomag
+     (`platform-tools`, `ndk`, `emulator`, `system-images`,
+     `extras;google;usb_driver`) mind `Failed`-del állhat le — a
+     `platform-tools` esetén konkrétan egy `java.nio.file.
+     AccessDeniedException` hibával, a Google saját, a `sdkmanager`-t
+     leváltó, még új és nyilvánvalóan **kevésbé kiforrott "Android
+     CLI" eszközében** (`com.android.cli.sdk...` a hibaüzenet
+     verem-nyomkövetésében). Ez **nem ennek a repónak/a leírásnak a
+     hibája**, hanem Google saját, Windows-on futó telepítő-eszközének
+     egy valós, ebben a munkamenetben nem tovább diagnosztizálható
+     problémája. Ha ezt kapod:
+     1. Először ellenőrizd, hogy a választott SDK-mappa **nem**
+        felhő-szinkronizált mappában van-e (OneDrive/Dropbox/Google
+        Drive — ez klasszikus, gyakori oka pont az
+        `AccessDeniedException`-nek, mert a szinkronizáló folyamat
+        épp zárolja a frissen kicsomagolt fájlokat), és hogy a
+        Windows-felhasználódnak **teljes írási/módosítási joga** van
+        rá (nem `C:\Program Files\` alatt van).
+     2. Ha ez nem segít, **ne ezzel a beépített eszközzel küzdj
+        tovább** — telepítsd inkább az **Android Studio-t**
+        ([developer.android.com/studio](https://developer.android.com/studio)),
+        és a benne lévő, jóval kiforrottabb, hagyományos SDK Manager-en
+        keresztül telepítsd a platformot/platform-tools/build-tools/NDK
+        csomagokat, majd — a fenti "Ha van Android Studio-d" pont
+        szerint — azt az SDK-mappát add meg Qt Creator-ban. Ez
+        megkerüli a hibázó új eszközt teljesen.
    - Legalább egy **platform** (az `AndroidManifest.xml` `minSdkVersion=
      "24"`/`targetSdkVersion="34"` alapján érdemes a 34-es platformot
      bepipálni), a **platform-tools**, és **build-tools** csomagokat
@@ -892,6 +921,19 @@ vannak oldva:
   **nem** ad kész SDK-t, csak a Qt-könyvtárakat) — lásd a [2.1-es
   Android kit telepítés](#21-szükséges-összetevők) 6-7. lépését,
   különösen ha az "Android SDK location" mező üres vagy piros.
+- Qt Creator "Set Up SDK" gombja: a `cmdline-tools` telepítése
+  sikeres, utána viszont `platform-tools`/`ndk`/`emulator`/
+  `system-images`/`extras;google;usb_driver` mind `Failed`-del áll le,
+  a `platform-tools`-nál konkrétan egy `java.nio.file.
+  AccessDeniedException`-nel → **nem ennek a repónak a hibája**, hanem
+  Google saját, a `sdkmanager`-t leváltó, új "Android CLI" nevű
+  telepítő-eszközének egy valós Windows-os problémája. Ellenőrizd, hogy
+  a választott SDK-mappa nincs-e felhő-szinkronizált mappában
+  (OneDrive/Dropbox/stb. — gyakori ok), és hogy teljes írási jogod van
+  rá; ha ez nem segít, kerüld meg a hibázó eszközt: telepítsd az
+  Android Studio-t, és annak hagyományos SDK Manager-ével telepítsd a
+  csomagokat, majd azt az SDK-mappát add meg Qt Creator-ban — lásd a
+  [2.1-es Android kit telepítés](#21-szükséges-összetevők) 7. lépését.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
