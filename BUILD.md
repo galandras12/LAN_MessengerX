@@ -682,13 +682,18 @@ vannak oldva:
   fenti "not a valid Win32 application" — itt a `lmc.exe` fizikailag
   nem jött létre, mert a build maga elszállt a resource-compilálásnál,
   mert a `resource.qrc` 18 `.qm` fájlra hivatkozik, és az `rcc` hibával
-  leáll, ha akár egy is hiányzik közülük. Ha ezt a legfrissebb
-  `lmc.pro`-val (lásd lent, "Csak angol nyelv jelenik meg futáskor")
-  mégis megkapod, ellenőrizd, hogy az `lrelease.exe` valóban elérhető-e
-  onnan, ahonnan a Qt Creator/Visual Studio a `qmake`-et futtatja (a Qt
-  telepítésed `bin` mappájában van, a `qmake.exe` mellett) — a `.pro`
-  fájl `system(lrelease ...)` hívása ugyanazt a folyamat-környezetet
-  örökli, amiben a `qmake` fut.
+  leáll, ha akár egy is hiányzik közülük. Már javítva: a `lmc.pro`
+  korábban egy csupasz `lrelease` parancsnevet adott át a
+  `system()`-nek, amit csak akkor talált meg, ha a `qmake`-et indító
+  folyamat `PATH`-ja tartalmazta a Qt `bin` mappáját — parancssorból és
+  Qt Creator-ból igen, de a Visual Studio-s Qt VS Tools `QtRunWork`
+  build-feladatából nem, ezért ott a `lrelease`-hívás csendben nem
+  hozott létre semmilyen `.qm` fájlt, és az `rcc` ezen bukott el
+  (valós Visual Studio build-del megerősítve). A `.pro` fájl mostantól
+  `$$[QT_INSTALL_BINS]/lrelease`-t hív a csupasz név helyett — ez
+  mindig ugyanahhoz a Qt-telepítéshez tartozó `lrelease`-re oldódik
+  fel, függetlenül attól, hogy melyik környezetből (parancssor, Qt
+  Creator, Visual Studio) indult a `qmake`.
 - `fatal error: openssl/rand.h: No such file or directory` az `lmc`
   (nem a `Core`) fordításánál, `main.cpp`-nél vagy `lmc.cpp`-nél, **annak
   ellenére, hogy az OpenSSL már a helyén van** és a `Core` már sikeresen
@@ -723,12 +728,15 @@ vannak oldva:
   eredményeként be volt checkolva a repóba, a többi nyelvhez **soha
   nem is jött létre `.qm` fájl**. A végleges javítás: a `lmc.pro` maga
   fordítja le mind a 18 `.ts` fájlt `resources/lang/*.qm`-mé, egy
-  `system(lrelease ...)` hívással, ami minden `qmake`-lefutáskor
-  automatikusan lefut — sem parancssoron, sem Qt Creator-ban, sem
-  Visual Studio-ban nincs hozzá külön, kézzel elvégzendő lépés.
-  Korábban két másik megoldást is kipróbáltam, mindkettő okkal esett
-  ki (lásd lent a következő pontot, illetve a fenti `rcc exited with
-  code 1` pontot).
+  `system($$[QT_INSTALL_BINS]/lrelease ...)` hívással, ami minden
+  `qmake`-lefutáskor automatikusan lefut — sem parancssoron, sem Qt
+  Creator-ban, sem Visual Studio-ban nincs hozzá külön, kézzel
+  elvégzendő lépés, és nem függ attól, hogy az adott környezet PATH-ja
+  tartalmazza-e a Qt `bin` mappáját. Korábban két másik megoldást is
+  kipróbáltam, mindkettő okkal esett ki, és egy harmadik javítási
+  kísérletnek (csupasz `lrelease` parancsnév) is volt egy valós
+  Visual Studio-s hibája (lásd lent a következő pontot, illetve a
+  fenti `rcc exited with code 1` pontot).
 - `` :-1: error: No rule to make target '../../resources/lang/XX_XX.qm',
   needed by 'qrc_resource.cpp'.  Stop. `` → egy korábbi, azóta
   elvetett javítási kísérlet hibája volt (`lmc.pro`-ban
