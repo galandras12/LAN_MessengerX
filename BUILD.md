@@ -316,7 +316,7 @@ NSIS → Inno Setup" szakaszát a részletekért).
    (Ez az `ISCC.exe`-t hívja meg — ha máshova telepítetted az Inno
    Setup-ot, mint `C:\Program Files (x86)\Inno Setup 6\`, igazítsd az
    elérési utat a `.bat` fájlban.)
-4. Az eredmény: `lanmessengerx-2.0.4-win32-setup.exe` a
+4. Az eredmény: `lanmessengerx-2.0.5-win32-setup.exe` a
    `Windows\setup\` mappában — **ez már egy önmagában átadható, kattints
    -és-települ telepítő**, amit bárkinek oda lehet adni.
 
@@ -450,9 +450,12 @@ opció.
 | **Qt Creator** (ajánlott, nem kötelező) | Legegyszerűbb módja az Android kit beállításának és a build elindításának; parancssorból is megy (`qmake` + `androiddeployqt`), de Qt Creator sokkal kevesebb kézi konfigurációt igényel |
 | **Android ABI-nkénti OpenSSL** | Lásd 2.2 — **már bekötve a repóba**, nincs hozzá teendőd |
 
-Az `AndroidManifest.xml` `minSdkVersion="24"`, `targetSdkVersion="34"` —
+Az `AndroidManifest.xml` `minSdkVersion="28"`, `targetSdkVersion="34"` —
 ezekhez illő SDK platform-csomagokat is telepítened kell az Android
-SDK Manager-ben.
+SDK Manager-ben. (A `minSdkVersion` eredetileg `24` volt, de egy valós
+build-bel kiderült, hogy a Qt 6.11.2 Android kitje ennél magasabbat
+követel meg — lásd a Gyakori hibák "API level set for the APK is less
+than the minimum required by the kit" pontját.)
 
 #### Az Android kit telepítése (ha eddig csak MinGW/MSVC van fent)
 
@@ -583,7 +586,7 @@ vissza kell menned hozzá:
      alapértelmezettjére (`...\AppData\Local\Android\Sdk`) vagy egy
      `C:\Android\Sdk`-hoz hasonló, gyökér-közeli mappára.
    - Legalább egy **platform** (az `AndroidManifest.xml` `minSdkVersion=
-     "24"`/`targetSdkVersion="34"` alapján érdemes a 34-es platformot
+     "28"`/`targetSdkVersion="34"` alapján érdemes a 34-es platformot
      bepipálni), a **platform-tools**, és **build-tools** csomagokat
      mindenképp telepítsd.
 
@@ -1049,6 +1052,17 @@ vannak oldva:
   side)"-t, majd Qt Creator-ban "Add..."-tal tallózd be a települt NDK
   mappát — lásd a [2.1-es Android kit
   telepítés](#21-szükséges-összetevők) 7. lépését.
+- `Android.pro` build: `` The API level set for the APK is less than
+  the minimum required by the kit. The minimum API level required by
+  the kit is 28. `` → már javítva. A Qt 6.11.2 Android kitje saját
+  maga megkövetel egy minimum API-szintet (28), ami magasabb, mint az
+  `AndroidManifest.xml`-ben korábban beállított `minSdkVersion="24"` —
+  ez nem ennek az appnak a döntése volt, hanem a Qt toolchain saját
+  alsó korlátja, valós build-bel megerősítve. Az
+  `android/AndroidManifest.xml` `minSdkVersion`-je mostantól `"28"`. Ha
+  egy újabb Qt-verzióval ismét hasonló hibát kapsz, emeld tovább
+  ugyanígy — az error szövege mindig megmondja a pontos szükséges
+  értéket.
 - Qt Creator "Set Up SDK" gombja: a `cmdline-tools` telepítése
   sikeres, utána viszont `platform-tools`/`ndk`/`emulator`/
   `system-images`/`extras;google;usb_driver` mind `Failed`-del áll le,

@@ -52,10 +52,13 @@
 //	see Core/Core.pro and Core/src/crypto.cpp), then to "2.0.4" for
 //	vendoring a per-ABI Android OpenSSL package (openssl-android/,
 //	Core.pro, Android.pro) that resolved BUILD.md's previously
-//	documented Android build blocker - none of these changed the wire
-//	protocol or settings format, so no new version-gate concerns
-//	beyond what "2.0.0" already cleared.
-#define IDA_VERSION		"2.0.4"
+//	documented Android build blocker, then to "2.0.5" for raising
+//	AndroidManifest.xml's minSdkVersion to 28 (Qt 6.11.2's Android kit
+//	itself refuses anything lower - confirmed by a real build) and an
+//	Android-only unused-parameter warning in settings.cpp - none of
+//	these changed the wire protocol or settings format, so no new
+//	version-gate concerns beyond what "2.0.0" already cleared.
+#define IDA_VERSION		"2.0.5"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."

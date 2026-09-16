@@ -215,6 +215,14 @@ void lmcSettings::setAutoStart(bool on) {
     Q_UNUSED(on);
 #endif
 
+#ifdef Q_OS_ANDROID
+	//	No traditional "run at login" concept on Android - same
+	//	no-op treatment as Q_OS_MAC above. Without this branch, `on`
+	//	is unused in an Android build (Q_OS_WIN/Q_OS_MAC/Q_OS_X11 all
+	//	compile out), triggering [-Wunused-parameter].
+	Q_UNUSED(on);
+#endif
+
 #ifdef Q_OS_X11
 	//  get the path of .desktop file
 	QString autoStartDir;
