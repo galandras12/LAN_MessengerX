@@ -39,15 +39,9 @@ REM then fails with "cannot find -llmcapp".
 if exist liblmcapp2.a move liblmcapp2.a liblmcapp.a
 
 cd ..\..\lmc\src
-REM Compile every .ts translation to resources\lang\*.qm BEFORE qmake/make
-REM run, so resource.qrc's hand-written /lang entries find real files.
-REM lmc.pro used to instead have CONFIG += lrelease do this
-REM automatically at build time, but that generated a Makefile rule
-REM with a broken relative path to the .qm files ("No rule to make
-REM target '../../resources/lang/hu_HU.qm'", confirmed by a real
-REM build) - removed in favor of this explicit, unconditionally
-REM correct pre-step.
-for %%f in (en_US ml_IN fr_FR de_DE tr_TR es_ES ko_KR bg_BG ro_RO ar_SA sl_SI pt_BR ru_RU it_IT sv_SE hu_HU ja_JP pl_PL sk_SK) do lrelease %%f.ts -qm resources\lang\%%f.qm
+REM lmc.pro itself now compiles every .ts to resources\lang\*.qm as a
+REM side effect of qmake parsing it (a system() call in the .pro), so
+REM there's no separate translation-compiling step needed here anymore.
 qmake lmc.pro -spec win32-g++ CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
 mingw32-make
 goto endmake
@@ -70,8 +64,7 @@ REM directory rather than in a ..\lib that lmcapp.pro never creates on win32
 if exist lmcapp2.lib move lmcapp2.lib lmcapp.lib
 
 cd ..\..\lmc\src
-REM see the mingw64 branch above for why this explicit pass exists
-for %%f in (en_US ml_IN fr_FR de_DE tr_TR es_ES ko_KR bg_BG ro_RO ar_SA sl_SI pt_BR ru_RU it_IT sv_SE hu_HU ja_JP pl_PL sk_SK) do lrelease %%f.ts -qm resources\lang\%%f.qm
+REM see the mingw64 branch above - lmc.pro compiles translations itself now
 qmake lmc.pro CONFIG+=x86_64 CONFIG-=debug CONFIG+=release
 nmake
 goto endmake
