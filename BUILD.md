@@ -504,11 +504,13 @@ vissza kell menned hozzá:
    jelenti, hogy a Qt telepítő nem hozott létre neked kész SDK-t (lásd
    az 5. pontot), tehát ezt itt, Qt Creator-ban kell pótolnod:
    - **Ha van (vagy most telepítesz) Android Studio-t**: nyisd meg
-     egyszer, hogy létrehozza a saját SDK-mappáját (Windows-on alapból
-     valahol `...\AppData\Local\Android\Sdk` környékén — Android
-     Studio-ban a Settings/Preferences → "Languages & Frameworks" →
-     "Android SDK" mutatja a pontos elérési utat), majd ugyanezt a
-     mappát tallózd be Qt Creator "Android SDK location" mezőjében.
+     egyszer, hogy létrehozza a saját SDK-mappáját (Windows-on
+     **alapból** valahol `...\AppData\Local\Android\Sdk` környékén —
+     Android Studio-ban a Settings/Preferences → "Languages &
+     Frameworks" → "Android SDK" mutatja a pontos elérési utat). **Ne
+     írd felül ezt az alapértelmezett helyet** egy `C:\Program Files\`
+     alatti mappára — lásd lent, miért. Ha megvan, ugyanezt a mappát
+     tallózd be Qt Creator "Android SDK location" mezőjében.
    - **Ha nincs és nem is akarsz Android Studio-t telepíteni**: hozz
      létre egy üres mappát (pl. `C:\Android\Sdk`), és azt add meg
      "Android SDK location"-ként — Qt Creator (a 20.0.1 is) egy üres
@@ -536,9 +538,10 @@ vissza kell menned hozzá:
         felhő-szinkronizált mappában van-e (OneDrive/Dropbox/Google
         Drive — ez klasszikus, gyakori oka pont az
         `AccessDeniedException`-nek, mert a szinkronizáló folyamat
-        épp zárolja a frissen kicsomagolt fájlokat), és hogy a
-        Windows-felhasználódnak **teljes írási/módosítási joga** van
-        rá (nem `C:\Program Files\` alatt van).
+        épp zárolja a frissen kicsomagolt fájlokat), és **semmiképp ne**
+        legyen `C:\Program Files\` (se `Program Files (x86)`) alatt —
+        lásd rögtön lent, miért **ez konkrétan** okoz egy másik,
+        külön tünetet: végtelen újra-frissítési kört.
      2. Ha ez nem segít, **ne ezzel a beépített eszközzel küzdj
         tovább** — telepítsd inkább az **Android Studio-t**
         ([developer.android.com/studio](https://developer.android.com/studio)),
@@ -547,6 +550,29 @@ vissza kell menned hozzá:
         csomagokat, majd — a fenti "Ha van Android Studio-d" pont
         szerint — azt az SDK-mappát add meg Qt Creator-ban. Ez
         megkerüli a hibázó új eszközt teljesen.
+
+     ⚠️ **Ugyanígy valós build-bel tapasztalt, külön tünet**: ha az SDK
+     mappáját (akár Android Studio telepítésekor, akár kézzel) egy
+     `C:\Program Files\...` alá teszed, az SDK Manager (akár Android
+     Studio-é, akár Qt Creator-é) **végtelen körben** akarja
+     újratelepíteni **ugyanazokat** a csomagokat (`build-tools`,
+     `cmdline-tools`, `emulator`, `usb_driver`, `ndk`, `platform-tools`,
+     `platforms`, `system-images`) — a telepítés lefut, "sikerül", majd
+     legközelebb megint ugyanezt a listát ajánlja fel, a végtelenségig.
+     Ez **Windows saját UAC-fájlvédelme** miatt van: egy nem-rendszergazdai
+     folyamat írása egy `Program Files` alá **nem a valódi helyre**
+     kerül, hanem Windows csendben átirányítja egy rejtett
+     `...\AppData\Local\VirtualStore\Program Files\...` másolatba (ez a
+     "UAC virtualizáció" nevű, régóta létező Windows-kompatibilitási
+     mechanizmus) — az SDK Manager UI viszont a *valódi* `Program
+     Files`-beli mappát nézi vissza, ahol emiatt sosem látja a saját
+     maga által (a virtualizált másolatba) írt fájlokat, ezért mindig
+     "hiányzónak" gondolja ugyanazokat a csomagokat. **Az egyetlen
+     megbízható javítás**: ne legyen az SDK mappája `Program Files`
+     alatt — költöztesd (vagy telepítsd újra) egy sima, nem
+     rendszer-védett helyre, pl. az Android Studio saját
+     alapértelmezettjére (`...\AppData\Local\Android\Sdk`) vagy egy
+     `C:\Android\Sdk`-hoz hasonló, gyökér-közeli mappára.
    - Legalább egy **platform** (az `AndroidManifest.xml` `minSdkVersion=
      "24"`/`targetSdkVersion="34"` alapján érdemes a 34-es platformot
      bepipálni), a **platform-tools**, és **build-tools** csomagokat
@@ -934,6 +960,21 @@ vannak oldva:
   Android Studio-t, és annak hagyományos SDK Manager-ével telepítsd a
   csomagokat, majd azt az SDK-mappát add meg Qt Creator-ban — lásd a
   [2.1-es Android kit telepítés](#21-szükséges-összetevők) 7. lépését.
+- Android SDK Manager (akár Android Studio-é, akár Qt Creator-é)
+  **ugyanazt a csomaglistát** (`build-tools`, `cmdline-tools`,
+  `emulator`, `usb_driver`, `ndk`, `platform-tools`, `platforms`,
+  `system-images`) **végtelen körben** újra és újra telepítésre
+  ajánlja, minden "sikeres" telepítés után megint → az SDK mappája
+  `C:\Program Files\...` alatt van. Windows saját UAC-fájlvédelme
+  (virtualizáció) egy nem-rendszergazdai írást ilyenkor csendben egy
+  rejtett `...\AppData\Local\VirtualStore\Program Files\...` másolatba
+  irányít át a valódi hely helyett, így az SDK Manager UI (ami a valódi
+  `Program Files`-beli mappát nézi) sosem látja a saját maga által írt
+  fájlokat, és mindig hiányzónak gondolja őket. Javítás: költöztesd az
+  SDK-t egy `Program Files`-en kívüli, sima mappába (pl. Android Studio
+  saját alapértelmezettje, `...\AppData\Local\Android\Sdk`, vagy
+  `C:\Android\Sdk`) — lásd a [2.1-es Android kit
+  telepítés](#21-szükséges-összetevők) 7. lépését.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
