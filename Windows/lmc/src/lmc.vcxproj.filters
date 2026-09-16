@@ -1,0 +1,820 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
+    <Filter Include="Generated Files">
+      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;moc;h;def;odl;idl;res;</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
+      <Extensions>qrc;*</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Translation Files">
+      <UniqueIdentifier>{639EADAA-A684-42e4-A9AD-28FC9BCB8F7C}</UniqueIdentifier>
+      <Extensions>ts;xlf</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="aboutdialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="broadcastwindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="chathelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="chatroomwindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="chatwindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="filemodelview.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="helpwindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="historywindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="imagepicker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="imagepickeraction.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lmc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mainwindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="messagelog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="qmessagebrowser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="settingsdialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="soundplayer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="subcontrols.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="theme.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="transferlistview.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="transferwindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="updatewindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="userinfowindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="userselectdialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="usertreewidget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="aboutdialog.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="broadcastwindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <ClInclude Include="chathelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <QtMoc Include="chatroomwindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="chatwindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="filemodelview.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="helpwindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <ClInclude Include="historytreewidget.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <QtMoc Include="historywindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="imagepicker.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <ClInclude Include="imagepickeraction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <QtMoc Include="lmc.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="mainwindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="messagelog.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="qmessagebrowser.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <QtMoc Include="settingsdialog.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <ClInclude Include="soundplayer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <QtMoc Include="subcontrols.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <ClInclude Include="theme.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <QtMoc Include="transferlistview.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="transferwindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <ClInclude Include="uidefinitions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <QtMoc Include="updatewindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="userinfowindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="userselectdialog.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="usertreewidget.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="ar_SA.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="bg_BG.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="de_DE.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="en_US.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="es_ES.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="fr_FR.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="hu_HU.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="it_IT.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="ja_JP.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="ko_KR.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="ml_IN.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="pl_PL.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="pt_BR.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="ro_RO.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="ru_RU.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="sk_SK.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="sl_SI.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="sv_SE.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+    <None Include="tr_TR.ts">
+      <Filter>Translation Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="aboutdialog.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="broadcastwindow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="chatroomwindow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="chatwindow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="helpwindow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="historywindow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="mainwindow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="settingsdialog.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="transferwindow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="updatewindow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="userinfowindow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="userselectdialog.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\avatars\0.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\01.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\02.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\03.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\04.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\05.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\06.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\07.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\08.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\09.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\1.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\10.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\10.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\11.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\11.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\12.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\12.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\13.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\13.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\14.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\14.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\15.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\15.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\16.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\16.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\17.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\17.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\18.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\18.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\19.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\19.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\2.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\20.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\21.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\22.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\23.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\24.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\25.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\26.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\27.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\28.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\29.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\3.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\30.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\31.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\32.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\33.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\34.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\35.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\36.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\37.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\38.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\39.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\4.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\40.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\41.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\42.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\43.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\44.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\45.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\46.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\47.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\48.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\49.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\5.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\50.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\51.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\52.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\53.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\54.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\55.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\56.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\57.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\58.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\59.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\6.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\60.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\61.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\62.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\63.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\64.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\65.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\66.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\67.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\68.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\69.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\7.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\smileys\70.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\8.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\9.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\themes\Classic\Broadcast.html">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\themes\Classic\Incoming\Content.html">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\themes\Classic\Outgoing\Content.html">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\themes\Classic\Incoming\NextContent.html">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\themes\Classic\Outgoing\NextContent.html">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\themes\Classic\NextStatus.html">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\themes\Classic\Request.html">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\themes\Classic\Status.html">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\accept.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\addcontact.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\alertsettings.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\ar_SA.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\away.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\icons\awaybubble.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\bg_BG.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\blank.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\broadcastmsg.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\busy.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\icons\busybubble.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\chat.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\chatroom.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\close.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\critical.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\criticalmsg.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\de_DE.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\avatars\default.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\en_US.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\es_ES.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\file.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\filemsg.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\folder.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\font.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\fontcolor.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\fr_FR.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\hgrip.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\history.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\historysettings.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\hotkeysettings.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\hu_HU.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\info.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\it_IT.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\ja_JP.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\ko_KR.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\text\license.txt">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\icons\lmc.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\logo.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\logosmall.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\messagesettings.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\messenger.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\ml_IN.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\networksettings.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\newchatroom.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\nodisturb.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\icons\nodisturbbubble.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\offline.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\icons\offlinebubble.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\online.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\icons\onlinebubble.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\paint.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\pixel.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\pl_PL.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\play.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\pt_BR.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\question.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\refresh.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <QtRcc Include="resource.qrc">
+      <Filter>Resource Files</Filter>
+    </QtRcc>
+    <None Include="resources\lang\ro_RO.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\ru_RU.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\save.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\sendfolder.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\sk_SK.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\sl_SI.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\smiley.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\stop.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\sv_SE.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\systemsettings.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\text\thanks.txt">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\themesettings.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\tools.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\lang\tr_TR.qm">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\transfer.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\transfersettings.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\usersettings.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\vgrip.png">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\images\web.png">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="lmcwin32.rc" />
+  </ItemGroup>
+</Project>

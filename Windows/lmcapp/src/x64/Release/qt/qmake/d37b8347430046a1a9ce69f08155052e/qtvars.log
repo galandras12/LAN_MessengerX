@@ -1,0 +1,3 @@
+Info: creating stash file C:\Users\galan\Documents\GitHub\LAN_MessengerX\Windows\lmcapp\src\x64\Release\qt\qmake\d37b8347430046a1a9ce69f08155052e\.qmake.stash
+WARNING: Could not parse Compiler option '/await:strict'; added to AdditionalOptions.
+WARNING: You can suppress these warnings with CONFIG+=suppress_vcproj_warnings.

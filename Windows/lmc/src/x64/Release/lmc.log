@@ -1,0 +1,5 @@
+﻿   Qt/MSBuild: 3.5.0.0
+   Qt: 6.11.2
+  Rcc'ing resource.qrc...
+   RCC: Error in 'C:\Users\galan\Documents\GitHub\LAN_MessengerX\Windows\lmc\src\resource.qrc': Cannot find file 'resources/lang/ml_IN.qm'
+C:\Users\galan\AppData\Local\QtMsBuild\qt_work.targets(136,5): error : [QtRunWork] C:/Qt/6.11.2/msvc2022_64/bin/rcc exited with code 1

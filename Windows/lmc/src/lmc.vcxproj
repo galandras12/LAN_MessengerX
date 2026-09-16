@@ -1,0 +1,395 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{0C8DD077-495B-6D1C-239C-BFEFAB1EC2BC}</ProjectGuid>
+    <RootNamespace>lmc</RootNamespace>
+    <Keyword>QtVS_v304</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <QtMsBuild Condition="'$(QtMsBuild)'=='' OR !Exists('$(QtMsBuild)\qt.targets')">$(MSBuildProjectDirectory)\QtMsBuild</QtMsBuild>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <PlatformToolset>v145</PlatformToolset>
+    <OutputDirectory>.\</OutputDirectory>
+    <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
+    <CharacterSet>NotSet</CharacterSet>
+    <ConfigurationType>Application</ConfigurationType>
+    <PrimaryOutput>lmc</PrimaryOutput>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(QtMsBuild)\qt_defaults.props" Condition="Exists('$(QtMsBuild)\qt_defaults.props')" />
+  <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <QtInstall>6.11.2_msvc2022_64</QtInstall>
+    <QtModules>core;gui;network;widgets;xml</QtModules>
+  </PropertyGroup>
+  <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') OR !Exists('$(QtMsBuild)\Qt.props')">
+    <Message Importance="High" Text="QtMsBuild: could not locate qt.targets, qt.props; project may not build correctly." />
+  </Target>
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
+    <Import Project="$(QtMsBuild)\Qt.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\</OutDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">lmc</TargetName>
+    <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</IgnoreImportLibrary>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Label="QtMocPreprocessDefines" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <QtMocPreprocessDefinesCommand>cl -Bx"$(QTDIR)\bin\qmake.exe" -nologo -Zc:wchar_t -FS -Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -permissive- -Zc:__cplusplus -Zc:externConstexpr /await:strict -O2 -MD /Zi /FAcs -std:c++17 -utf-8 -W3 -w34100 -w34189 -w44456 -w44457 -w44458 -wd4577 -wd4467 -E $(QTDIR)\mkspecs\features\data\dummy.cpp 2&gt;NUL &gt;moc_predefs.h</QtMocPreprocessDefinesCommand>
+    <QtMocPreprocessDefinesInputs>$(QTDIR)\mkspecs\features\data\dummy.cpp</QtMocPreprocessDefinesInputs>
+    <QtMocPreprocessDefinesOutputs>moc_predefs.h</QtMocPreprocessDefinesOutputs>
+    <QtMocPreprocessDefinesMessage>Generate moc_predefs.h</QtMocPreprocessDefinesMessage>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>GeneratedFiles\$(ConfigurationName);GeneratedFiles;.;..\..\..\Core\src;..\..\lmcapp\include;..\..\..\openssl\include;/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -permissive- -Zc:__cplusplus -Zc:externConstexpr /await:strict -utf-8 -w34100 -w34189 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
+      <AssemblerListingLocation>.\</AssemblerListingLocation>
+      <AssemblerOutput>All</AssemblerOutput>
+      <BrowseInformation>false</BrowseInformation>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4577;4467;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ObjectFileName>.\</ObjectFileName>
+      <Optimization>MaxSpeed</Optimization>
+      <PreprocessorDefinitions>_WINDOWS;UNICODE;_UNICODE;WIN32;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;NDEBUG;QT_NO_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessToFile>false</PreprocessToFile>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>lmccore.lib;lmcapp.lib;advapi32.lib;libcrypto.lib;$(QTDIR)\lib\Qt6EntryPoint.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\galan\Documents\GitHub\LAN_MessengerX\Core\lib;C:\Users\galan\Documents\GitHub\LAN_MessengerX\Windows\lmcapp\src;C:\Users\galan\Documents\GitHub\LAN_MessengerX\openssl\lib\VC\x64\MD;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>/debug /opt:ref "/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <IgnoreImportLibrary>true</IgnoreImportLibrary>
+      <LinkIncremental>false</LinkIncremental>
+      <OptimizeReferences>true</OptimizeReferences>
+      <OutputFile>$(OutDir)\lmc.exe</OutputFile>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Link>
+    <Midl>
+      <DefaultCharType>Unsigned</DefaultCharType>
+      <EnableErrorChecks>None</EnableErrorChecks>
+      <WarningLevel>0</WarningLevel>
+    </Midl>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_WINDOWS;UNICODE;_UNICODE;WIN32;_ENABLE_EXTENDED_ALIGNED_STORAGE;WIN64;NDEBUG;QT_NO_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <QtMoc>
+      <CompilerFlavor>msvc</CompilerFlavor>
+      <Include>./moc_predefs.h</Include>
+      <ExecutionDescription>Moc'ing %(Identity)...</ExecutionDescription>
+      <DynamicSource>output</DynamicSource>
+      <QtMocDir>$(ProjectDir)</QtMocDir>
+      <QtMocFileName>moc_%(Filename).cpp</QtMocFileName>
+    </QtMoc>
+    <QtRcc>
+      <InitFuncName>resource</InitFuncName>
+      <Compression>default</Compression>
+      <NoZstd>true</NoZstd>
+      <ExecutionDescription>Rcc'ing %(Identity)...</ExecutionDescription>
+      <QtRccDir>$(ProjectDir)</QtRccDir>
+      <QtRccFileName>qrc_%(Filename).cpp</QtRccFileName>
+    </QtRcc>
+    <QtUic>
+      <ExecutionDescription>Uic'ing %(Identity)...</ExecutionDescription>
+      <QtUicDir>$(ProjectDir)</QtUicDir>
+      <QtUicFileName>ui_%(Filename).h</QtUicFileName>
+    </QtUic>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="aboutdialog.cpp" />
+    <ClCompile Include="broadcastwindow.cpp" />
+    <ClCompile Include="chathelper.cpp" />
+    <ClCompile Include="chatroomwindow.cpp" />
+    <ClCompile Include="chatwindow.cpp" />
+    <ClCompile Include="filemodelview.cpp" />
+    <ClCompile Include="helpwindow.cpp" />
+    <ClCompile Include="historywindow.cpp" />
+    <ClCompile Include="imagepicker.cpp" />
+    <ClCompile Include="imagepickeraction.cpp" />
+    <ClCompile Include="lmc.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="mainwindow.cpp" />
+    <ClCompile Include="messagelog.cpp" />
+    <ClCompile Include="qmessagebrowser.cpp" />
+    <ClCompile Include="settingsdialog.cpp" />
+    <ClCompile Include="soundplayer.cpp" />
+    <ClCompile Include="subcontrols.cpp" />
+    <ClCompile Include="theme.cpp" />
+    <ClCompile Include="transferlistview.cpp" />
+    <ClCompile Include="transferwindow.cpp" />
+    <ClCompile Include="updatewindow.cpp" />
+    <ClCompile Include="userinfowindow.cpp" />
+    <ClCompile Include="userselectdialog.cpp" />
+    <ClCompile Include="usertreewidget.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="aboutdialog.h" />
+    <QtMoc Include="broadcastwindow.h" />
+    <ClInclude Include="chathelper.h" />
+    <QtMoc Include="chatroomwindow.h" />
+    <QtMoc Include="chatwindow.h" />
+    <QtMoc Include="filemodelview.h" />
+    <QtMoc Include="helpwindow.h" />
+    <ClInclude Include="historytreewidget.h" />
+    <QtMoc Include="historywindow.h" />
+    <QtMoc Include="imagepicker.h" />
+    <ClInclude Include="imagepickeraction.h" />
+    <QtMoc Include="lmc.h" />
+    <QtMoc Include="mainwindow.h" />
+    <QtMoc Include="messagelog.h" />
+    <QtMoc Include="qmessagebrowser.h" />
+    <ClInclude Include="resource.h" />
+    <QtMoc Include="settingsdialog.h" />
+    <ClInclude Include="soundplayer.h" />
+    <QtMoc Include="subcontrols.h" />
+    <ClInclude Include="theme.h" />
+    <QtMoc Include="transferlistview.h" />
+    <QtMoc Include="transferwindow.h" />
+    <ClInclude Include="uidefinitions.h" />
+    <QtMoc Include="updatewindow.h" />
+    <QtMoc Include="userinfowindow.h" />
+    <QtMoc Include="userselectdialog.h" />
+    <QtMoc Include="usertreewidget.h" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="ar_SA.ts" />
+    <None Include="bg_BG.ts" />
+    <None Include="de_DE.ts" />
+    <None Include="en_US.ts" />
+    <None Include="es_ES.ts" />
+    <None Include="fr_FR.ts" />
+    <None Include="hu_HU.ts" />
+    <None Include="it_IT.ts" />
+    <None Include="ja_JP.ts" />
+    <None Include="ko_KR.ts" />
+    <None Include="ml_IN.ts" />
+    <None Include="pl_PL.ts" />
+    <None Include="pt_BR.ts" />
+    <None Include="ro_RO.ts" />
+    <None Include="ru_RU.ts" />
+    <None Include="sk_SK.ts" />
+    <None Include="sl_SI.ts" />
+    <None Include="sv_SE.ts" />
+    <None Include="tr_TR.ts" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="aboutdialog.ui" />
+    <QtUic Include="broadcastwindow.ui" />
+    <QtUic Include="chatroomwindow.ui" />
+    <QtUic Include="chatwindow.ui" />
+    <QtUic Include="helpwindow.ui" />
+    <QtUic Include="historywindow.ui" />
+    <QtUic Include="mainwindow.ui" />
+    <QtUic Include="settingsdialog.ui" />
+    <QtUic Include="transferwindow.ui" />
+    <QtUic Include="updatewindow.ui" />
+    <QtUic Include="userinfowindow.ui" />
+    <QtUic Include="userselectdialog.ui" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\avatars\0.png" />
+    <None Include="resources\smileys\01.png" />
+    <None Include="resources\smileys\02.png" />
+    <None Include="resources\smileys\03.png" />
+    <None Include="resources\smileys\04.png" />
+    <None Include="resources\smileys\05.png" />
+    <None Include="resources\smileys\06.png" />
+    <None Include="resources\smileys\07.png" />
+    <None Include="resources\smileys\08.png" />
+    <None Include="resources\smileys\09.png" />
+    <None Include="resources\avatars\1.png" />
+    <None Include="resources\avatars\10.png" />
+    <None Include="resources\smileys\10.png" />
+    <None Include="resources\avatars\11.png" />
+    <None Include="resources\smileys\11.png" />
+    <None Include="resources\avatars\12.png" />
+    <None Include="resources\smileys\12.png" />
+    <None Include="resources\avatars\13.png" />
+    <None Include="resources\smileys\13.png" />
+    <None Include="resources\avatars\14.png" />
+    <None Include="resources\smileys\14.png" />
+    <None Include="resources\avatars\15.png" />
+    <None Include="resources\smileys\15.png" />
+    <None Include="resources\avatars\16.png" />
+    <None Include="resources\smileys\16.png" />
+    <None Include="resources\avatars\17.png" />
+    <None Include="resources\smileys\17.png" />
+    <None Include="resources\avatars\18.png" />
+    <None Include="resources\smileys\18.png" />
+    <None Include="resources\avatars\19.png" />
+    <None Include="resources\smileys\19.png" />
+    <None Include="resources\avatars\2.png" />
+    <None Include="resources\smileys\20.png" />
+    <None Include="resources\smileys\21.png" />
+    <None Include="resources\smileys\22.png" />
+    <None Include="resources\smileys\23.png" />
+    <None Include="resources\smileys\24.png" />
+    <None Include="resources\smileys\25.png" />
+    <None Include="resources\smileys\26.png" />
+    <None Include="resources\smileys\27.png" />
+    <None Include="resources\smileys\28.png" />
+    <None Include="resources\smileys\29.png" />
+    <None Include="resources\avatars\3.png" />
+    <None Include="resources\smileys\30.png" />
+    <None Include="resources\smileys\31.png" />
+    <None Include="resources\smileys\32.png" />
+    <None Include="resources\smileys\33.png" />
+    <None Include="resources\smileys\34.png" />
+    <None Include="resources\smileys\35.png" />
+    <None Include="resources\smileys\36.png" />
+    <None Include="resources\smileys\37.png" />
+    <None Include="resources\smileys\38.png" />
+    <None Include="resources\smileys\39.png" />
+    <None Include="resources\avatars\4.png" />
+    <None Include="resources\smileys\40.png" />
+    <None Include="resources\smileys\41.png" />
+    <None Include="resources\smileys\42.png" />
+    <None Include="resources\smileys\43.png" />
+    <None Include="resources\smileys\44.png" />
+    <None Include="resources\smileys\45.png" />
+    <None Include="resources\smileys\46.png" />
+    <None Include="resources\smileys\47.png" />
+    <None Include="resources\smileys\48.png" />
+    <None Include="resources\smileys\49.png" />
+    <None Include="resources\avatars\5.png" />
+    <None Include="resources\smileys\50.png" />
+    <None Include="resources\smileys\51.png" />
+    <None Include="resources\smileys\52.png" />
+    <None Include="resources\smileys\53.png" />
+    <None Include="resources\smileys\54.png" />
+    <None Include="resources\smileys\55.png" />
+    <None Include="resources\smileys\56.png" />
+    <None Include="resources\smileys\57.png" />
+    <None Include="resources\smileys\58.png" />
+    <None Include="resources\smileys\59.png" />
+    <None Include="resources\avatars\6.png" />
+    <None Include="resources\smileys\60.png" />
+    <None Include="resources\smileys\61.png" />
+    <None Include="resources\smileys\62.png" />
+    <None Include="resources\smileys\63.png" />
+    <None Include="resources\smileys\64.png" />
+    <None Include="resources\smileys\65.png" />
+    <None Include="resources\smileys\66.png" />
+    <None Include="resources\smileys\67.png" />
+    <None Include="resources\smileys\68.png" />
+    <None Include="resources\smileys\69.png" />
+    <None Include="resources\avatars\7.png" />
+    <None Include="resources\smileys\70.png" />
+    <None Include="resources\avatars\8.png" />
+    <None Include="resources\avatars\9.png" />
+    <None Include="resources\themes\Classic\Broadcast.html" />
+    <None Include="resources\themes\Classic\Incoming\Content.html" />
+    <None Include="resources\themes\Classic\Outgoing\Content.html" />
+    <None Include="resources\themes\Classic\Incoming\NextContent.html" />
+    <None Include="resources\themes\Classic\Outgoing\NextContent.html" />
+    <None Include="resources\themes\Classic\NextStatus.html" />
+    <None Include="resources\themes\Classic\Request.html" />
+    <None Include="resources\themes\Classic\Status.html" />
+    <None Include="resources\images\accept.png" />
+    <None Include="resources\images\addcontact.png" />
+    <None Include="resources\images\alertsettings.png" />
+    <None Include="resources\lang\ar_SA.qm" />
+    <None Include="resources\images\away.png" />
+    <None Include="resources\icons\awaybubble.ico" />
+    <None Include="resources\lang\bg_BG.qm" />
+    <None Include="resources\images\blank.png" />
+    <None Include="resources\images\broadcastmsg.png" />
+    <None Include="resources\images\busy.png" />
+    <None Include="resources\icons\busybubble.ico" />
+    <None Include="resources\images\chat.png" />
+    <None Include="resources\images\chatroom.png" />
+    <None Include="resources\images\close.png" />
+    <None Include="resources\images\critical.png" />
+    <None Include="resources\images\criticalmsg.png" />
+    <None Include="resources\lang\de_DE.qm" />
+    <None Include="resources\avatars\default.png" />
+    <None Include="resources\lang\en_US.qm" />
+    <None Include="resources\lang\es_ES.qm" />
+    <None Include="resources\images\file.png" />
+    <None Include="resources\images\filemsg.png" />
+    <None Include="resources\images\folder.png" />
+    <None Include="resources\images\font.png" />
+    <None Include="resources\images\fontcolor.png" />
+    <None Include="resources\lang\fr_FR.qm" />
+    <None Include="resources\images\hgrip.png" />
+    <None Include="resources\images\history.png" />
+    <None Include="resources\images\historysettings.png" />
+    <None Include="resources\images\hotkeysettings.png" />
+    <None Include="resources\lang\hu_HU.qm" />
+    <None Include="resources\images\info.png" />
+    <None Include="resources\lang\it_IT.qm" />
+    <None Include="resources\lang\ja_JP.qm" />
+    <None Include="resources\lang\ko_KR.qm" />
+    <None Include="resources\text\license.txt" />
+    <None Include="resources\icons\lmc.ico" />
+    <None Include="resources\images\logo.png" />
+    <None Include="resources\images\logosmall.png" />
+    <None Include="resources\images\messagesettings.png" />
+    <None Include="resources\images\messenger.png" />
+    <None Include="resources\lang\ml_IN.qm" />
+    <None Include="resources\images\networksettings.png" />
+    <None Include="resources\images\newchatroom.png" />
+    <None Include="resources\images\nodisturb.png" />
+    <None Include="resources\icons\nodisturbbubble.ico" />
+    <None Include="resources\images\offline.png" />
+    <None Include="resources\icons\offlinebubble.ico" />
+    <None Include="resources\images\online.png" />
+    <None Include="resources\icons\onlinebubble.ico" />
+    <None Include="resources\images\paint.png" />
+    <None Include="resources\images\pixel.png" />
+    <None Include="resources\lang\pl_PL.qm" />
+    <None Include="resources\images\play.png" />
+    <None Include="resources\lang\pt_BR.qm" />
+    <None Include="resources\images\question.png" />
+    <None Include="resources\images\refresh.png" />
+    <QtRcc Include="resource.qrc" />
+    <None Include="resources\lang\ro_RO.qm" />
+    <None Include="resources\lang\ru_RU.qm" />
+    <None Include="resources\images\save.png" />
+    <None Include="resources\images\sendfolder.png" />
+    <None Include="resources\lang\sk_SK.qm" />
+    <None Include="resources\lang\sl_SI.qm" />
+    <None Include="resources\images\smiley.png" />
+    <None Include="resources\images\stop.png" />
+    <None Include="resources\lang\sv_SE.qm" />
+    <None Include="resources\images\systemsettings.png" />
+    <None Include="resources\text\thanks.txt" />
+    <None Include="resources\images\themesettings.png" />
+    <None Include="resources\images\tools.png" />
+    <None Include="resources\lang\tr_TR.qm" />
+    <None Include="resources\images\transfer.png" />
+    <None Include="resources\images\transfersettings.png" />
+    <None Include="resources\images\usersettings.png" />
+    <None Include="resources\images\vgrip.png" />
+    <None Include="resources\images\web.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="lmcwin32.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="$(QtMsBuild)\qt.targets" Condition="Exists('$(QtMsBuild)\qt.targets')" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>
