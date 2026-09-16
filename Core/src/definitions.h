@@ -55,10 +55,15 @@
 //	documented Android build blocker, then to "2.0.5" for raising
 //	AndroidManifest.xml's minSdkVersion to 28 (Qt 6.11.2's Android kit
 //	itself refuses anything lower - confirmed by a real build) and an
-//	Android-only unused-parameter warning in settings.cpp - none of
-//	these changed the wire protocol or settings format, so no new
-//	version-gate concerns beyond what "2.0.0" already cleared.
-#define IDA_VERSION		"2.0.5"
+//	Android-only unused-parameter warning in settings.cpp, then to
+//	"2.0.6" for renaming Core/src/strings.h/.cpp to lmcstrings.h/.cpp
+//	(see Core/src/lmcstrings.h) - the old name collided with the NDK's
+//	own POSIX strings.h, which its Android build's INCLUDEPATH shadowed
+//	and broke every Android.pro translation unit with cascading
+//	"templates must have C++ linkage" errors - none of these changed
+//	the wire protocol or settings format, so no new version-gate
+//	concerns beyond what "2.0.0" already cleared.
+#define IDA_VERSION		"2.0.6"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."

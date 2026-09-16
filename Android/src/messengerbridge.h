@@ -103,7 +103,7 @@
 #include <QMap>
 #include <QUrl>
 #include "messaging.h"
-#include "strings.h"
+#include "lmcstrings.h"
 #include "history.h"
 #include "contactmodel.h"
 #include "chatmodel.h"

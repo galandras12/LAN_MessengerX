@@ -33,7 +33,7 @@ SOURCES += \
     src/network.cpp \
     src/settings.cpp \
     src/shared.cpp \
-    src/strings.cpp \
+    src/lmcstrings.cpp \
     src/tcpnetwork.cpp \
     src/trace.cpp \
     src/udpnetwork.cpp \
@@ -53,7 +53,7 @@ HEADERS += \
     src/settings.h \
     src/shared.h \
     src/stdlocation.h \
-    src/strings.h \
+    src/lmcstrings.h \
     src/tcpnetwork.h \
     src/trace.h \
     src/udpnetwork.h \
