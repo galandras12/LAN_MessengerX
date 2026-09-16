@@ -123,35 +123,38 @@ library).
    sorát/sorait a saját elrendezésed alapján.
 4. **Futásidőben** is kell a tényleges `libcrypto-3-x64.dll` (és
    `libssl-3-x64.dll`, ha a disztribúciód külön adja) — ezt a `lmc.exe`
-   mellé kell majd másolni (lásd 1.4. lépés). A fenti `include`/`lib`
-   csak a *fordításhoz* kell, a DLL a *futtatáshoz* — és **nincs benne
-   abban, amit eddig a repóba másoltál**, mert csak az `include`-ot és
-   a `lib`-et kértük bemásolni, a DLL-ek egy harmadik, `bin` nevű
-   mappában vannak, amit még nem érintettünk. Hogy pontosan hol, az
-   attól függ, honnan szerezted az OpenSSL-t (lásd az 1. pontot):
+   mellé kell majd másolni (lásd 1.4. lépés). Ez **nincs benne abban,
+   amit eddig a repóba másoltál** (a fenti `include`/`lib` csak a
+   *fordításhoz* kell, ez a fájl a *futtatáshoz*) — de nem kell
+   kitalálnod, pontosan hol van, egyszerűen megkeresheted:
 
-   - **Előre csomagolt bináris disztribúció** (pl. egy telepítőt
-     futtató "Win64 OpenSSL" jellegű csomag): a DLL-ek a telepítés
-     gyökerében vagy egy `bin\` alkönyvtárában vannak, pl.
-     `C:\Program Files\OpenSSL-Win64\` vagy
-     `C:\Program Files\OpenSSL-Win64\bin\` — attól függően, melyik
-     telepítőt használtad, nézd meg, hová telepített.
-   - **Saját `nmake install`-lal fordítva**: a build a `Configure`-nek
-     megadott `--prefix`-hez telepít, és ott **`bin\`, `lib\`,
-     `include\` egymás melletti testvérmappák** — vagyis ha az
-     `include`-ot és a `lib`-et onnan másoltad be a repó `openssl/`
-     mappájába, ugyanannak a mappának a `bin\` alkönyvtárában vannak a
-     DLL-ek is (nem a `lib\VC\x64\MD\` alatt, az csak az import
-     library-ket/`.pdb`-ket tartalmazza).
-   - **`vcpkg install openssl:x64-windows`**: a DLL-ek a
-     `<vcpkg gyökere>\installed\x64-windows\bin\` mappában vannak.
-   - **Ha egyik sem stimmel**, vagy nem emlékszel pontosan, hová
-     telepítettél/build-eltél: keresd meg egy Windows-keresővel, vagy
-     egy parancssorból (a diszk gyökeréből, vagy onnan, ahonnan az
-     OpenSSL-t letöltötted/fordítottad):
-     ```bat
-     dir /s /b libcrypto-3-x64.dll
-     ```
+   1. Nyiss egy parancssort (`cmd.exe`), és add ki ezt (cseréld ki a
+      `C:\`-t arra a meghajtóra, ahova Windows-t telepítetted, ha nem
+      `C:\`):
+      ```bat
+      dir /s /b C:\libcrypto-3-x64.dll
+      ```
+      Ez kiírja a fájl teljes elérési útját, pl.:
+      ```
+      C:\Program Files\OpenSSL-Win64\libcrypto-3-x64.dll
+      ```
+      (Egy kicsit eltarthat, mert az egész `C:\` meghajtót átnézi — ez
+      normális.) Ha nincs találat, próbáld meg egy másik meghajtón is,
+      pl. `dir /s /b D:\libcrypto-3-x64.dll`.
+   2. Ugyanígy keresd meg a `libssl-3-x64.dll`-t is:
+      ```bat
+      dir /s /b C:\libssl-3-x64.dll
+      ```
+      (Ha erre nincs találat, az azt jelenti, hogy a te OpenSSL-ed nem
+      adja külön fájlként — ilyenkor elég csak a `libcrypto`-t
+      bemásolni, ez nem hiba.)
+   3. A megtalált fájl(oka)t másold be oda, ahol a `lmc.exe` lesz (lásd
+      1.4. lépés) — Intézőben egyszerű másolás-beillesztés, vagy
+      parancssorból (a saját, 1. pontban kapott elérési utaddal):
+      ```bat
+      copy "C:\Program Files\OpenSSL-Win64\libcrypto-3-x64.dll" Windows\build-release-deploy\
+      copy "C:\Program Files\OpenSSL-Win64\libssl-3-x64.dll" Windows\build-release-deploy\
+      ```
 
 Enélkül a build az alábbi hibával fog leállni:
 ```
