@@ -489,18 +489,60 @@ vissza kell menned hozzá:
 6. Nyisd meg (vagy indítsd újra) a **Qt Creator-t**, és menj a
    Beállításokba: **Edit → Preferences** (újabb Qt Creator-verzióknál)
    vagy **Tools → Options** (régebbieknél) → **Devices → Android** fül.
-7. Töltsd ki (vagy ellenőrizd, hogy Qt Creator automatikusan
-   megtalálta-e) a **JDK**, **Android SDK** és **Android NDK** elérési
-   útjait — zöld pipák jelzik, ha minden helyesen van beállítva.
+   ⚠️ **Ide menj be elsőnek** — **ne** a Devices fül "Add..." gombjával
+   közvetlenül "Android Device"-ot indíts, mielőtt ez a fül zöld/kész
+   nem lesz, mert az `` Android support is not yet configured. ``
+   hibaüzenettel fog elszállni (valós Qt Creator 20.0.1-gyel
+   megerősítve) — ez **nem** kódhiba, csak azt jelzi, hogy a wizard egy
+   már beállított SDK-t vár, amit még nem adtál meg.
+7. Ezen a fülön töltsd ki (vagy ellenőrizd, hogy Qt Creator
+   automatikusan megtalálta-e) a **JDK location**, **Android SDK
+   location** és **Android NDK** mezőket.
+
+   **Ha az "Android SDK location" mező üres, piros, vagy egyáltalán nem
+   szerepel a listában** (ez okozza a fenti hibaüzenetet) — ez azt
+   jelenti, hogy a Qt telepítő nem hozott létre neked kész SDK-t (lásd
+   az 5. pontot), tehát ezt itt, Qt Creator-ban kell pótolnod:
+   - **Ha van (vagy most telepítesz) Android Studio-t**: nyisd meg
+     egyszer, hogy létrehozza a saját SDK-mappáját (Windows-on alapból
+     valahol `...\AppData\Local\Android\Sdk` környékén — Android
+     Studio-ban a Settings/Preferences → "Languages & Frameworks" →
+     "Android SDK" mutatja a pontos elérési utat), majd ugyanezt a
+     mappát tallózd be Qt Creator "Android SDK location" mezőjében.
+   - **Ha nincs és nem is akarsz Android Studio-t telepíteni**: hozz
+     létre egy üres mappát (pl. `C:\Android\Sdk`), és azt add meg
+     "Android SDK location"-ként — Qt Creator (a 20.0.1 is) egy üres
+     mappa esetén felajánlja a hiányzó parancssori eszközök
+     (`cmdline-tools`) letöltését/telepítését, utána pedig egy beépített
+     Android SDK Manager panelen (checkbox-lista: SDK Platforms, SDK
+     Tools, build-tools stb.) engedi kiválasztani és telepíteni a
+     szükséges csomagokat egy "Apply"/"Install" gombbal — ehhez
+     internetkapcsolat kell, de külön Android Studio nem.
+   - Legalább egy **platform** (az `AndroidManifest.xml` `minSdkVersion=
+     "24"`/`targetSdkVersion="34"` alapján érdemes a 34-es platformot
+     bepipálni), a **platform-tools**, és **build-tools** csomagokat
+     mindenképp telepítsd.
+
+   Az **Android NDK** mezőt hasonlóan töltsd ki, ha a Qt Maintenance
+   Tool 4. pontban telepített NDK-ja nem jelenik meg automatikusan —
+   tallózd be kézzel, vagy telepítsd ugyanebből a panelből.
+
+   Zöld pipák/pipa-ikonok jelzik soronként, ha az adott mező helyesen
+   van beállítva — csak akkor lépj tovább, ha mindegyik zöld.
 8. Ha minden zöld: menj a **Kits** fülre. Itt egy vagy több új,
    automatikusan létrehozott **"Android Qt 6.x.x Clang \<abi\>"**
    kitnek kell megjelennie. Ha nem jelenik meg magától, kattints
    **"Add"** (Hozzáadás), és állítsd be kézzel (Qt version: a telepített
    Android Qt, Compiler: Android Clang, Device type: Android Device).
-9. Ha ez megvan, az `Android/Android.pro` (vagy `Core/Core.pro`)
-   megnyitásakor a "Configure Project" képernyőn már megjelenik és
-   kiválasztható ez az Android kit — innentől a [2.4](#24-az-android-kliens-fordítása)
-   lépéstől folytatható a build.
+9. Csak **ezután** érdemes a Devices fülön "Add... → Android Device →
+   Start Wizard"-dal egy konkrét emulátort/virtuális eszközt is
+   létrehozni (ez opcionális — fizikai USB-n csatlakoztatott Android
+   telefonnal fejlesztői opciók/USB-hibakeresés engedélyezése mellett is
+   lehet tesztelni, emulátor nélkül).
+10. Ha ez megvan, az `Android/Android.pro` (vagy `Core/Core.pro`)
+    megnyitásakor a "Configure Project" képernyőn már megjelenik és
+    kiválasztható ez az Android kit — innentől a [2.4](#24-az-android-kliens-fordítása)
+    lépéstől folytatható a build.
 
 ### 2.2 OpenSSL Androidra — már bekötve
 
@@ -842,6 +884,14 @@ vannak oldva:
   az eredeti warningok voltak. A végleges megoldás egy, kifejezetten a
   `crypto.cpp`-beli hívásokra szűkített fordító-pragma, ami build-hibát
   sosem tud okozni.
+- Qt Creator: `Android Device Manager - Android support is not yet
+  configured.` a Devices fül "Add... → Android Device → Start Wizard"
+  lépésénél → **nem hiba**, csak azt jelzi, hogy a wizard előtt még be
+  kell állítanod a Devices → Android fülön a JDK/Android SDK/NDK
+  elérési útjait (a Qt Maintenance Tool "Android" komponense önmagában
+  **nem** ad kész SDK-t, csak a Qt-könyvtárakat) — lásd a [2.1-es
+  Android kit telepítés](#21-szükséges-összetevők) 6-7. lépését,
+  különösen ha az "Android SDK location" mező üres vagy piros.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
