@@ -25,6 +25,29 @@
 #include "trace.h"
 #include "crypto.h"
 
+//	The classic RSA_*/PEM_*RSAPublicKey API used throughout this file
+//	(RSA_new/RSA_free/RSA_size/RSA_generate_key/RSA_public_encrypt/
+//	RSA_private_decrypt/PEM_write_bio_RSAPublicKey/PEM_read_bio_RSAPublicKey)
+//	is deprecated as of OpenSSL 3.0 (RSA_generate_key since 0.9.8) in
+//	favor of the newer EVP_PKEY-based API, but still fully implemented.
+//	It's kept here on purpose: the wire format must stay byte-compatible
+//	with the original LAN Messenger protocol, and a switch to EVP_PKEY
+//	is a real behavioral rewrite this fork isn't taking on speculatively
+//	(see Core/README.md). The warnings are silenced with a compiler
+//	diagnostic pragma scoped to just this usage, rather than a project-
+//	wide OPENSSL_API_COMPAT define - that would require guessing
+//	OpenSSL's internal version-number encoding without a real install to
+//	verify against, and a wrong guess there is a hard build error
+//	(OpenSSL's own headers #error out on an unrecognized value), not
+//	just a warning - too fragile for something this specific.
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 lmcCrypto::lmcCrypto(void) {
 	pRsa = NULL;
 	encryptMap.clear();
@@ -125,6 +148,12 @@ void lmcCrypto::retreiveAES(QString* lpszUserId, QByteArray& aesKeyIv) {
 
 	free(keyIv);
 }
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 QByteArray lmcCrypto::encrypt(QString* lpszUserId, QByteArray& clearData) {
 	int outLen = clearData.length() + AES_BLOCK_SIZE;

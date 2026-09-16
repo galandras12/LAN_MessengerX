@@ -282,7 +282,7 @@ NSIS → Inno Setup" szakaszát a részletekért).
    (Ez az `ISCC.exe`-t hívja meg — ha máshova telepítetted az Inno
    Setup-ot, mint `C:\Program Files (x86)\Inno Setup 6\`, igazítsd az
    elérési utat a `.bat` fájlban.)
-4. Az eredmény: `lanmessengerx-2.0.2-win32-setup.exe` a
+4. Az eredmény: `lanmessengerx-2.0.3-win32-setup.exe` a
    `Windows\setup\` mappában — **ez már egy önmagában átadható, kattints
    -és-települ telepítő**, amit bárkinek oda lehet adni.
 
@@ -764,6 +764,18 @@ vannak oldva:
   [Releases](https://github.com/galandras12/LAN_MessengerX/releases)
   oldalát a böngészőben, ugyanúgy, ahogy a "LAN Messenger X online"
   link is teszi.
+- `` #error "The requested API level higher than the configured API
+  compatibility level" `` / `` #error "OPENSSL_API_COMPAT expresses an
+  impossible API compatibility level" `` (`openssl/include/openssl/
+  macros.h`-ból, `Core.pro` fordításánál) → már javítva. Egy korábbi,
+  azóta visszavont javítási kísérlet (`Core.pro`-ban `DEFINES +=
+  OPENSSL_API_COMPAT=<érték>`, a `crypto.cpp`-beli szándékosan
+  megtartott, elavultnak jelölt RSA/PEM-API warningjainak némítására)
+  egy nem létező OpenSSL verziószám-kódolást adott meg — az OpenSSL
+  saját fejlécei ezt kemény hibával utasítják el, ami rosszabb, mint
+  az eredeti warningok voltak. A végleges megoldás egy, kifejezetten a
+  `crypto.cpp`-beli hívásokra szűkített fordító-pragma, ami build-hibát
+  sosem tud okozni.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és

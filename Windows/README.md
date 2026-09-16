@@ -643,13 +643,18 @@ A hálózati/protokoll/titkosítási/előzmény kód a [`/Core`](../Core) mappá
 van, önálló `lmccore` statikus library-ként épül, amit a `lmc.pro` linkel
 (lásd [`Core/Core.pro`](../Core/Core.pro) és [`Core/README.md`](../Core/README.md)).
 
-## 2.0.2 — build-warning takarítás
+## 2.0.2 / 2.0.3 — build-warning takarítás
 
 Egy valós Qt Creator build (`Core.pro`, `lmcapp.pro`, `lmc.pro`, mind
 `release`) sok warningot adott — egyik sem állította meg a buildet (egyik
 `.pro` fájlban sincs `-Werror`), de a legtöbb tényleg kitakarítható volt.
 Nem érintett wire-protokollt vagy beállítás-formátumot, ezért `IDA_VERSION`
-csak egy patch-verzióval nőtt (`2.0.0` → `2.0.2`).
+csak patch-verziókkal nőtt (`2.0.0` → `2.0.2` → `2.0.3`) — utóbbi azért,
+mert a `2.0.2`-es javítás egyik része (lásd lent, az `OPENSSL_API_COMPAT`
+pont) egy valós build-bel kiderülően maga is hibás volt, és egy újabb,
+ezúttal ellenőrizhető javítást igényelt: a szabály innentől az, hogy
+minden tényleges hibajavítás (nem csak funkció) kap egy patch-verzió
+emelést, akkor is, ha egy korábbi, még ki nem adott javítást korrigál.
 
 - **OpenSSL 3.0 deprecated RSA/PEM-API** (`RSA_free`, `RSA_new`,
   `RSA_generate_key`, `RSA_size`, `RSA_public_encrypt`,
@@ -657,14 +662,25 @@ csak egy patch-verzióval nőtt (`2.0.0` → `2.0.2`).
   `PEM_read_bio_RSAPublicKey`, mind `crypto.cpp`-ben) — szándékosan
   megmaradt a klasszikus C-API, mert a huzalformátum-kompatibilitás miatt
   egy EVP_PKEY-alapú átírás tényleges viselkedésváltoztatás lenne, amit
-  ez a patch nem vállal be spekulatívan. A warningokat a `Core.pro`-ba
-  felvett `DEFINES += OPENSSL_API_COMPAT=0x00800000L` némítja el — ez
-  OpenSSL saját, dokumentált mechanizmusa arra, hogy "ez a kód szándékosan
-  egy régebbi API-verzióhoz készült", **nem** rejti el vagy eszi meg
-  ténylegesen a hívásokat (az `OPENSSL_NO_DEPRECATED` tenné ezt, azt
-  viszont nem állítottuk be), csak a deprecation-figyelmeztetést kapcsolja
-  ki azokra a szimbólumokra, amiket az adott verzió előtt még nem
-  jelöltek elavultnak.
+  ez a patch nem vállal be spekulatívan.
+
+  ⚠️→🐞 Az első próbálkozás (`Core.pro`-ba felvett `DEFINES +=
+  OPENSSL_API_COMPAT=0x00800000L`) **valós build-bel elszállt**: az
+  érték nem egy OpenSSL által elfogadott verziószám-kódolás volt (nem
+  volt hozzáférhető tényleges OpenSSL-telepítés, amivel ellenőrizni
+  lehetett volna), és OpenSSL saját `macros.h`-ja ezt kemény
+  `#error`-ral ("impossible API compatibility level") utasította
+  vissza — ez rosszabb volt, mint az eredeti warningok, mert a build
+  ettől egyáltalán nem futott le. **Javítás**: a `Core.pro`-s globális
+  `DEFINES` helyett egy, kifejezetten a `crypto.cpp`-beli
+  hívásokra szűkített fordító-pragma (`#pragma GCC diagnostic
+  ignored "-Wdeprecated-declarations"` GCC/MinGW alatt,
+  `#pragma warning(disable: 4996)` MSVC alatt, a fájl elején
+  `push`-olva, a `retreiveAES()` után `pop`-olva) — ez sosem tud
+  build-hibát okozni (rosszabb esetben csak nem némítja el a
+  warningot az adott fordítón), szemben egy kitalált OpenSSL
+  verziószám-kódolással, amit ellenőrzés nélkül nem lehet biztonságosan
+  megadni.
 - `crypto.cpp` `generateRSA()`: a `'buf' may be used uninitialized`
   warning mögött egy valós, régóta jelen lévő hiba állt — `buf` sosem
   kapott értéket `malloc()` után, mielőtt `RAND_seed(buf, bits)`-nek

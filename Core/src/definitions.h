@@ -47,9 +47,12 @@
 //	settings.cpp:267. "2.0.0" clears all of that with room to spare.
 //	Bumped to "2.0.2" for the build-warning cleanup patch (OpenSSL 3.0/
 //	Qt6 deprecated-API warnings, a couple of latent bugs they pointed
-//	at) - no wire-protocol or settings-format change, so no new
-//	version-gate concerns beyond what "2.0.0" already cleared.
-#define IDA_VERSION		"2.0.2"
+//	at), then to "2.0.3" for a follow-up fix to that same patch (an
+//	invalid OPENSSL_API_COMPAT value broke the Core build outright -
+//	see Core/Core.pro and Core/src/crypto.cpp) - neither changed the
+//	wire protocol or settings format, so no new version-gate concerns
+//	beyond what "2.0.0" already cleared.
+#define IDA_VERSION		"2.0.3"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."
