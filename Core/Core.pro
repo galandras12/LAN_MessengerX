@@ -69,18 +69,13 @@ HEADERS += \
 INCLUDEPATH += $$PWD/../openssl/include
 DEPENDPATH += $$PWD/../openssl/include
 
-# crypto.cpp intentionally keeps calling the classic RSA_*/PEM_*RSAPublicKey
-# API (RSA_new/RSA_free/RSA_size/RSA_generate_key/RSA_public_encrypt/
-# RSA_private_decrypt/PEM_write_bio_RSAPublicKey/PEM_read_bio_RSAPublicKey)
-# rather than the newer EVP_PKEY-based API - see the comment above and
-# Core/README.md: the wire format must stay byte-compatible with the
-# original LAN Messenger protocol, and a switch to EVP_PKEY is a real
-# behavioral rewrite this fork isn't taking on speculatively. OpenSSL 3.0
-# marks that classic API deprecated (0.9.8 for RSA_generate_key, 3.0 for
-# the rest) but still fully implements it. OPENSSL_API_COMPAT tells
-# OpenSSL's headers which API version this code targets; declaring an
-# older target than either deprecation point (0.9.8) suppresses the
-# deprecation warnings for symbols deprecated at or after it, without
-# hiding or disabling the functions themselves (that would be
-# OPENSSL_NO_DEPRECATED, which is not set here).
-DEFINES += OPENSSL_API_COMPAT=0x00800000L
+# NOTE: crypto.cpp intentionally keeps calling the classic
+# RSA_*/PEM_*RSAPublicKey API, which OpenSSL 3.0 marks deprecated but
+# still fully implements - see crypto.cpp's own comment for why, and
+# for how those deprecation warnings are silenced (a targeted #pragma
+# in crypto.cpp itself, not a project-wide DEFINES here - an earlier
+# attempt at DEFINES += OPENSSL_API_COMPAT=<value> guessed at OpenSSL's
+# internal version-number encoding without a real OpenSSL install to
+# test against, and turned out to be flatly invalid: OpenSSL's own
+# headers rejected it with a hard #error ("impossible API compatibility
+# level"), breaking the build worse than the warnings ever did).

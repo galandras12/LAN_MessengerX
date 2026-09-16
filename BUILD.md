@@ -764,6 +764,18 @@ vannak oldva:
   [Releases](https://github.com/galandras12/LAN_MessengerX/releases)
   oldalát a böngészőben, ugyanúgy, ahogy a "LAN Messenger X online"
   link is teszi.
+- `` #error "The requested API level higher than the configured API
+  compatibility level" `` / `` #error "OPENSSL_API_COMPAT expresses an
+  impossible API compatibility level" `` (`openssl/include/openssl/
+  macros.h`-ból, `Core.pro` fordításánál) → már javítva. Egy korábbi,
+  azóta visszavont javítási kísérlet (`Core.pro`-ban `DEFINES +=
+  OPENSSL_API_COMPAT=<érték>`, a `crypto.cpp`-beli szándékosan
+  megtartott, elavultnak jelölt RSA/PEM-API warningjainak némítására)
+  egy nem létező OpenSSL verziószám-kódolást adott meg — az OpenSSL
+  saját fejlécei ezt kemény hibával utasítják el, ami rosszabb, mint
+  az eredeti warningok voltak. A végleges megoldás egy, kifejezetten a
+  `crypto.cpp`-beli hívásokra szűkített fordító-pragma, ami build-hibát
+  sosem tud okozni.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
