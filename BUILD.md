@@ -488,13 +488,22 @@ vissza kell menned hozzá:
      ez Qt-verziónként változik, ne feltételezz konkrét számot).
 6. Nyisd meg (vagy indítsd újra) a **Qt Creator-t**, és menj a
    Beállításokba: **Edit → Preferences** (újabb Qt Creator-verzióknál)
-   vagy **Tools → Options** (régebbieknél) → **Devices → Android** fül.
-   ⚠️ **Ide menj be elsőnek** — **ne** a Devices fül "Add..." gombjával
-   közvetlenül "Android Device"-ot indíts, mielőtt ez a fül zöld/kész
-   nem lesz, mert az `` Android support is not yet configured. ``
-   hibaüzenettel fog elszállni (valós Qt Creator 20.0.1-gyel
-   megerősítve) — ez **nem** kódhiba, csak azt jelzi, hogy a wizard egy
-   már beállított SDK-t vár, amit még nem adtál meg.
+   vagy **Tools → Options** (régebbieknél). A bal oldali listában
+   keress egy **"SDKs"** bejegyzést (Qt Creator 20.0.1-ben ez **külön**
+   pont, nem a "Devices" alatt van — ha a tiéd más elrendezésű, keresd
+   a "Devices → Android" fület helyette, régebbi verziókban ott
+   szokott lenni), és azon belül az **"Android"** fület.
+   ⚠️ **Ide menj be elsőnek** — **ne** a "Devices" fül "Add..."
+   gombjával közvetlenül "Android Device"-ot indíts, mielőtt ez a
+   panel zöld/kész nem lesz ("Android settings are OK."), mert az ``
+   Android support is not yet configured. `` hibaüzenettel fog
+   elszállni (valós Qt Creator 20.0.1-gyel megerősítve) — ez **nem**
+   kódhiba, csak azt jelzi, hogy a wizard egy már beállított SDK-t vár,
+   amit még nem adtál meg. A "Devices" fül egyébként is csak
+   fizikai telefonok/emulátorok (AVD-k) listája — egy USB-n
+   csatlakoztatott, hibakeresésre bekapcsolt fizikai telefonnak
+   **magától** meg kell jelennie itt, ha az alábbi SDK-beállítás rendben
+   van, nem kell hozzá az "Add..." varázsló.
 7. Ezen a fülön töltsd ki (vagy ellenőrizd, hogy Qt Creator
    automatikusan megtalálta-e) a **JDK location**, **Android SDK
    location** és **Android NDK** mezőket.
@@ -578,9 +587,59 @@ vissza kell menned hozzá:
      bepipálni), a **platform-tools**, és **build-tools** csomagokat
      mindenképp telepítsd.
 
-   Az **Android NDK** mezőt hasonlóan töltsd ki, ha a Qt Maintenance
-   Tool 4. pontban telepített NDK-ja nem jelenik meg automatikusan —
-   tallózd be kézzel, vagy telepítsd ugyanebből a panelből.
+   Az **"Android NDK list"** mezőt (valós Qt Creator 20.0.1-gyel
+   megerősítve: ez gyakran **üresen** marad, még akkor is, ha minden
+   más zöld) hasonlóan töltsd ki, ha a Qt Maintenance Tool 4. pontban
+   telepített NDK-ja nem jelenik meg automatikusan:
+   - Android Studio SDK Manager → "SDK Tools" fül → pipáld ki az
+     **"NDK (Side by side)"**-t → Apply (telepíti pl. ide:
+     `...\Sdk\ndk\<verziószám>\`).
+   - Vissza Qt Creator-ban: az "Android NDK list" mellett **"Add..."**
+     → tallózd be pontosan ezt a mappát.
+   - Ez önmagában is javíthatja az alább leírt "All essential packages
+     installed for all installed Qt versions." sort, mert az attól is
+     függ, hogy van-e regisztrált NDK.
+
+   ⚠️ **Valós build-bel megerősített, gyakori hibakép**: minden zöld
+   **kivéve** ez a kettő:
+   - `Android SDK Command-line Tools runs.` ✗
+   - `Android Platform SDK (version) installed.` ✗
+
+   — annak ellenére, hogy a `cmdline-tools\latest\bin\sdkmanager.bat`
+   kézzel futtatva (`sdkmanager.bat --version`) **ténylegesen lefut** és
+   ad vissza egy verziószámot, és a `platforms\` mappában valódi,
+   szabályos platformok (pl. `android-34`, `android-36`) is megvannak.
+   Ez **Qt Creator 20.0.1 és Google legújabb, a klasszikus
+   `sdkmanager`-t leváltó "Android CLI" nevű eszköze közti valós
+   inkompatibilitás** — Qt Creator nem ismeri fel/dolgozza fel ennek az
+   új eszköznek a kimenetét, ezért folyamatosan "nem fut"/"nincs
+   telepítve platform"-ként jelzi, holott az SDK ténylegesen rendben
+   van. **Megerősítetten működő javítás**:
+   1. Android Studio → Settings → Languages & Frameworks → Android SDK
+      → **"SDK Tools"** fül → jobb alul pipáld ki **"Show Package
+      Details"**-t.
+   2. Bontsd ki az **"Android SDK Command-line Tools"** sort — több
+      verziószám jelenik meg alatta (pl. `11.0`, `12.0`, `13.0`,
+      esetleg `latest`). Pipáld ki telepítésre egy **régebbi, számozott**
+      verziót (**ne** a legújabbat/"latest"-et — az hozza az
+      inkompatibilis új eszközt) — egy `12.0` körüli revízió
+      megerősítve működik. Apply — ez **külön** mappába települ
+      (`cmdline-tools\<verziószám>\`), a jelenlegi `latest` mappát nem
+      írja felül.
+   3. Kézzel cseréld ki a mappákat, mert az eszközök kifejezetten a
+      `latest` nevű mappát keresik: az Intézőben (`...\Sdk\
+      cmdline-tools\`) nevezd át a jelenlegi `latest` mappát pl.
+      `latest_old`-ra, majd az imént telepített, régebbi verziószámú
+      mappát (pl. `12.0`) nevezd át **`latest`**-re.
+   4. Zárd be és nyisd újra a Preferences ablakot (vagy csak az SDKs
+      panelt) — ekkor mindkét pipa zöldre kell, hogy váltson, és a
+      panel alján **"Android settings are OK. (SDK Version: 12.0)"**
+      (vagy a te választott verziószámoddal) jelenik meg.
+
+   Ez a két piros pipa közvetlenül okozza az `` Android build SDK
+   version is not defined. Check Android settings. `` build-időben
+   kapott hibát is (`Core`/`Android` projekt fordításakor) — ha ezt
+   kaptad, ugyanez a javítás oldja meg.
 
    Zöld pipák/pipa-ikonok jelzik soronként, ha az adott mező helyesen
    van beállítva — csak akkor lépj tovább, ha mindegyik zöld.
@@ -963,11 +1022,33 @@ vannak oldva:
 - Qt Creator: `Android Device Manager - Android support is not yet
   configured.` a Devices fül "Add... → Android Device → Start Wizard"
   lépésénél → **nem hiba**, csak azt jelzi, hogy a wizard előtt még be
-  kell állítanod a Devices → Android fülön a JDK/Android SDK/NDK
-  elérési útjait (a Qt Maintenance Tool "Android" komponense önmagában
-  **nem** ad kész SDK-t, csak a Qt-könyvtárakat) — lásd a [2.1-es
-  Android kit telepítés](#21-szükséges-összetevők) 6-7. lépését,
-  különösen ha az "Android SDK location" mező üres vagy piros.
+  kell állítanod az SDKs (Qt Creator 20.0.1-ben) vagy Devices → Android
+  (régebbi verziókban) fülön a JDK/Android SDK/NDK elérési útjait (a Qt
+  Maintenance Tool "Android" komponense önmagában **nem** ad kész
+  SDK-t, csak a Qt-könyvtárakat) — lásd a [2.1-es Android kit
+  telepítés](#21-szükséges-összetevők) 6-7. lépését, különösen ha az
+  "Android SDK location" mező üres vagy piros.
+- Qt Creator SDKs/Android panel: minden zöld, **kivéve** `Android SDK
+  Command-line Tools runs.` és `Android Platform SDK (version)
+  installed.`, és/vagy build-időben `` Android build SDK version is
+  not defined. Check Android settings. `` a `Core`/`Android` projekt
+  fordításakor → **valós, megerősített** Qt Creator 20.0.1 ↔ Google
+  legújabb, a klasszikus `sdkmanager`-t leváltó "Android CLI" eszköze
+  közti inkompatibilitás, még akkor is, ha az SDK ténylegesen rendben
+  van (a `sdkmanager.bat --version` kézzel lefuttatva működik, a
+  platformok megvannak a lemezen). Megerősítetten működő javítás: telepíts
+  egy **régebbi, számozott** "Android SDK Command-line Tools" revíziót
+  (nem a legújabbat/"latest"-et) Android Studio SDK Manager-éből
+  ("Show Package Details" bepipálva), majd kézzel cseréld a
+  `cmdline-tools\latest` mappát erre a régebbire — lásd a [2.1-es
+  Android kit telepítés](#21-szükséges-összetevők) 7. lépését a teljes
+  menetért.
+- Qt Creator SDKs/Android panel: `Android NDK list` üres, még akkor is,
+  ha minden más zöld → nem hiba, csak nincs regisztrálva — Android
+  Studio SDK Manager "SDK Tools" fülén pipáld ki az "NDK (Side by
+  side)"-t, majd Qt Creator-ban "Add..."-tal tallózd be a települt NDK
+  mappát — lásd a [2.1-es Android kit
+  telepítés](#21-szükséges-összetevők) 7. lépését.
 - Qt Creator "Set Up SDK" gombja: a `cmdline-tools` telepítése
   sikeres, utána viszont `platform-tools`/`ndk`/`emulator`/
   `system-images`/`extras;google;usb_driver` mind `Failed`-del áll le,
