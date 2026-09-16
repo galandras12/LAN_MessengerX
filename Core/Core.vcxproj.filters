@@ -60,7 +60,7 @@
     <ClCompile Include="src\shared.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\strings.cpp">
+    <ClCompile Include="src\lmcstrings.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\tcpnetwork.cpp">
@@ -116,7 +116,7 @@
     <ClInclude Include="src\stdlocation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\strings.h">
+    <ClInclude Include="src\lmcstrings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <QtMoc Include="src\tcpnetwork.h">

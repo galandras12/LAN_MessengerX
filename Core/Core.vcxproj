@@ -179,7 +179,7 @@
     <ClCompile Include="src\network.cpp" />
     <ClCompile Include="src\settings.cpp" />
     <ClCompile Include="src\shared.cpp" />
-    <ClCompile Include="src\strings.cpp" />
+    <ClCompile Include="src\lmcstrings.cpp" />
     <ClCompile Include="src\tcpnetwork.cpp" />
     <ClCompile Include="src\trace.cpp" />
     <ClCompile Include="src\udpnetwork.cpp" />
@@ -199,7 +199,7 @@
     <ClInclude Include="src\settings.h" />
     <ClInclude Include="src\shared.h" />
     <ClInclude Include="src\stdlocation.h" />
-    <ClInclude Include="src\strings.h" />
+    <ClInclude Include="src\lmcstrings.h" />
     <QtMoc Include="src\tcpnetwork.h" />
     <ClInclude Include="src\trace.h" />
     <QtMoc Include="src\udpnetwork.h" />
