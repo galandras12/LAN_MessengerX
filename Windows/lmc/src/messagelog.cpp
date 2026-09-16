@@ -85,11 +85,11 @@ void lmcMessageLog::reloadTheme()
 
 void lmcMessageLog::createContextMenu(void) {
 	contextMenu = new QMenu(this);
-	copyAction = contextMenu->addAction("&Copy", this, SLOT(copyAction_triggered()), QKeySequence::Copy);
+	copyAction = contextMenu->addAction("&Copy", QKeySequence::Copy, this, &lmcMessageLog::copyAction_triggered);
 	copyLinkAction = contextMenu->addAction("&Copy Link", this, SLOT(copyLinkAction_triggered()));
 	contextMenu->addSeparator();
-	selectAllAction = contextMenu->addAction("Select &All", this,
-							SLOT(selectAllAction_triggered()), QKeySequence::SelectAll);
+	selectAllAction = contextMenu->addAction("Select &All", QKeySequence::SelectAll, this,
+							&lmcMessageLog::selectAllAction_triggered);
 	connect(this, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(showContextMenu(QPoint)));
 	setContextMenuPolicy(Qt::CustomContextMenu);
 }
@@ -117,7 +117,7 @@ void lmcMessageLog::appendMessageLog(MessageType type, QString* lpszUserId, QStr
 		time.setMSecsSinceEpoch(pMessage->header(XN_TIME).toLongLong());
 		message = pMessage->data(XN_MESSAGE);
 		font.fromString(pMessage->data(XN_FONT));
-		color.setNamedColor(pMessage->data(XN_COLOR));
+		color = QColor::fromString(pMessage->data(XN_COLOR));
 		appendMessage(lpszUserId, lpszUserName, &message, &time, &font, &color);
 		lastId = *lpszUserId;
 		break;
@@ -126,7 +126,7 @@ void lmcMessageLog::appendMessageLog(MessageType type, QString* lpszUserId, QStr
 		time.setMSecsSinceEpoch(pMessage->header(XN_TIME).toLongLong());
 		message = pMessage->data(XN_MESSAGE);
 		font.fromString(pMessage->data(XN_FONT));
-		color.setNamedColor(pMessage->data(XN_COLOR));
+		color = QColor::fromString(pMessage->data(XN_COLOR));
         appendPublicMessage(lpszUserId, lpszUserName, &message, &time, &font, &color, type);
 		lastId = *lpszUserId;
 		break;
@@ -151,7 +151,7 @@ void lmcMessageLog::appendMessageLog(MessageType type, QString* lpszUserId, QStr
 	case MT_Failed:
 		message = pMessage->data(XN_MESSAGE);
 		font.fromString(pMessage->data(XN_FONT));
-		color.setNamedColor(pMessage->data(XN_COLOR));
+		color = QColor::fromString(pMessage->data(XN_COLOR));
 		html = themeData.sysMsg;
 		caption = tr("This message was not delivered to %1:");
 		fontStyle = getFontStyle(&font, &color, true);

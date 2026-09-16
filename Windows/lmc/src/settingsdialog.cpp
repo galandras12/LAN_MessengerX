@@ -532,7 +532,7 @@ void lmcSettingsDialog::loadSettings(void) {
 	ui.chkTrimMessage->setChecked(pSettings->value(IDS_TRIMMESSAGE, IDS_TRIMMESSAGE_VAL).toBool());
     ui.chkClearOnClose->setChecked(pSettings->value(IDS_CLEARONCLOSE, IDS_CLEARONCLOSE_VAL).toBool());
 	font.fromString(pSettings->value(IDS_FONT, IDS_FONT_VAL).toString());
-	color.setNamedColor(pSettings->value(IDS_COLOR, IDS_COLOR_VAL).toString());
+	color = QColor::fromString(pSettings->value(IDS_COLOR, IDS_COLOR_VAL).toString());
 	fontSize = pSettings->value(IDS_FONTSIZE, IDS_FONTSIZE_VAL).toInt();
 	fontSize = qMin(FS_LARGE, qMax(FS_SMALL, fontSize));
 	ui.cboFontSize->setCurrentIndex(fontSize);

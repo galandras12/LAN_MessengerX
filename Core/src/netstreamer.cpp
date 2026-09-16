@@ -417,13 +417,21 @@ void MsgStream::readyRead(void) {
 }
 
 void MsgStream::bytesWritten(qint64 bytes) {
-	outDataLen -= bytes;
-	if(outDataLen == 0)
+	//	outDataLen is quint32 (unsigned), so it can never actually go
+	//	negative - the old "outDataLen -= bytes; if(outDataLen < 0)"
+	//	overrun check ([-Wtype-limits]) could never fire, it would just
+	//	silently wrap around instead. Computing the signed remainder
+	//	first makes the overrun case detectable again before clamping
+	//	outDataLen back to an unsigned value.
+	qint64 remaining = (qint64)outDataLen - bytes;
+	outDataLen = (quint32)qMax(remaining, (qint64)0);
+
+	if(remaining == 0)
 		return;
 
-	if(outDataLen > 0)
+	if(remaining > 0)
 		lmcTrace::write("Warning: Socket write operation not completed");
-	if(outDataLen < 0)
+	if(remaining < 0)
 		lmcTrace::write("Warning: Socket write overrun");
 
 	//	TODO: handle situation when entire message is not written to stream in one write operation

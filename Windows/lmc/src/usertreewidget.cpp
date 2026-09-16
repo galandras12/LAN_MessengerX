@@ -267,15 +267,15 @@ void lmcUserTreeWidget::mousePressEvent(QMouseEvent* event) {
 void lmcUserTreeWidget::dragMoveEvent(QDragMoveEvent* event) {
 	QTreeWidget::dragMoveEvent(event);
 
-	QTreeWidgetItem* item = itemAt(event->pos());
+	QTreeWidgetItem* item = itemAt(event->position().toPoint());
 	bool accept = false;
 
 	if(dragUser) {
-		if(item && dynamic_cast<lmcUserTreeWidgetGroupItem*>(item) && visualItemRect(item).contains(event->pos(), true))
+		if(item && dynamic_cast<lmcUserTreeWidgetGroupItem*>(item) && visualItemRect(item).contains(event->position().toPoint(), true))
 			accept = true;
 	}
 	else if(dragGroup) {
-		if(!item || (dynamic_cast<lmcUserTreeWidgetGroupItem*>(item) && !visualItemRect(item).contains(event->pos(), true)))
+		if(!item || (dynamic_cast<lmcUserTreeWidgetGroupItem*>(item) && !visualItemRect(item).contains(event->position().toPoint(), true)))
 			accept = true;
 	}
 

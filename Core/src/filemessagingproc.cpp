@@ -371,6 +371,7 @@ bool lmcMessaging::updateFileTransfer(FileMode fileMode, FileOp fileOp, QString*
                 case FT_Avatar:
                 case FT_Folder:
                     emitMsg = false;
+                    [[fallthrough]];
                 default:
                     break;
                 }
@@ -382,6 +383,7 @@ bool lmcMessaging::updateFileTransfer(FileMode fileMode, FileOp fileOp, QString*
                     switch(fileType) {
                     case FT_Avatar:
                         emitMsg = false;
+                        [[fallthrough]];
                     case FT_Folder:
                         pMessage->addData(XN_FOLDERID, transFile.folderId);
                         updateFolderTransfer(FM_Send, FO_Next, lpszUserId, pMessage);
@@ -419,6 +421,7 @@ bool lmcMessaging::updateFileTransfer(FileMode fileMode, FileOp fileOp, QString*
                 switch(fileType) {
                 case FT_Avatar:
                     emitMsg = false;
+                    [[fallthrough]];
                 case FT_Folder:
                     pMessage->addData(XN_FOLDERID, transFile.folderId);
                     updateFolderTransfer((FileMode)fileMode, (FileOp)fileOp, lpszUserId, pMessage);

@@ -45,7 +45,11 @@
 //	group chat, and an upgrade over a real old install's settings file
 //	looks like a downgrade and gets wiped by the safety check at
 //	settings.cpp:267. "2.0.0" clears all of that with room to spare.
-#define IDA_VERSION		"2.0.0"
+//	Bumped to "2.0.2" for the build-warning cleanup patch (OpenSSL 3.0/
+//	Qt6 deprecated-API warnings, a couple of latent bugs they pointed
+//	at) - no wire-protocol or settings-format change, so no new
+//	version-gate concerns beyond what "2.0.0" already cleared.
+#define IDA_VERSION		"2.0.2"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."

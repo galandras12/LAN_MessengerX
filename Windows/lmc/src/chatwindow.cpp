@@ -126,7 +126,7 @@ void lmcChatWindow::init(User* pLocalUser, User* pRemoteUser, bool connected) {
 	QFont font = QApplication::font();
 	font.fromString(pSettings->value(IDS_FONT, IDS_FONT_VAL).toString());
 	messageColor = QApplication::palette().text().color();
-	messageColor.setNamedColor(pSettings->value(IDS_COLOR, IDS_COLOR_VAL).toString());
+	messageColor = QColor::fromString(pSettings->value(IDS_COLOR, IDS_COLOR_VAL).toString());
 	sendKeyMod = pSettings->value(IDS_SENDKEYMOD, IDS_SENDKEYMOD_VAL).toBool();
     clearOnClose = pSettings->value(IDS_CLEARONCLOSE, IDS_CLEARONCLOSE_VAL).toBool();
 
@@ -513,9 +513,9 @@ void lmcChatWindow::createToolBar(void) {
 	ui.toolBarLayout->addWidget(pRightBar);
 
 	pHistoryAction = pRightBar->addAction(QIcon(QPixmap(IDR_HISTORY, "PNG")), "&History", this, SLOT(btnHistory_clicked()));
-	pHistoryAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_H));
+	pHistoryAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_H));
 	pTransferAction = pRightBar->addAction(QIcon(QPixmap(IDR_TRANSFER, "PNG")), "File &Transfers", this, SLOT(btnTransfers_clicked()));
-	pTransferAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_J));
+	pTransferAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_J));
 
 	ui.lblDividerTop->setBackgroundRole(QPalette::Light);
 	ui.lblDividerTop->setAutoFillBackground(true);

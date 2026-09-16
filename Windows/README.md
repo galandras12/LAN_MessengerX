@@ -642,3 +642,78 @@ Windows/
 A hálózati/protokoll/titkosítási/előzmény kód a [`/Core`](../Core) mappában
 van, önálló `lmccore` statikus library-ként épül, amit a `lmc.pro` linkel
 (lásd [`Core/Core.pro`](../Core/Core.pro) és [`Core/README.md`](../Core/README.md)).
+
+## 2.0.2 — build-warning takarítás
+
+Egy valós Qt Creator build (`Core.pro`, `lmcapp.pro`, `lmc.pro`, mind
+`release`) sok warningot adott — egyik sem állította meg a buildet (egyik
+`.pro` fájlban sincs `-Werror`), de a legtöbb tényleg kitakarítható volt.
+Nem érintett wire-protokollt vagy beállítás-formátumot, ezért `IDA_VERSION`
+csak egy patch-verzióval nőtt (`2.0.0` → `2.0.2`).
+
+- **OpenSSL 3.0 deprecated RSA/PEM-API** (`RSA_free`, `RSA_new`,
+  `RSA_generate_key`, `RSA_size`, `RSA_public_encrypt`,
+  `RSA_private_decrypt`, `PEM_write_bio_RSAPublicKey`,
+  `PEM_read_bio_RSAPublicKey`, mind `crypto.cpp`-ben) — szándékosan
+  megmaradt a klasszikus C-API, mert a huzalformátum-kompatibilitás miatt
+  egy EVP_PKEY-alapú átírás tényleges viselkedésváltoztatás lenne, amit
+  ez a patch nem vállal be spekulatívan. A warningokat a `Core.pro`-ba
+  felvett `DEFINES += OPENSSL_API_COMPAT=0x00800000L` némítja el — ez
+  OpenSSL saját, dokumentált mechanizmusa arra, hogy "ez a kód szándékosan
+  egy régebbi API-verzióhoz készült", **nem** rejti el vagy eszi meg
+  ténylegesen a hívásokat (az `OPENSSL_NO_DEPRECATED` tenné ezt, azt
+  viszont nem állítottuk be), csak a deprecation-figyelmeztetést kapcsolja
+  ki azokra a szimbólumokra, amiket az adott verzió előtt még nem
+  jelöltek elavultnak.
+- `crypto.cpp` `generateRSA()`: a `'buf' may be used uninitialized`
+  warning mögött egy valós, régóta jelen lévő hiba állt — `buf` sosem
+  kapott értéket `malloc()` után, mielőtt `RAND_seed(buf, bits)`-nek
+  átadtuk volna (és utána sosem szabadult fel). Ez nem volt biztonsági
+  rés (OpenSSL 1.1.0+ a saját CSPRNG-jét amúgy is az OS
+  entrópiaforrásából auto-seedeli, nem ettől a hívástól függ), csak
+  felesleges és hibás kód — törölve, a `free(buf)`-fal együtt.
+- `netstreamer.cpp` `MsgStream::bytesWritten()`: a `comparison of unsigned
+  expression in '< 0' is always false` warning egy valós logikai hibára
+  mutatott rá — `outDataLen` `quint32` (előjel nélküli), tehát az
+  eredeti `outDataLen -= bytes; if(outDataLen < 0)` túlírás-detektálás
+  **sosem tudott ténylegesen lefutni**, alulcsordulás esetén csendben
+  egy hatalmas pozitív értékre "csomagolódott volna". Javítva: előbb egy
+  előjeles (`qint64`) különbséget számolunk, azon fut a három ágú
+  (befejezve / még hátravan / túlírás) diagnosztikai log, utána
+  clampelünk vissza `outDataLen`-be.
+- `filemessagingproc.cpp`: 2, ténylegesen szándékos `switch`
+  átesésnél (`case FT_Avatar:` → `case FT_Folder:`, ugyanazt az
+  `emitMsg = false`-t osztva) explicit `[[fallthrough]];` jelölés
+  pótolva — a viselkedés nem változott, csak a fordító számára vált
+  egyértelművé, hogy ez szándékos, nem elfelejtett `break`.
+- **Qt6 deprecated API-hívások**, mind mechanikus, viselkedés-azonos
+  csere, a fordító saját, a warning szövegében adott javaslatát követve:
+  - `qtlocalpeer.cpp`: `qChecksum(idc.constData(), idc.size())` →
+    `qChecksum(idc)` (a `QByteArrayView`-túlterhelés).
+  - `usertreewidget.cpp`: `event->pos()` → `event->position().toPoint()`
+    (3 hely, `QDropEvent`).
+  - `mainwindow.cpp`/`messagelog.cpp`: a régi, `SLOT()`-makrós
+    `addAction(text/icon, text, receiver, member, shortcut)` hívások —
+    de **csak** azok, amik shortcut-argumentumot is kaptak (a
+    shortcut nélküliek nem lettek deprecated-nek jelölve, azok
+    változatlanok) — átírva a modern `addAction(text/icon, text,
+    shortcut, receiver, &Class::slot)` pointer-to-member formára.
+  - `mainwindow.cpp`/`chatwindow.cpp`: `Qt::CTRL + Qt::Key_H`/`_J` →
+    `Qt::CTRL | Qt::Key_H`/`_J` (a `+`-operátor deprecated, a `|` a
+    javasolt csere).
+  - `settingsdialog.cpp`/`chatwindow.cpp`/`chatroomwindow.cpp`/
+    `messagelog.cpp` (3 hely): `color.setNamedColor(x)` →
+    `color = QColor::fromString(x)` — azonos szemantika érvénytelen
+    névre is (mindkettő érvénytelen `QColor`-t ad).
+- `transferwindow.cpp`: a `[[nodiscard]]`-jelölt `QFile::open()`
+  visszatérési értéke eddig figyelmen kívül lett hagyva — mostantól csak
+  sikeres megnyitás esetén hívunk `close()`-t, viselkedés gyakorlatilag
+  változatlan (a hívó kód a fájl létezésétől függetlenül fut tovább,
+  sikertelen `open()` esetén korábban is csak egy no-op `close()`-t
+  hívott volna).
+- `filemodelview.cpp` `FileModel::itemChanged()`: a `this 'if' clause
+  does not guard...` (`-Wmisleading-indentation`) egy tabok/szóközök
+  keveredéséből adódó vizuális félrevezetés volt, nem tényleges hiba —
+  kapcsos zárójelek pótolva, hogy ne függjön a behúzástól.
+- `qmessagebrowser.cpp` `insertMessage()`: a nem használt `time`
+  paraméter `Q_UNUSED(time);`-vel jelölve.
