@@ -123,11 +123,35 @@ library).
    sorát/sorait a saját elrendezésed alapján.
 4. **Futásidőben** is kell a tényleges `libcrypto-3-x64.dll` (és
    `libssl-3-x64.dll`, ha a disztribúciód külön adja) — ezt a `lmc.exe`
-   mellé kell majd másolni (lásd 1.4. lépés). A `VC\x64\...` elrendezésű
-   `nmake install` kimenetnél a DLL-eket jellemzően egy külön `bin`
-   mappában találod (nem a `lib` alatt) — keresd meg, ahol az OpenSSL
-   build/telepítés létrehozta őket. A fenti `include`/`lib` csak a
-   *fordításhoz* kell, a DLL a *futtatáshoz*.
+   mellé kell majd másolni (lásd 1.4. lépés). A fenti `include`/`lib`
+   csak a *fordításhoz* kell, a DLL a *futtatáshoz* — és **nincs benne
+   abban, amit eddig a repóba másoltál**, mert csak az `include`-ot és
+   a `lib`-et kértük bemásolni, a DLL-ek egy harmadik, `bin` nevű
+   mappában vannak, amit még nem érintettünk. Hogy pontosan hol, az
+   attól függ, honnan szerezted az OpenSSL-t (lásd az 1. pontot):
+
+   - **Előre csomagolt bináris disztribúció** (pl. egy telepítőt
+     futtató "Win64 OpenSSL" jellegű csomag): a DLL-ek a telepítés
+     gyökerében vagy egy `bin\` alkönyvtárában vannak, pl.
+     `C:\Program Files\OpenSSL-Win64\` vagy
+     `C:\Program Files\OpenSSL-Win64\bin\` — attól függően, melyik
+     telepítőt használtad, nézd meg, hová telepített.
+   - **Saját `nmake install`-lal fordítva**: a build a `Configure`-nek
+     megadott `--prefix`-hez telepít, és ott **`bin\`, `lib\`,
+     `include\` egymás melletti testvérmappák** — vagyis ha az
+     `include`-ot és a `lib`-et onnan másoltad be a repó `openssl/`
+     mappájába, ugyanannak a mappának a `bin\` alkönyvtárában vannak a
+     DLL-ek is (nem a `lib\VC\x64\MD\` alatt, az csak az import
+     library-ket/`.pdb`-ket tartalmazza).
+   - **`vcpkg install openssl:x64-windows`**: a DLL-ek a
+     `<vcpkg gyökere>\installed\x64-windows\bin\` mappában vannak.
+   - **Ha egyik sem stimmel**, vagy nem emlékszel pontosan, hová
+     telepítettél/build-eltél: keresd meg egy Windows-keresővel, vagy
+     egy parancssorból (a diszk gyökeréből, vagy onnan, ahonnan az
+     OpenSSL-t letöltötted/fordítottad):
+     ```bat
+     dir /s /b libcrypto-3-x64.dll
+     ```
 
 Enélkül a build az alábbi hibával fog leállni:
 ```
@@ -252,7 +276,11 @@ mappát csinál:
    többi futáshoz kellő Qt-plugint.
 4. **Másold be kézzel az OpenSSL DLL-eket is** ugyanebbe a mappába
    (`libcrypto-3-x64.dll`, esetleg `libssl-3-x64.dll`) — a
-   `windeployqt` ezekről nem tud, mivel nem Qt-modulok.
+   `windeployqt` ezekről nem tud, mivel nem Qt-modulok. Ezek **nem**
+   ugyanott vannak, ahonnan az `include`-ot/`lib`-et a repó `openssl/`
+   mappájába másoltad az 1.2. lépésben (azok csak a *fordításhoz*
+   kellenek) — hol keresd őket pontosan, lásd az [1.2. lépés 4.
+   pontját](#12-openssl-beszerzése-és-elhelyezése).
 5. Másold be a `sounds`/`lang` mappákat is (ezeket a telepítő-szkript a
    forrásból tölti be automatikusan, de ha a mappát kézzel akarod
    tesztelni futtatás előtt, másold be őket a
