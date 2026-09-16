@@ -368,22 +368,30 @@ Most már bekötve:
   (működik, de nem a szokásos fehér-sziluett stílus) — kozmetikai
   hiányosság, lásd a Java fájl megjegyzését.
 
-## ⚠️ Kritikus, ellenőrizetlen pont: OpenSSL Androidon
+## OpenSSL Androidon — bekötve
 
 A `/Core`-beli `crypto.cpp` közvetlenül OpenSSL-t hív (`libcrypto`). A
 Windows kliens ehhez egy Windows-os előre fordított `libcrypto.lib`-et
 linkel a repó gyökerén (`/openssl`) — ez **Androidon nem használható**,
 ott Android ABI-nkénti (arm64-v8a / armeabi-v7a / x86_64 / x86)
-keresztfordított `libcrypto.so`/`.a` kell (pl. a közösségi
-`android_openssl` csomag). Ez **nincs bekötve** az `Android.pro`-ba — lásd
-az ottani kommenteket. Enélkül a `lmccore` linkelése Android célra
-valószínűleg hibát fog adni. Ez a legnagyobb, még megoldatlan technikai
-akadály a tényleges Android build előtt.
+keresztfordított `libcrypto.so`/`libssl.so` kell.
+
+Ez korábban a legnagyobb, dokumentált, még megoldatlan technikai akadály
+volt a tényleges Android build előtt. A [KDAB
+`android_openssl`](https://github.com/KDAB/android_openssl) (`ssl_3` ág)
+közösségi előre fordított csomagja — közös fejléc-fa + mind a négy ABI
+`.so`-ja — be van vezetve a repó gyökerébe, a `openssl-android/`
+mappába (~21 MB, be van csekkolva a git-be, a Windows-os `/openssl/`-lel
+ellentétben, mert nincs egyszerű módja, hogy magad újra elő tudd
+állítani NDK/internet nélkül). A `Core/Core.pro` (fejléc-útvonal) és az
+`Android/Android.pro` (linkelés + `ANDROID_EXTRA_LIBS`, hogy az
+`androiddeployqt` ténylegesen bele is csomagolja a `.so`-kat az
+`.apk`-ba) mindkettő már be van kötve rá — lásd az ottani kommenteket,
+ha másik/frissebb csomagra akarod cserélni.
 
 ## Build előfeltételek (még nem ellenőrizve — nincs Android SDK/NDK/Qt ebben a környezetben)
 
 - Qt 6 LTS Android kit (SDK + NDK Qt Creatorral telepítve).
-- A fenti OpenSSL-Androidra probléma megoldása.
 - `Core/Core.pro`-t Android ABI-nkénti target-ekkel kell buildelni, mielőtt
   az `Android.pro` linkelni tudja.
 - Az `android/AndroidManifest.xml`-t érdemes végigfuttatni a Qt Creator

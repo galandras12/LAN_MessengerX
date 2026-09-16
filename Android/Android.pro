@@ -44,13 +44,29 @@ RESOURCES += qml/qml.qrc
 # OpenSSL: crypto.cpp (built into lmccore, see Core/Core.pro) needs
 # libcrypto at final link time here too, same as the Windows client - but
 # NOT the same prebuilt library. Android needs libcrypto cross-compiled
-# for each target ABI (arm64-v8a / armeabi-v7a / x86_64 / x86), e.g. via
-# the community "android_openssl" prebuilt package, not the repo-root
-# /openssl folder the Windows build uses (that one is a Windows-only
-# import library). Not wired up yet - see Android/README.md. Once you have
-# such a package, something like:
-# android: INCLUDEPATH += $$PWD/../openssl-android/include
-# android: LIBS += -L$$PWD/../openssl-android/lib/$$ANDROID_TARGET_ARCH -lcrypto_$$ANDROID_TARGET_ARCH
+# for each target ABI (arm64-v8a / armeabi-v7a / x86_64 / x86); vendored
+# here from the community "android_openssl" (KDAB) prebuilt package - see
+# Android/README.md for where it came from and what's in it, and
+# Core/Core.pro for the matching header INCLUDEPATH (crypto.cpp itself is
+# compiled there, not here - this file only links the already-compiled
+# lmccore static library against the final .so).
+#
+# -l:libcrypto_3.so (the "-l:<exact filename>" GNU ld/lld syntax, not the
+# usual "-lname" -> "lib<name>.so" pattern) links the real file directly,
+# rather than through a libcrypto.so -> libcrypto_3.so symlink - the
+# vendored package ships that relationship as a real symlink upstream,
+# but zip archives (and Windows checkouts without symlink support) can't
+# reliably carry that, so this sidesteps depending on it.
+android: LIBS += -L$$PWD/../openssl-android/$$ANDROID_TARGET_ARCH -l:libcrypto_3.so -l:libssl_3.so
+
+# Linking against these isn't enough on its own - androiddeployqt only
+# bundles .so files into the .apk that are explicitly listed here.
+# Without this, the app links and builds fine but crashes at runtime on
+# a real device/emulator (UnsatisfiedLinkError / dlopen failure), because
+# libcrypto_3.so/libssl_3.so are simply missing from the installed .apk.
+android: ANDROID_EXTRA_LIBS += \
+    $$PWD/../openssl-android/$$ANDROID_TARGET_ARCH/libcrypto_3.so \
+    $$PWD/../openssl-android/$$ANDROID_TARGET_ARCH/libssl_3.so
 
 android {
     ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android

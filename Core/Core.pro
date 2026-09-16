@@ -64,10 +64,26 @@ HEADERS += \
 # bit-compatible with the original LAN Messenger wire protocol - see
 # Core/README.md). Only the headers are needed to build this static
 # library; the actual libcrypto is linked in by whichever executable
-# ultimately links libCore/lmccore (see Windows/lmc/src/lmc.pro) - a
-# static library archive step does not itself link against libcrypto.
-INCLUDEPATH += $$PWD/../openssl/include
-DEPENDPATH += $$PWD/../openssl/include
+# ultimately links libCore/lmccore (Windows/lmc/src/lmc.pro or
+# Android/Android.pro) - a static library archive step does not itself
+# link against libcrypto. Windows and Android need different header
+# trees here: opensslconf.h/configuration.h encode platform-specific
+# values (word size, endianness) baked in per target at OpenSSL's own
+# build/configure time, so a Windows x64 OpenSSL's headers are not
+# interchangeable with an Android (per-ABI) OpenSSL's headers, even
+# though almost all of the tree is identical portable C.
+win32: INCLUDEPATH += $$PWD/../openssl/include
+win32: DEPENDPATH += $$PWD/../openssl/include
+
+# Android OpenSSL headers (KDAB android_openssl ssl_3 package - see
+# Android/Android.pro for the matching per-ABI LIBS/ANDROID_EXTRA_LIBS
+# and Android/README.md for where this package came from). All four
+# target ABIs' prebuilt headers are identical (the actual per-ABI
+# difference lives in the compiled .so files, linked in Android.pro,
+# not in these headers), so one shared include/ tree covers all of
+# them - no $$ANDROID_TARGET_ARCH branching needed here.
+android: INCLUDEPATH += $$PWD/../openssl-android/include
+android: DEPENDPATH += $$PWD/../openssl-android/include
 
 # NOTE: crypto.cpp intentionally keeps calling the classic
 # RSA_*/PEM_*RSAPublicKey API, which OpenSSL 3.0 marks deprecated but
