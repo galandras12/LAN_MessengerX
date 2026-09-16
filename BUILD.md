@@ -652,17 +652,38 @@ Android kit(ek)kel, ugyanúgy, mint az `Android.pro`-t).
    csak a saját gépeden/emulátorodon telepíthető állapotban).
 
 **Parancssorból** (haladóbb, ha nem akarsz Qt Creatort használni):
-```bash
+
+⚠️ Az alábbi `\` sortörés-jelek **Unix/bash-szintaxis** — egy sima
+Windows `cmd.exe`-ben **nem** sortörésként, hanem szó szerint egy
+külön, érvénytelen parancs kezdéseként értelmeződnek (pontosan ezt
+kapod, ha bemásolod: az `androiddeployqt --input ...` és a `--output
+...` két külön, mindkettő hibázó parancsként fut le). `cmd.exe`-ben a
+sortörés jele a `^`, vagy egyszerűbb egy sorba írni az egészet — lent
+mindkettőt mutatjuk. Emellett, ugyanúgy mint az 1.3-as Windows-lépésnél,
+**előbb be kell tenned PATH-ra** a te konkrét Android Qt-kited saját
+`bin` mappáját (ez **nem** ugyanaz, mint a MinGW/MSVC kit `bin`-je) —
+a pontos mappanév Qt-verziónként/ABI-nként eltér (pl. valami
+`C:\Qt\6.11.2\android_arm64_v8a\bin`-hez hasonló, de ezt a sajátodban
+ellenőrizd, ne feltételezz konkrét nevet).
+
+```bat
+set PATH=C:\Qt\6.11.2\android_arm64_v8a\bin;%PATH%
+
 cd Android
 qmake Android.pro -spec android-clang ANDROID_ABIS="arm64-v8a"
 make
-androiddeployqt --input android-lmccore-deployment-settings.json \
-                 --output android-build --release
+androiddeployqt --input android-lmccore-deployment-settings.json --output android-build --release
 ```
-(A pontos `androiddeployqt` hívás és a generált `.json` fájl neve
-Qt-verziónként és kit-beállítástól függően változhat — ha bizonytalan
-vagy, Qt Creator elvégzi ugyanezt kattintásra, és a "Compile Output"
-panelen látod a pontos parancsokat, amiket lemásolhatsz saját szkriptbe.)
+
+**A legmegbízhatóbb módja ennek**, hogy ne kelljen a fenti PATH-ot és
+`androiddeployqt`-hívást kitalálnod: építs **egyszer** Qt Creator-ral
+(lásd fent), és a build lefutása után nézd meg a Qt Creator "Compile
+Output" (vagy "Application Output") paneljét — ott, szó szerint,
+karakterről karakterre látod a ténylegesen lefuttatott `qmake`/`make`/
+`androiddeployqt` parancsokat (a pontos elérési utakkal, a generált
+`.json` fájl valódi nevével), amit onnantól kimásolhatsz saját
+szkriptbe — ez Qt-verziónként/kit-beállítástól változik, úgyhogy ez
+megbízhatóbb, mint egy itt leírt, előre kitalált parancs.
 
 ### 2.5 Az APK aláírása kiadásra
 
