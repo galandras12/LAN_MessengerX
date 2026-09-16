@@ -1,8 +1,8 @@
 #include <windows.h>
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION		2,0,4,0
-PRODUCTVERSION	2,0,4,0
+FILEVERSION		2,0,5,0
+PRODUCTVERSION	2,0,5,0
 FILEFLAGSMASK	VS_FFI_FILEFLAGSMASK
 #ifdef DEBUG
 FILEFLAGS		VER_DEBUG
@@ -20,12 +20,12 @@ FILESUBTYPE     0x0L
             VALUE "Comments",         "\0"
 			VALUE "CompanyName",      "LAN Messenger X\0"
 			VALUE "FileDescription",  "LAN Messenger X Application\0"
-			VALUE "FileVersion",      "2.0.4\0"
+			VALUE "FileVersion",      "2.0.5\0"
 			VALUE "InternalName",     "lmcapp\0"
 			VALUE "LegalCopyright",   "Copyright � 2010-2012 Qualia Digital Solutions.\0"
 			VALUE "OriginalFilename", "lmcapp2.dll\0"
             VALUE "ProductName",      "LAN Messenger X\0"
-			VALUE "ProductVersion",   "2.0.4\0"
+			VALUE "ProductVersion",   "2.0.5\0"
         }
     }
     BLOCK "VarFileInfo"
