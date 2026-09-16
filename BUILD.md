@@ -316,7 +316,7 @@ NSIS → Inno Setup" szakaszát a részletekért).
    (Ez az `ISCC.exe`-t hívja meg — ha máshova telepítetted az Inno
    Setup-ot, mint `C:\Program Files (x86)\Inno Setup 6\`, igazítsd az
    elérési utat a `.bat` fájlban.)
-4. Az eredmény: `lanmessengerx-2.0.5-win32-setup.exe` a
+4. Az eredmény: `lanmessengerx-2.0.6-win32-setup.exe` a
    `Windows\setup\` mappában — **ez már egy önmagában átadható, kattints
    -és-települ telepítő**, amit bárkinek oda lehet adni.
 
@@ -1091,6 +1091,31 @@ vannak oldva:
   saját alapértelmezettje, `...\AppData\Local\Android\Sdk`, vagy
   `C:\Android\Sdk`) — lásd a [2.1-es Android kit
   telepítés](#21-szükséges-összetevők) 7. lépését.
+- `Android.pro` build: rengeteg, sok különböző `.cpp` fájlban jelentkező
+  `error: templates must have C++ linkage` (jellemzően `qpair.h`,
+  `qgenericatomic.h` és NDK-s `<atomic>`/`<optional>` fejlécekben, a
+  hibaüzenet melletti jegyzet mindig egy `extern "C"` blokkra — a
+  bionic `string.h` `__BEGIN_DECLS` makrójára — mutat vissza), utána
+  `error: no template named '__cxx_atomic_base_impl'`,
+  `error: unknown type name '__ptr_type'`, végül `fatal error: too many
+  errors emitted, stopping now` → már javítva. **Nem elavult/piszkos
+  build volt az ok** (bár egy tiszta rebuild is érdemes első lépésnek,
+  ha ismeretlen hibába futsz) — a hibaüzenet include-lánca saját maga
+  mutatta meg a valódi okot: az NDK bionic `string.h`-ja belülről
+  `#include <strings.h>`-t (POSIX, "s" a végén) csinál, és mivel az
+  `Android.pro` `INCLUDEPATH`-ja tartalmazza a `Core/src`-t, a
+  fordító ezt a `Core/src/strings.h`-ra oldotta fel — egy, a repóban
+  már régóta létező, a `lmcStrings` UI-szöveg osztályt tartalmazó
+  fejlécre — az NDK saját, valódi `usr/include/strings.h`-ja helyett.
+  Az így belehúzott Qt/C++ sablonkód a bionic `string.h` még nyitva
+  lévő `extern "C" { ... }` blokkján belülre került, ami pontosan ezt a
+  hibakaszkádot okozza. A Windows (MinGW/MSVC) build ugyanezt sosem
+  látta, mert azok C futtatókönyvtárában nincs POSIX `strings.h`, így
+  nem volt névütközés. Javítás: a `Core/src/strings.h`/`strings.cpp`
+  átnevezve `lmcstrings.h`/`lmcstrings.cpp`-re (lásd
+  `Core/src/lmcstrings.h` fejléc-kommentjét), minden `#include` és
+  projektfájl (`Core.pro`, `Core.vcxproj`, `Core.vcxproj.filters`)
+  frissítve az új névre.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és

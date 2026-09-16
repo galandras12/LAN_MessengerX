@@ -22,8 +22,14 @@
 ****************************************************************************/
 
 
-#ifndef STRINGS_H
-#define STRINGS_H
+// Named lmcstrings.h, not strings.h: the NDK's bionic string.h does its own
+// #include <strings.h> internally, and this header's directory sits on the
+// Android build's INCLUDEPATH ahead of the NDK sysroot - a plain strings.h
+// here got picked up instead of the real POSIX one, pulling all of this
+// class's Qt/C++ template includes into the extern "C" block bionic's
+// string.h wraps that include in ("templates must have C++ linkage").
+#ifndef LMCSTRINGS_H
+#define LMCSTRINGS_H
 
 #include <QStringList>
 #include <QCoreApplication>
@@ -56,4 +62,4 @@ private:
 	static QStringList m_userListView;
 };
 
-#endif // STRINGS_H
+#endif // LMCSTRINGS_H
