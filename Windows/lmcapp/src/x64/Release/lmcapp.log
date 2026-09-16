@@ -1,0 +1,37 @@
+﻿   Qt/MSBuild: 3.5.0.0
+  Reading Qt configuration (C:/Qt/6.11.2/msvc2022_64/bin/qmake)
+   Qt: 6.11.2
+  application.cpp
+  qtlocalpeer.cpp
+  qtsingleapplication.cpp
+  qtsinglecoreapplication.cpp
+C:\Qt\6.11.2\msvc2022_64\include\QtGui\qguiapplication.h(168,10): warning C4996: 'QCoreApplication::compressEvent': This feature will be removed in Qt 7
+  (compiling source file 'qtsingleapplication.cpp')
+  
+C:\Qt\6.11.2\msvc2022_64\include\QtWidgets\qapplication.h(146,10): warning C4996: 'QGuiApplication::compressEvent': This feature will be removed in Qt 7
+  (compiling source file 'qtsingleapplication.cpp')
+  
+C:\Qt\6.11.2\msvc2022_64\include\QtGui\qguiapplication.h(168,10): warning C4996: 'QCoreApplication::compressEvent': This feature will be removed in Qt 7
+  (compiling source file 'application.cpp')
+  
+C:\Qt\6.11.2\msvc2022_64\include\QtWidgets\qapplication.h(146,10): warning C4996: 'QGuiApplication::compressEvent': This feature will be removed in Qt 7
+  (compiling source file 'application.cpp')
+  
+C:\Users\galan\Documents\GitHub\LAN_MessengerX\Windows\lmcapp\src\qtlocalpeer.cpp(91,21): warning C4996: 'qChecksum': Use the QByteArrayView overload.
+  moc_application.cpp
+  moc_qtlocalpeer.cpp
+  moc_qtsingleapplication.cpp
+  moc_qtsinglecoreapplication.cpp
+C:\Qt\6.11.2\msvc2022_64\include\QtGui\qguiapplication.h(168,10): warning C4996: 'QCoreApplication::compressEvent': This feature will be removed in Qt 7
+  (compiling source file 'moc_qtsingleapplication.cpp')
+  
+C:\Qt\6.11.2\msvc2022_64\include\QtWidgets\qapplication.h(146,10): warning C4996: 'QGuiApplication::compressEvent': This feature will be removed in Qt 7
+  (compiling source file 'moc_qtsingleapplication.cpp')
+  
+C:\Qt\6.11.2\msvc2022_64\include\QtGui\qguiapplication.h(168,10): warning C4996: 'QCoreApplication::compressEvent': This feature will be removed in Qt 7
+  (compiling source file 'moc_application.cpp')
+  
+C:\Qt\6.11.2\msvc2022_64\include\QtWidgets\qapplication.h(146,10): warning C4996: 'QGuiApplication::compressEvent': This feature will be removed in Qt 7
+  (compiling source file 'moc_application.cpp')
+  
+  lmcapp.vcxproj -> C:\Users\galan\Documents\GitHub\LAN_MessengerX\Windows\lmcapp\src\lmcapp.lib
