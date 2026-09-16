@@ -443,8 +443,8 @@ opció.
 
 | Összetevő | Megjegyzés |
 |---|---|
-| **Qt 6 LTS Android kit** | Qt Online Installer / Qt Maintenance Tool → válaszd ki az "Android" komponenst a telepített Qt verzióhoz |
-| **Android SDK** (parancssori eszközök + platform + build-tools) | A Qt Online Installer Android-kit telepítője ezt is felajánlja, vagy Android Studio-ból is telepíthető |
+| **Qt 6 LTS Android kit** | Lásd lent, a lépésről lépésre telepítést — ez **nem** települ fel automatikusan a Windows-os (MinGW/MSVC) kitekkel együtt, külön kell hozzá visszamenni a Qt telepítőbe |
+| **Android SDK** (parancssori eszközök + platform + build-tools) | Lásd lent |
 | **Android NDK** | A Qt adott verziójához **dokumentáltan illő** NDK-verziót kell használni (ellenőrizd a Qt telepítőben felajánlott/ajánlott NDK verziót a saját Qt verziódhoz — ez Qt-verziónként változik, ne feltételezz konkrét számot) |
 | **JDK** (Java Development Kit) | Az Android Gradle Plugin/Qt Creator Android-varázslója jelzi, melyik JDK-major-verzió kell a te Qt/AGP kombinációdhoz |
 | **Qt Creator** (ajánlott, nem kötelező) | Legegyszerűbb módja az Android kit beállításának és a build elindításának; parancssorból is megy (`qmake` + `androiddeployqt`), de Qt Creator sokkal kevesebb kézi konfigurációt igényel |
@@ -453,6 +453,54 @@ opció.
 Az `AndroidManifest.xml` `minSdkVersion="24"`, `targetSdkVersion="34"` —
 ezekhez illő SDK platform-csomagokat is telepítened kell az Android
 SDK Manager-ben.
+
+#### Az Android kit telepítése (ha eddig csak MinGW/MSVC van fent)
+
+Ha a Qt Creator Kit-listájában eddig csak "Desktop Qt ... MinGW"/"...
+MSVC..." szerepel, Android nem, az azért van, mert a Windows-os asztali
+build **külön telepítési komponens** — a Qt Online Installer/Maintenance
+Tool-lal eredetileg futtatott telepítés nem veszi fel automatikusan,
+vissza kell menned hozzá:
+
+1. **Nyisd meg a Qt Maintenance Tool-t** — a Qt telepítési mappádban van
+   (pl. `C:\Qt\MaintenanceTool.exe`), nem ugyanaz, mint amivel eredetileg
+   telepítettél (az a Qt Online Installer) — bár ha csak azt találod meg,
+   az is felajánlja ugyanezt a komponens-kezelést.
+2. Válaszd az **"Add or remove components"** (Összetevők hozzáadása/
+   eltávolítása) opciót, Next.
+3. A komponens-fában bontsd ki a már telepített Qt-verziódat (pl. "Qt" →
+   "6.x.x"), és pipáld ki alatta az **"Android"** jelölőnégyzetet — ez
+   telepíti a Qt for Android build-könyvtárakat minden ABI-hoz
+   (`arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`).
+4. Ugyanitt (a Qt-verziószám alatt, vagy egy külön "Developer and
+   Designer Tools" ágban) keresd meg és pipáld ki, ha fel vannak kínálva:
+   **"Android SDK Tools"**, **"Android NDK"**, **"OpenJDK"** — a pontos
+   elnevezés és elérhetőség Qt telepítő-verziónként változhat.
+5. Ha a Qt telepítő **nem** ajánlja fel az SDK/NDK/JDK komponenseket
+   (előfordulhat régebbi vagy másképp csomagolt telepítőknél), telepítsd
+   ezeket külön:
+   - **Android Studio** — tartalmazza az SDK-t és egy beépített JDK-t is,
+     a hivatalos [developer.android.com/studio](https://developer.android.com/studio)
+     oldalról.
+   - Az Android Studio SDK Manager-jéből telepítsd a te Qt-verziódhoz
+     **dokumentáltan ajánlott NDK-verziót** (a Qt saját "Getting Started
+     with Qt for Android" dokumentációja mondja meg pontosan, melyiket —
+     ez Qt-verziónként változik, ne feltételezz konkrét számot).
+6. Nyisd meg (vagy indítsd újra) a **Qt Creator-t**, és menj a
+   Beállításokba: **Edit → Preferences** (újabb Qt Creator-verzióknál)
+   vagy **Tools → Options** (régebbieknél) → **Devices → Android** fül.
+7. Töltsd ki (vagy ellenőrizd, hogy Qt Creator automatikusan
+   megtalálta-e) a **JDK**, **Android SDK** és **Android NDK** elérési
+   útjait — zöld pipák jelzik, ha minden helyesen van beállítva.
+8. Ha minden zöld: menj a **Kits** fülre. Itt egy vagy több új,
+   automatikusan létrehozott **"Android Qt 6.x.x Clang \<abi\>"**
+   kitnek kell megjelennie. Ha nem jelenik meg magától, kattints
+   **"Add"** (Hozzáadás), és állítsd be kézzel (Qt version: a telepített
+   Android Qt, Compiler: Android Clang, Device type: Android Device).
+9. Ha ez megvan, az `Android/Android.pro` (vagy `Core/Core.pro`)
+   megnyitásakor a "Configure Project" képernyőn már megjelenik és
+   kiválasztható ez az Android kit — innentől a [2.4](#24-az-android-kliens-fordítása)
+   lépéstől folytatható a build.
 
 ### 2.2 OpenSSL Androidra — már bekötve
 
