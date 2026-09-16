@@ -452,6 +452,29 @@ angolul indult. Két, egymást erősítő okot találtam:
    mostantól egyetlen, közös mechanizmus fedi le mind a négy build-utat
    (parancssor, szkript, Qt Creator, Visual Studio).
 
+   ⚠️→🐞 A `system(lrelease ...)` hívás egy csupasz `lrelease`
+   parancsnevet adott át, amit a `system()` által indított shell a
+   folyamat `PATH`-ján keresztül oldott fel. Parancssorból és Qt
+   Creator-ból ez működött, mert mindkettő felteszi a Qt `bin`
+   mappáját a `PATH`-ra, mielőtt elindítaná a `qmake`-et. Valós
+   Visual Studio + Qt VS Tools build viszont ismét elhasalt:
+   `` [QtRunWork] .../rcc exited with code 1 `` — a Qt VS Tools
+   `QtRunWork` MSBuild-feladata nem teszi fel ugyanígy a Qt `bin`
+   mappáját a `PATH`-ra a `qmake` (és ezáltal a belőle induló
+   `system()`-shell) számára, tehát a `lrelease` parancs
+   megtalálhatatlan volt, a hívás csendben nem hozott létre semmilyen
+   `.qm` fájlt a repóba már eleve bekerült `en_US.qm`-en kívül, és az
+   `rcc` a `resource.qrc` másik 17, hiányzó `.qm` bejegyzésén bukott
+   el — ugyanaz a tünet, mint a második kísérletnél, de más ok: nem
+   hiányzó lépés, hanem `PATH`-függő parancsnév-feloldás.
+
+   **Javítás**: a csupasz `lrelease` helyett `$$[QT_INSTALL_BINS]`-t
+   használok — ez a qmake saját, éppen futó binárisának `bin`
+   mappájára oldódik fel, tehát pontosan ugyanahhoz a Qt-telepítéshez
+   tartozó `lrelease`-t hívja meg, teljesen függetlenül attól, hogy a
+   `qmake`-et hívó folyamat (parancssor, Qt Creator, vagy a Qt VS
+   Tools `QtRunWork` feladata) mit tett fel a saját `PATH`-jára.
+
 ## Magyar (hu_HU) fordítás
 
 Hozzáadva [`lmc/src/hu_HU.ts`](lmc/src/hu_HU.ts) — a teljes UI mind a 284

@@ -142,9 +142,22 @@ TRANSLATIONS += \
 #	Calling system() directly here sidesteps both: no dependency on
 #	lrelease.prf's rule generation, and no action required from
 #	whoever is building this beyond a normal build.
+#
+#	The lrelease call below uses $$[QT_INSTALL_BINS] (qmake's own bin
+#	dir, the one it's currently running from) rather than a bare
+#	"lrelease" resolved through PATH. A bare name worked from a
+#	terminal and from Qt Creator (both put Qt's bin on PATH before
+#	invoking qmake), but Visual Studio/Qt VS Tools' QtRunWork task
+#	does not - system()'s child shell then couldn't find lrelease,
+#	silently produced no .qm files beyond the one already checked
+#	into git (en_US.qm), and rcc failed on the other 17 missing from
+#	resource.qrc ("rcc exited with code 1", confirmed by a real
+#	Visual Studio build). QT_INSTALL_BINS makes this independent of
+#	whatever PATH the calling IDE/build tool happens to set up.
+LRELEASE = $$system_quote($$[QT_INSTALL_BINS]/lrelease)
 for(ts_file, TRANSLATIONS) {
     qm_file = $$replace(ts_file, \.ts$, .qm)
-    system(lrelease \"$$PWD/$$ts_file\" -qm \"$$PWD/resources/lang/$$qm_file\")
+    system($$LRELEASE $$system_quote($$PWD/$$ts_file) -qm $$system_quote($$PWD/resources/lang/$$qm_file))
 }
 
 win32: RC_FILE = lmcwin32.rc
