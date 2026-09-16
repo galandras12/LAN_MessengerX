@@ -29,6 +29,14 @@ Makefile*
 
 # Third-party dependencies fetched locally at build time (not vendored in the repo)
 /openssl/
+
+# Android OpenSSL (KDAB android_openssl prebuilt package, ssl_3 branch) -
+# unlike /openssl/ above, this IS vendored: it's the fix for a real,
+# previously-documented build blocker (no Android NDK/internet access to
+# produce per-ABI cross-compiled OpenSSL from a from-scratch environment),
+# and it's small enough (~21 MB) to check in. Carved out of the blanket
+# *.so ignore rule above.
+!/openssl-android/**/*.so
 /Windows/lmc/debug/
 /Windows/lmc/release*/
 /Windows/lmc/build/

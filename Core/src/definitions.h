@@ -49,10 +49,13 @@
 //	Qt6 deprecated-API warnings, a couple of latent bugs they pointed
 //	at), then to "2.0.3" for a follow-up fix to that same patch (an
 //	invalid OPENSSL_API_COMPAT value broke the Core build outright -
-//	see Core/Core.pro and Core/src/crypto.cpp) - neither changed the
-//	wire protocol or settings format, so no new version-gate concerns
+//	see Core/Core.pro and Core/src/crypto.cpp), then to "2.0.4" for
+//	vendoring a per-ABI Android OpenSSL package (openssl-android/,
+//	Core.pro, Android.pro) that resolved BUILD.md's previously
+//	documented Android build blocker - none of these changed the wire
+//	protocol or settings format, so no new version-gate concerns
 //	beyond what "2.0.0" already cleared.
-#define IDA_VERSION		"2.0.3"
+#define IDA_VERSION		"2.0.4"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."

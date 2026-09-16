@@ -15,8 +15,11 @@ egy átadható, végleges program.
 > A Windows oldalt már **részben valós build igazolta vissza** (lásd a
 > [`Windows/README.md`](Windows/README.md) "Valós build-bel talált és
 > javított hibák" szakaszát) — az Android oldal **még senki által nem lett
-> ténylegesen lefuttatva**, és van benne egy ismert, megoldatlan blokkoló
-> (lásd lent). Ha egy lépés itt nem egyezik a valósággal, az elsődleges,
+> ténylegesen lefuttatva**. A korábbi, dokumentált OpenSSL-Android
+> blokkoló (lásd lent, 2.2) azóta el van hárítva egy vendorelt előre
+> fordított csomaggal, de ez önmagában nem jelenti azt, hogy a többi
+> Android-lépés (build-eszközök, aláírás, tényleges `.apk`-futtatás) is
+> valós build-bel ellenőrizve lett. Ha egy lépés itt nem egyezik a valósággal, az elsődleges,
 > megbízhatóbb forrás mindig a `Windows/README.md` és az
 > `Android/README.md` — ez a fájl azok tartalmát gyűjti össze egy
 > gyakorlati, sorrendi útmutatóvá.
@@ -313,7 +316,7 @@ NSIS → Inno Setup" szakaszát a részletekért).
    (Ez az `ISCC.exe`-t hívja meg — ha máshova telepítetted az Inno
    Setup-ot, mint `C:\Program Files (x86)\Inno Setup 6\`, igazítsd az
    elérési utat a `.bat` fájlban.)
-4. Az eredmény: `lanmessengerx-2.0.3-win32-setup.exe` a
+4. Az eredmény: `lanmessengerx-2.0.4-win32-setup.exe` a
    `Windows\setup\` mappában — **ez már egy önmagában átadható, kattints
    -és-települ telepítő**, amit bárkinek oda lehet adni.
 
@@ -436,11 +439,6 @@ opció.
 
 ## 2. Android .apk build
 
-> ⚠️ **Ez az ág jelenleg blokkolva van** egy megoldatlan OpenSSL-Android
-> linkelési problémán (lásd 2.2) — enélkül a `lmccore` Android célra
-> valószínűleg nem fog linkelni. A többi lépés attól még helytálló, csak
-> ez a rész igényel tőled egy kis utánajárást.
-
 ### 2.1 Szükséges összetevők
 
 | Összetevő | Megjegyzés |
@@ -450,50 +448,39 @@ opció.
 | **Android NDK** | A Qt adott verziójához **dokumentáltan illő** NDK-verziót kell használni (ellenőrizd a Qt telepítőben felajánlott/ajánlott NDK verziót a saját Qt verziódhoz — ez Qt-verziónként változik, ne feltételezz konkrét számot) |
 | **JDK** (Java Development Kit) | Az Android Gradle Plugin/Qt Creator Android-varázslója jelzi, melyik JDK-major-verzió kell a te Qt/AGP kombinációdhoz |
 | **Qt Creator** (ajánlott, nem kötelező) | Legegyszerűbb módja az Android kit beállításának és a build elindításának; parancssorból is megy (`qmake` + `androiddeployqt`), de Qt Creator sokkal kevesebb kézi konfigurációt igényel |
-| **Android ABI-nkénti OpenSSL** | Lásd 2.2 — **ez a blokkoló** |
+| **Android ABI-nkénti OpenSSL** | Lásd 2.2 — **már bekötve a repóba**, nincs hozzá teendőd |
 
 Az `AndroidManifest.xml` `minSdkVersion="24"`, `targetSdkVersion="34"` —
 ezekhez illő SDK platform-csomagokat is telepítened kell az Android
 SDK Manager-ben.
 
-### 2.2 A blokkoló: OpenSSL Androidra
+### 2.2 OpenSSL Androidra — már bekötve
 
 A `crypto.cpp` (a `/Core`-ban, mindkét kliens megosztja) közvetlenül
 OpenSSL-t hív. A Windows build ehhez egy Windows-os `.lib`-et linkel — ez
-**Androidon nem használható**. Androidhoz **ABI-nkénti** (`arm64-v8a`,
-`armeabi-v7a`, `x86_64`, `x86`) keresztfordított `libcrypto.so`/`.a` kell.
+**Androidon nem használható**, oda **ABI-nkénti** (`arm64-v8a`,
+`armeabi-v7a`, `x86_64`, `x86`) keresztfordított `libcrypto.so`/`libssl.so`
+kell.
 
-Két reális út van ennek megoldására (egyiket sem végeztem el ebben a
-munkamenetben, mert nem volt hozzá internet-elérésem/Android NDK-m):
+Ez korábban ennek az útmutatónak egy dokumentált, megoldatlan blokkolója
+volt. A [KDAB `android_openssl`](https://github.com/KDAB/android_openssl)
+(`ssl_3` ág) közösségi előre fordított csomagja — a hozzá tartozó közös
+fejléc-fává és mind a négy ABI (`arm64-v8a`, `armeabi-v7a`, `x86`,
+`x86_64`) `.so`-jával — be van vezetve a repó gyökerébe, a
+`openssl-android/` mappába (a Windows-os `/openssl/` mappával
+ellentétben ez **be van csekkolva a git-be** — ~21 MB, elég kicsi hozzá,
+és nincs egyszerű módja, hogy magad újra elő tudd állítani NDK/internet
+nélkül). Sem az `Android.pro`, sem a `Core.pro` OpenSSL-bekötése nem
+igényel tőled semmilyen kézi lépést vagy útvonal-igazítást — mindkettő
+készen linkel/fordít a `openssl-android/`-ból.
 
-**A) Közösségi előre fordított csomag** (gyorsabb, kevesebb munka):
-   A Qt/Android közösségben elterjedt megoldás a
-   [KDAB `android_openssl`](https://github.com/KDAB/android_openssl)
-   (vagy hasonló, karbantartott) projekt — ez minden Android ABI-hoz ad
-   kész `libcrypto.so`/`libssl.so`-t és a hozzájuk tartozó `.pri`
-   include-fájlt, amit qmake-projektbe egy sornyi `include(...)`-tal be
-   lehet húzni. Töltsd le/klónozd, és kövesd a saját README-jét az
-   `Android.pro`-ba illesztéshez.
-
-**B) OpenSSL saját fordítása Android NDK-val**: az OpenSSL hivatalos
-   forrása tartalmaz Android cross-compile utasításokat (`Configure
-   android-arm64`, `android-arm`, `android-x86_64`, `android-x86`,
-   `ANDROID_NDK_ROOT` környezeti változóval) — ABI-nként külön kell
-   lefuttatni, és a kimenetet a projekt saját mappastruktúrájába kell
-   rendezni.
-
-Amelyiket választod, a kimenetet helyezd el (vagy módosítsd az utat) úgy,
-hogy illeszkedjen az `Android/Android.pro`-ban **már előkészített, jelenleg
-kikommentezett** sorokhoz:
-
-```qmake
-# android: INCLUDEPATH += $$PWD/../openssl-android/include
-# android: LIBS += -L$$PWD/../openssl-android/lib/$$ANDROID_TARGET_ARCH -lcrypto_$$ANDROID_TARGET_ARCH
-```
-
-Vedd ki a kommentet, és igazítsd az útvonalat/könyvtárnevet a ténylegesen
-letöltött/fordított csomagodhoz (a fenti csak egy javasolt elrendezés,
-nem egy elvárt fix útvonal).
+Ha mégis a saját magad által fordított/frissebb csomagoddal akarod
+lecserélni: a `Core.pro`-ban az `android: INCLUDEPATH +=`, az
+`Android.pro`-ban az `android: LIBS +=`/`ANDROID_EXTRA_LIBS +=` sorok
+mutatják, pontosan mit vár a build a `openssl-android/` alatt (közös
+`include/`, és ABI-nkénti `libcrypto_3.so`/`libssl_3.so`) — cseréld le a
+tartalmát ugyanerre a mappastruktúrára, a `.pro` fájlokat nem kell
+módosítanod.
 
 ### 2.3 A `Core` fordítása Android ABI-nként
 
@@ -567,10 +554,10 @@ elvégezhetők. A 2.4-ben ez már röviden szerepelt — itt egy részletesebb,
 lépésről lépésre változat, plusz tisztázva, hol jön (ha jön) a képbe az
 Android Studio.
 
-⚠️ Emlékeztető: a [2.2-ben](#22-a-blokkoló-openssl-androidra) leírt
-OpenSSL-Android blokkoló ettől a GUI-s úttól **függetlenül fennáll** —
-GUI-ból ugyanúgy meg kell előbb oldanod, különben a `Core` Android
-ABI-nkénti fordítása (1. lépés lent) linker-hibával elszáll.
+ℹ️ A [2.2-ben](#22-openssl-androidra--már-bekötve) leírt Android OpenSSL
+már be van kötve a repóba (`openssl-android/`) — a GUI-s úton sincs hozzá
+külön teendőd, a `Core` Android ABI-nkénti fordítása (1. lépés lent)
+készen megtalálja.
 
 **Qt Creator-ral, lépésről lépésre:**
 
