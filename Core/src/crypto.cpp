@@ -46,8 +46,13 @@ lmcCrypto::~lmcCrypto(void) {
 
 //	creates an RSA key pair and returns the string representation of the public key
 QByteArray lmcCrypto::generateRSA(void) {
-	unsigned char* buf = (unsigned char*)malloc(bits);
-	RAND_seed(buf, bits);
+	//	No manual RAND_seed() call here (removed - see 2.0.2 notes): it
+	//	previously passed an uninitialized malloc()'d buffer as "seed"
+	//	data, which never got initialized before use ([-Wmaybe-uninitialized])
+	//	and was never freed. It also provided no real entropy benefit -
+	//	OpenSSL 1.1.0+ auto-seeds its CSPRNG from the OS's own entropy
+	//	source on first use, which is what actually secures key
+	//	generation here, not this call.
 	pRsa = RSA_generate_key(bits, exponent, NULL, NULL);
 
 	BIO* bio = BIO_new(BIO_s_mem());
@@ -58,7 +63,6 @@ QByteArray lmcCrypto::generateRSA(void) {
 	publicKey = QByteArray(pem_key, keylen);
 	BIO_free_all(bio);
 	free(pem_key);
-	free(buf);
 
 	return publicKey;
 }

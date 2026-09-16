@@ -693,27 +693,27 @@ void lmcMainWindow::txtNote_lostFocus(void) {
 void lmcMainWindow::createMainMenu(void) {
 	pMainMenu = new QMenuBar(this);
 	pFileMenu = pMainMenu->addMenu("&Messenger");
-	chatRoomAction = pFileMenu->addAction("&New Chat Room", this,
-		SLOT(chatRoomAction_triggered()), QKeySequence::New);
+	chatRoomAction = pFileMenu->addAction("&New Chat Room", QKeySequence::New, this,
+		&lmcMainWindow::chatRoomAction_triggered);
 	publicChatAction = pFileMenu->addAction(QIcon(QPixmap(IDR_CHATROOM, "PNG")), "&Public Chat",
 		this, SLOT(publicChatAction_triggered()));
 	pFileMenu->addSeparator();
-	refreshAction = pFileMenu->addAction(QIcon(QPixmap(IDR_REFRESH, "PNG")), "&Refresh contacts list", 
-		this, SLOT(refreshAction_triggered()), QKeySequence::Refresh);
+	refreshAction = pFileMenu->addAction(QIcon(QPixmap(IDR_REFRESH, "PNG")), "&Refresh contacts list", QKeySequence::Refresh,
+		this, &lmcMainWindow::refreshAction_triggered);
 	pFileMenu->addSeparator();
-	exitAction = pFileMenu->addAction(QIcon(QPixmap(IDR_CLOSE, "PNG")), "E&xit", 
+	exitAction = pFileMenu->addAction(QIcon(QPixmap(IDR_CLOSE, "PNG")), "E&xit",
 		this, SLOT(trayExitAction_triggered()));
 	pToolsMenu = pMainMenu->addMenu("&Tools");
-	historyAction = pToolsMenu->addAction(QIcon(QPixmap(IDR_HISTORY, "PNG")), "&History", 
-		this, SLOT(trayHistoryAction_triggered()), QKeySequence(Qt::CTRL + Qt::Key_H));
-	transferAction = pToolsMenu->addAction(QIcon(QPixmap(IDR_TRANSFER, "PNG")), "File &Transfers", 
-		this, SLOT(trayFileAction_triggered()), QKeySequence(Qt::CTRL + Qt::Key_J));
+	historyAction = pToolsMenu->addAction(QIcon(QPixmap(IDR_HISTORY, "PNG")), "&History", QKeySequence(Qt::CTRL | Qt::Key_H),
+		this, &lmcMainWindow::trayHistoryAction_triggered);
+	transferAction = pToolsMenu->addAction(QIcon(QPixmap(IDR_TRANSFER, "PNG")), "File &Transfers", QKeySequence(Qt::CTRL | Qt::Key_J),
+		this, &lmcMainWindow::trayFileAction_triggered);
 	pToolsMenu->addSeparator();
-	settingsAction = pToolsMenu->addAction(QIcon(QPixmap(IDR_TOOLS, "PNG")), "&Preferences", 
-		this, SLOT(traySettingsAction_triggered()), QKeySequence::Preferences);
+	settingsAction = pToolsMenu->addAction(QIcon(QPixmap(IDR_TOOLS, "PNG")), "&Preferences", QKeySequence::Preferences,
+		this, &lmcMainWindow::traySettingsAction_triggered);
 	pHelpMenu = pMainMenu->addMenu("&Help");
-	helpAction = pHelpMenu->addAction(QIcon(QPixmap(IDR_QUESTION, "PNG")), "&Help",
-		this, SLOT(helpAction_triggered()), QKeySequence::HelpContents);
+	helpAction = pHelpMenu->addAction(QIcon(QPixmap(IDR_QUESTION, "PNG")), "&Help", QKeySequence::HelpContents,
+		this, &lmcMainWindow::helpAction_triggered);
 	pHelpMenu->addSeparator();
 	QString text = "%1 &online";
 	onlineAction = pHelpMenu->addAction(QIcon(QPixmap(IDR_WEB, "PNG")), text.arg(lmcStrings::appName()), 

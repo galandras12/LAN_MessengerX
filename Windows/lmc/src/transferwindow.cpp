@@ -354,8 +354,8 @@ QPixmap lmcTransferWindow::getIcon(QString filePath) {
 		QString fileName = fileInfo.fileName();
 		QString path = QDir::temp().absoluteFilePath(fileName);
 		QFile file(path);
-		file.open(QIODevice::WriteOnly);
-		file.close();
+		if(file.open(QIODevice::WriteOnly))
+			file.close();
 		icon = iconProvider.icon(QFileInfo(path)).pixmap(32, 32);
 		QFile::remove(path);
 	}

@@ -315,8 +315,9 @@ int FileModel::itemIndex(QString id, FileView::TransferMode mode) {
 }
 
 void FileModel::itemChanged(int position) {
-    if(position < 0 || position >= transferList.count())
+    if(position < 0 || position >= transferList.count()) {
         return;
+    }
 
 	QModelIndex index = this->index(position);
 	emit dataChanged(index, index);

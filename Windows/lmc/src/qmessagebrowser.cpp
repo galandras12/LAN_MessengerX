@@ -18,6 +18,8 @@ QMessageBrowser::~QMessageBrowser()
 
 void QMessageBrowser::insertMessage(QTextCursor cursor, const QString &sender, const QString &receiver, const QDateTime &time, const QString &avatarUrl, const QString &text)
 {
+    Q_UNUSED(time);
+
     QString html = "<table border='0' width='100%'><tr><td rowspan='2'><img src='%AVATAR_URL%'></td><td style='background: #0000ff;font-size: 2px;'></td></tr><tr><td width='100%' style='padding-left: 10px;'>%TEXT%</td></tr></table>";
 
     html.replace("%SENDER%", sender);
