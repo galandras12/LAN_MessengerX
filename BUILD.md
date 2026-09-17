@@ -316,7 +316,7 @@ NSIS → Inno Setup" szakaszát a részletekért).
    (Ez az `ISCC.exe`-t hívja meg — ha máshova telepítetted az Inno
    Setup-ot, mint `C:\Program Files (x86)\Inno Setup 6\`, igazítsd az
    elérési utat a `.bat` fájlban.)
-4. Az eredmény: `lanmessengerx-2.0.7-win32-setup.exe` a
+4. Az eredmény: `lanmessengerx-2.0.8-win32-setup.exe` a
    `Windows\setup\` mappában — **ez már egy önmagában átadható, kattints
    -és-települ telepítő**, amit bárkinek oda lehet adni.
 
@@ -1130,8 +1130,25 @@ vannak oldva:
 - `Android.pro` build: `` androidforegroundservice.cpp:5: error:
   'QNativeInterface' file not found `` → már javítva. A `#include
   <QNativeInterface>` kényelmi fejlécet ez a Qt-telepítés nem generálja
-  le erre a névtérre — átírva a mögötte álló, mindig létező valódi
-  fejlécre: `#include <QtCore/qnativeinterface.h>`.
+  le erre a névtérre. Az első javítási kísérlet (`#include
+  <QtCore/qnativeinterface.h>`) csak félig volt jó: a fordító utána már
+  megtalálta magát a `QNativeInterface` névteret, de ``error: no member
+  named 'QAndroidApplication' in namespace 'QNativeInterface'``-lel állt
+  le, mert a `qnativeinterface.h` ebben a Qt-verzióban csak a
+  platform-független tagokat deklarálja. Egy valós `findstr` kereséssel
+  a ténylegesen települt fejlécek felett megerősítve: a
+  `QNativeInterface::QAndroidApplication` a
+  `QtCore/qcoreapplication_platform.h`-ban van — az `#include` erre
+  átírva, és ez már a tényleges telepítésből ellenőrzött, nem tippelt
+  útvonal.
+- `Android.pro` build (figyelmeztetés, nem hiba): `main.cpp` két
+  értesítés-lambdája `[-Wunused-lambda-capture]`-t adott a `[&app]`
+  befogásra, mert egyik lambda törzse sem használja `app`-ot (csak
+  statikus `QGuiApplication::applicationState()`-et és
+  `AndroidForegroundService::showMessageNotification()`-t hív) → már
+  javítva, `[&app]` → `[]`. A `&app` a `QObject::connect()` harmadik,
+  kontextus-paraméterében (a kapcsolat élettartamához) továbbra is
+  megvan és szükséges, csak a lambda saját befogási listájából tűnt el.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és

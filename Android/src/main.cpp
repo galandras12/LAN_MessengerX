@@ -90,13 +90,13 @@ int main(int argc, char* argv[]) {
 	//	chat notification from them, which is an accepted simplification
 	//	here rather than tracking a separate id space per kind.
 	QObject::connect(&bridge, &MessengerBridge::incomingMessage, &app,
-		[&app](const QString& userId, const QString& senderName, const QString& text) {
+		[](const QString& userId, const QString& senderName, const QString& text) {
 			if(QGuiApplication::applicationState() == Qt::ApplicationActive)
 				return;
 			AndroidForegroundService::showMessageNotification(messageNotificationId(userId), senderName, text);
 		});
 	QObject::connect(&bridge, &MessengerBridge::incomingFileRequest, &app,
-		[&app](const QString& userId, const QString& peerName, const QString& /*fileId*/, const QString& fileName, qint64 /*fileSize*/) {
+		[](const QString& userId, const QString& peerName, const QString& /*fileId*/, const QString& fileName, qint64 /*fileSize*/) {
 			if(QGuiApplication::applicationState() == Qt::ApplicationActive)
 				return;
 			AndroidForegroundService::showMessageNotification(messageNotificationId(userId), peerName,
