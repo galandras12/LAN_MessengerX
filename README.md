@@ -1,6 +1,6 @@
 # LAN Messenger X
 
-**Alkalmazás neve:** LAN Messenger X · **Verzió:** 2.0.6
+**Alkalmazás neve:** LAN Messenger X · **Verzió:** 2.0.7
 
 Az eredeti, megszűnt támogatású **LAN Messenger** (QualiaTech / Dilip
 Radhakrishnan, GPLv3) modernizált, folyamatban lévő újrakiadása —

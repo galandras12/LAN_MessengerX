@@ -60,10 +60,17 @@
 //	(see Core/src/lmcstrings.h) - the old name collided with the NDK's
 //	own POSIX strings.h, which its Android build's INCLUDEPATH shadowed
 //	and broke every Android.pro translation unit with cascading
-//	"templates must have C++ linkage" errors - none of these changed
-//	the wire protocol or settings format, so no new version-gate
-//	concerns beyond what "2.0.0" already cleared.
-#define IDA_VERSION		"2.0.6"
+//	"templates must have C++ linkage" errors - then to "2.0.7" for two
+//	more real Android.pro build breaks past that fix: crypto.h's
+//	<openssl/rand.h> not found (Android.pro's own sources transitively
+//	include crypto.h too, but only Core.pro had the openssl-android
+//	INCLUDEPATH - see Android/Android.pro) and
+//	androidforegroundservice.cpp's <QNativeInterface> not found (this
+//	Qt install doesn't generate that convenience header for this
+//	namespace - switched to its real path, QtCore/qnativeinterface.h) -
+//	none of these changed the wire protocol or settings format, so no
+//	new version-gate concerns beyond what "2.0.0" already cleared.
+#define IDA_VERSION		"2.0.7"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."
