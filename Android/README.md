@@ -367,6 +367,16 @@ Most már bekötve:
 - Az értesítés kis ikonja jelenleg az app launcher-ikonját használja
   (működik, de nem a szokásos fehér-sziluett stílus) — kozmetikai
   hiányosság, lásd a Java fájl megjegyzését.
+- **A launcher-ikon (`res/mipmap-*/ic_launcher.png`) jelenleg egy
+  egyszerű, programmatikusan generált teal kör** — korábban ezek a
+  fájlok teljesen hiányoztak (a manifest `@mipmap/ic_launcher`-re
+  hivatkozott, de sosem volt mögötte tényleges kép, ami valós AAPT
+  "resource ... not found" build-hibát okozott). A generátor script:
+  `/tmp` alatti session-scratchpad, nem része a repónak — bármikor
+  lecserélhető: tégy be öt PNG-t (48/72/96/144/192 px,
+  `mipmap-mdpi`/`hdpi`/`xhdpi`/`xxhdpi`/`xxxhdpi`) ugyanazokkal a
+  fájlnevekkel, vagy futtasd újra a "Add Android support" varázslót
+  Qt Creator-ban egy saját ikonnal.
 
 ## OpenSSL Androidon — bekötve
 

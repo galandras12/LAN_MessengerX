@@ -316,7 +316,7 @@ NSIS → Inno Setup" szakaszát a részletekért).
    (Ez az `ISCC.exe`-t hívja meg — ha máshova telepítetted az Inno
    Setup-ot, mint `C:\Program Files (x86)\Inno Setup 6\`, igazítsd az
    elérési utat a `.bat` fájlban.)
-4. Az eredmény: `lanmessengerx-2.0.10-win32-setup.exe` a
+4. Az eredmény: `lanmessengerx-2.0.11-win32-setup.exe` a
    `Windows\setup\` mappában — **ez már egy önmagában átadható, kattints
    -és-települ telepítő**, amit bárkinek oda lehet adni.
 
@@ -1207,6 +1207,20 @@ vannak oldva:
   (amit a csatorna `IMPORTANCE_HIGH` értéke amúgy is felülír O+-on)
   soha nem futó, felesleges holt kód volt. Eltávolítva mindkét
   `buildNotification()`-szerű metódusból.
+- `Android.pro` build (a manifest-merger-hiba a 2.0.10-es javítás után
+  már nem jelentkezett — ez egy azutáni, új Gradle-hiba): `` Android
+  resource linking failed ... ERROR: ... AndroidManifest.xml:52:5-83:19:
+  AAPT: error: resource mipmap/ic_launcher (aka
+  org.qualiatech.lanmessengerx:mipmap/ic_launcher) not found. `` → már
+  javítva. A manifest mindig is `@mipmap/ic_launcher`-re hivatkozott, de
+  az `Android/android/res/` mappában soha nem volt tényleges
+  `mipmap-*/ic_launcher.png` fájl (a `res/` gyakorlatilag üres váz volt)
+  — ez egy valódi, hiányzó erőforrás, nem build-állapot vagy
+  konfigurációs hiba. Öt egyszerű, programmatikusan generált
+  helyettesítő ikon hozzáadva minden szabvány denzitáshoz
+  (`mipmap-mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi`, 48–192 px) — lásd
+  [`Android/README.md`](Android/README.md) a lecserélésükről valódi
+  grafikára.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
