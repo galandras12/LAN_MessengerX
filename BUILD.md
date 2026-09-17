@@ -316,7 +316,7 @@ NSIS → Inno Setup" szakaszát a részletekért).
    (Ez az `ISCC.exe`-t hívja meg — ha máshova telepítetted az Inno
    Setup-ot, mint `C:\Program Files (x86)\Inno Setup 6\`, igazítsd az
    elérési utat a `.bat` fájlban.)
-4. Az eredmény: `lanmessengerx-2.0.8-win32-setup.exe` a
+4. Az eredmény: `lanmessengerx-2.0.9-win32-setup.exe` a
    `Windows\setup\` mappában — **ez már egy önmagában átadható, kattints
    -és-települ telepítő**, amit bárkinek oda lehet adni.
 
@@ -1149,6 +1149,20 @@ vannak oldva:
   javítva, `[&app]` → `[]`. A `&app` a `QObject::connect()` harmadik,
   kontextus-paraméterében (a kapcsolat élettartamához) továbbra is
   megvan és szükséges, csak a lambda saját befogási listájából tűnt el.
+- `Android.pro` build: sikeres fordítás után `ld.lld: error: undefined
+  symbol: ...` tucatjával, **a `Core` szinte összes osztályára**
+  (`lmcMessaging`, `XmlMessage`, `History`, `lmcStrings`,
+  `lmcSettingsBase`, `Helper` stb.) → már javítva. **Nem hiányzó/el nem
+  készült `Core` build volt az ok** — a `Core\lib\` mappában a valós
+  ellenőrzés szerint már ott volt egy friss `liblmccore_arm64-v8a.a`.
+  A valódi ok: a Qt Android mkspec minden általa épített binárist
+  automatikusan ABI-névvel lát el (`liblmccore_arm64-v8a.a`, nem
+  `liblmccore.a`), hogy több ABI statikus libje elférjen egymás mellett
+  a `Core.pro` egyetlen, ABI-független `DESTDIR`-jában — az
+  `Android.pro` linker-sora viszont a csupasz `-llmccore`-t kereste,
+  ami egy ottfelejtett, más platformról származó `liblmccore.a`-t talált
+  meg a friss, helyes fájl helyett. Javítva: `-llmccore` → `-llmccore_
+  $$ANDROID_TARGET_ARCH` az `Android/Android.pro`-ban.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
