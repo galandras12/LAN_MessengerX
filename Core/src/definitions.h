@@ -67,10 +67,18 @@
 //	INCLUDEPATH - see Android/Android.pro) and
 //	androidforegroundservice.cpp's <QNativeInterface> not found (this
 //	Qt install doesn't generate that convenience header for this
-//	namespace - switched to its real path, QtCore/qnativeinterface.h) -
-//	none of these changed the wire protocol or settings format, so no
-//	new version-gate concerns beyond what "2.0.0" already cleared.
-#define IDA_VERSION		"2.0.7"
+//	namespace - switched to its real path, QtCore/qnativeinterface.h),
+//	then to "2.0.8" because that qnativeinterface.h guess was only half
+//	right: the namespace resolved but QAndroidApplication wasn't a
+//	member of it there - confirmed via a real findstr over the
+//	installed headers that it actually lives in
+//	QtCore/qcoreapplication_platform.h, and fixed a real, separate
+//	[-Wunused-lambda-capture] warning in main.cpp (two notification
+//	lambdas captured &app but never used it - &app is still passed as
+//	QObject::connect's receiver/context argument, untouched) - none of
+//	these changed the wire protocol or settings format, so no new
+//	version-gate concerns beyond what "2.0.0" already cleared.
+#define IDA_VERSION		"2.0.8"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."
