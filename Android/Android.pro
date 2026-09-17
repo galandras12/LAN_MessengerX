@@ -16,6 +16,17 @@ TARGET = LANMessengerX
 TEMPLATE = app
 CONFIG += c++17
 
+# Authoritative source for the min/target API level - NOT the manifest's
+# <uses-sdk> (deliberately absent from AndroidManifest.xml, see the
+# comment there): Android Gradle Plugin 9.0+ flatly rejects a <uses-sdk>
+# tag controlling SDK versions, real build error at the Gradle
+# manifest-merge step. androiddeployqt reads these two qmake variables
+# and writes them into the build.gradle it generates instead. 28 is the
+# Qt 6.11.2 Android kit's own floor (confirmed by a real build); 34
+# matches this app's previous targetSdkVersion.
+ANDROID_MIN_SDK_VERSION = 28
+ANDROID_TARGET_SDK_VERSION = 34
+
 CORE_ROOT = $$PWD/../Core
 
 INCLUDEPATH += $$CORE_ROOT/src

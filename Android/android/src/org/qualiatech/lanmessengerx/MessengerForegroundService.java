@@ -117,15 +117,19 @@ public class MessengerForegroundService extends Service {
             contentIntent = PendingIntent.getActivity(context, notificationId, launchIntent, flags);
         }
 
-        Notification.Builder builder = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                ? new Notification.Builder(context, MESSAGE_CHANNEL_ID)
-                : new Notification.Builder(context);
+        // minSdkVersion is 28, always >= O (26), so the pre-channel
+        // Notification.Builder(Context) constructor is unreachable dead
+        // code here - real javac warning: "[deprecation] Builder(Context)
+        // in Builder has been deprecated". Likewise setPriority() is
+        // redundant/deprecated once a channel exists: MESSAGE_CHANNEL_ID
+        // above is already created with IMPORTANCE_HIGH, which governs
+        // priority on O+.
+        Notification.Builder builder = new Notification.Builder(context, MESSAGE_CHANNEL_ID);
 
         builder.setContentTitle(title)
                 .setContentText(text)
                 .setSmallIcon(context.getApplicationInfo().icon)
-                .setAutoCancel(true)
-                .setPriority(Notification.PRIORITY_HIGH);
+                .setAutoCancel(true);
         if (contentIntent != null)
             builder.setContentIntent(contentIntent);
 
@@ -186,9 +190,9 @@ public class MessengerForegroundService extends Service {
             contentIntent = PendingIntent.getActivity(this, 0, launchIntent, flags);
         }
 
-        Notification.Builder builder = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                ? new Notification.Builder(this, CHANNEL_ID)
-                : new Notification.Builder(this);
+        // See the same dead-code note in showMessageNotification() above -
+        // minSdkVersion 28 guarantees the O+ branch always applies.
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID);
 
         // NOTE: reusing the launcher icon as the notification's small icon
         // works but is not ideal - a notification icon should be a simple
