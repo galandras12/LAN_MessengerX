@@ -99,8 +99,19 @@
 //	one setPriority() call, all unreachable/redundant now that
 //	minSdkVersion 28 guarantees notification channels always exist -
 //	none of these changed the wire protocol or settings format, so no
+//	new version-gate concerns beyond what "2.0.0" already cleared, then
+//	to "2.0.11" for the next real Gradle-level Android packaging break,
+//	past a fully successful manifest merge: AAPT resource linking
+//	failed on "resource mipmap/ic_launcher ... not found" - the
+//	manifest had always referenced @mipmap/ic_launcher, but
+//	Android/android/res/ never actually had any mipmap-*/ic_launcher.png
+//	files in it (confirmed empty). Added simple placeholder launcher
+//	icons at all five standard densities (mdpi through xxxhdpi) so the
+//	build has something real to link against - see the icon generator
+//	note in Android/README.md for swapping these for real artwork -
+//	none of these changed the wire protocol or settings format, so no
 //	new version-gate concerns beyond what "2.0.0" already cleared.
-#define IDA_VERSION		"2.0.10"
+#define IDA_VERSION		"2.0.11"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."
