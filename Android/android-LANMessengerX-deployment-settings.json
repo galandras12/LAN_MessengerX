@@ -15,7 +15,7 @@
    "architectures": {"arm64-v8a":"aarch64-linux-android"},
    "android-package-source-directory": "C:/Users/galan/Documents/GitHub/LAN_MessengerX/Android/android",
    "android-min-sdk-version": "28",
-   "android-target-sdk-version": "36",
+   "android-target-sdk-version": "34",
    "android-extra-libs": "C:/Users/galan/Documents/GitHub/LAN_MessengerX/openssl-android/arm64-v8a/libcrypto_3.so,C:/Users/galan/Documents/GitHub/LAN_MessengerX/openssl-android/arm64-v8a/libssl_3.so",
    "rcc-binary": "C:/Qt/6.11.2/mingw_64/bin/rcc.exe",
    "qml-importscanner-binary": "C:/Qt/6.11.2/mingw_64/bin/qmlimportscanner.exe",
