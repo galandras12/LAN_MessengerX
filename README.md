@@ -1,6 +1,6 @@
 # LAN Messenger X
 
-**Alkalmazás neve:** LAN Messenger X · **Verzió:** 2.0.11
+**Alkalmazás neve:** LAN Messenger X · **Verzió:** 2.0.12
 
 Az eredeti, megszűnt támogatású **LAN Messenger** (QualiaTech / Dilip
 Radhakrishnan, GPLv3) modernizált, folyamatban lévő újrakiadása —
@@ -21,7 +21,8 @@ verziószám egyetlen helyről ([`Core/src/definitions.h`](Core/src/definitions.
 
 Lépésről lépésre útmutató Windows `.exe` telepítő és Android `.apk`
 készítéséhez (szükséges eszközök, build-sorrend, csomagolás átadható
-formába): [`BUILD.md`](BUILD.md).
+formába): [`BUILD.md`](BUILD.md). Már megtalált és javított build-hibák
+kereshető listája: [`FAQ.md`](FAQ.md).
 
 ## Státusz
 

@@ -45,6 +45,11 @@ Makefile*
 /Windows/lmcapp/lib/
 /Windows/lmcapp/bin/
 
+# package_release.bat's output - a generated, ready-to-run folder
+# (lmc.exe + windeployqt's Qt DLLs + OpenSSL DLLs + loose resources),
+# never meant to be committed
+/Windows-Release/
+
 # Core static library build output
 /Core/lib/
 /Core/debug/

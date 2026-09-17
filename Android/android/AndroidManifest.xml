@@ -11,8 +11,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.qualiatech.lanmessengerx"
-    android:versionName="2.0.11"
-    android:versionCode="11"
+    android:versionName="2.0.12"
+    android:versionCode="12"
     android:installLocation="auto">
 
     <!-- minSdkVersion/targetSdkVersion intentionally NOT set here via
@@ -49,9 +49,21 @@
          generic FOREGROUND_SERVICE permission -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
 
+    <!-- android:extractNativeLibs is likewise NOT set here anymore -
+         another AGP 9.0+ manifest restriction, same family as the
+         <uses-sdk> one above: "android:extractNativeLibs is set to
+         "true" in AndroidManifest.xml. Avoid setting
+         android:extractNativeLibs="true" explicitly in
+         AndroidManifest.xml, and instead set
+         android.packagingOptions.jniLibs.useLegacyPackaging to true in
+         the build script", a real ':packageDebug' build failure. Qt's
+         own androiddeployqt-generated build.gradle is what actually
+         needs to keep this true (Qt's native library loading has
+         required extracted, on-disk .so files for years) - removing
+         the redundant/now-forbidden manifest copy, not the behavior
+         itself. -->
     <application android:label="LAN Messenger X"
         android:icon="@mipmap/ic_launcher"
-        android:extractNativeLibs="true"
         android:requestLegacyExternalStorage="true">
 
         <activity android:name="org.qtproject.qt.android.bindings.QtActivity"
