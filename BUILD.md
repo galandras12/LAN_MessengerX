@@ -316,7 +316,7 @@ NSIS → Inno Setup" szakaszát a részletekért).
    (Ez az `ISCC.exe`-t hívja meg — ha máshova telepítetted az Inno
    Setup-ot, mint `C:\Program Files (x86)\Inno Setup 6\`, igazítsd az
    elérési utat a `.bat` fájlban.)
-4. Az eredmény: `lanmessengerx-2.0.9-win32-setup.exe` a
+4. Az eredmény: `lanmessengerx-2.0.10-win32-setup.exe` a
    `Windows\setup\` mappában — **ez már egy önmagában átadható, kattints
    -és-települ telepítő**, amit bárkinek oda lehet adni.
 
@@ -1163,6 +1163,50 @@ vannak oldva:
   ami egy ottfelejtett, más platformról származó `liblmccore.a`-t talált
   meg a friss, helyes fájl helyett. Javítva: `-llmccore` → `-llmccore_
   $$ANDROID_TARGET_ARCH` az `Android/Android.pro`-ban.
+- `Android.pro` build (a natív C++ fordítás/linkelés ezen a ponton már
+  **teljesen sikeres** volt, a hiba a Gradle-alapú APK-csomagolásnál
+  jött): `` Manifest merger failed: The <uses-sdk> tag was detected in
+  your main AndroidManifest.xml file. ... no longer allowed for
+  controlling SDK versions ... To fix: Remove <uses-sdk> from your
+  AndroidManifest.xml. `` → már javítva. Ez egy valós, dokumentált
+  Android Gradle Plugin 9.0+ viselkedésváltozás — onnantól kezdve a
+  `minSdkVersion`/`targetSdkVersion` manifestből (`<uses-sdk>`) történő
+  vezérlése egyszerűen tiltott, a Gradle manifest-merger hibával
+  elutasítja. Az `android/AndroidManifest.xml`-ből eltávolítva a
+  `<uses-sdk>` elem, a tényleges 28/34 értékek helyette az
+  `Android.pro`-ban új `ANDROID_MIN_SDK_VERSION`/
+  `ANDROID_TARGET_SDK_VERSION` qmake-változókban élnek — ezeket az
+  `androiddeployqt` olvassa ki, és írja bele a generált
+  `build.gradle`-be, a manifesttől függetlenül.
+- `Android.pro` build (figyelmeztetés, nem hiba, ártalmatlan): ``
+  Warning: QML import could not be resolved in any of the import
+  paths: LanMessenger `` → **nem hiba**, nem is kódprobléma. A
+  `LanMessenger` QML "modul" nem deklaratív (`qt_add_qml_module`/
+  `QML_ELEMENT`), hanem klasszikus, futásidejű
+  `qmlRegisterUncreatableType(...)` hívásokkal regisztrálódik
+  (`Android/src/main.cpp`) — ezt a statikus `qmlimportscanner` (amit az
+  `androiddeployqt` a becsomagolandó QML-modulok felderítésére futtat)
+  nem tudja feloldani, mert nincs hozzá `qmldir` fájl. Futásidőben ez
+  nem probléma, mert a C++ regisztráció a QML-motor indítása előtt
+  lefut — ez a figyelmeztetés minden ilyen imperatív regisztrációjú
+  Qt Quick projektnél megjelenik, ártalmatlan zaj.
+- `Android.pro` build (figyelmeztetés, nem hiba, ártalmatlan): `` SDK
+  processing. This version only understands SDK XML versions up to 3
+  but an SDK XML file of version 4 was encountered. `` → **nem hiba**,
+  ugyanaz a Qt Creator/Android CLI verzió-inkompatibilitás áll mögötte,
+  mint a fenti, [2.1-es Android kit
+  telepítés](#21-szükséges-összetevők) 7. lépésében leírt
+  `cmdline-tools`-revízió témakör — a build ettől függetlenül lefut.
+- `Android.pro` build (figyelmeztetés, nem hiba): `javac`
+  `[deprecation]` figyelmeztetések a
+  `MessengerForegroundService.java`-ban (`Builder(Context)`, `
+  PRIORITY_HIGH`) → már javítva. Mivel a `minSdkVersion` immár `28`
+  (lásd fent), a `Build.VERSION.SDK_INT >= Build.VERSION_CODES.O`
+  ellenőrzés mindig igaz — az elavult, csatorna nélküli
+  `Notification.Builder(Context)` ág és a `.setPriority()` hívás
+  (amit a csatorna `IMPORTANCE_HIGH` értéke amúgy is felülír O+-on)
+  soha nem futó, felesleges holt kód volt. Eltávolítva mindkét
+  `buildNotification()`-szerű metódusból.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és

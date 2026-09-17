@@ -85,10 +85,22 @@
 //	DESTDIR), but Android.pro's LIBS line still linked the bare,
 //	unsuffixed "-llmccore" - silently picking up an unrelated stale
 //	liblmccore.a instead of the freshly-built arm64-v8a one. Fixed to
-//	"-llmccore_$$ANDROID_TARGET_ARCH" - none of these changed the wire
-//	protocol or settings format, so no new version-gate concerns beyond
-//	what "2.0.0" already cleared.
-#define IDA_VERSION		"2.0.9"
+//	"-llmccore_$$ANDROID_TARGET_ARCH", then to "2.0.10" for the first
+//	real Gradle-level Android packaging break, past a fully successful
+//	native C++ compile+link: AGP 9.0+ flatly rejects a <uses-sdk> tag
+//	controlling SDK versions in the manifest ("Manifest merger failed",
+//	confirmed by a real build) - moved minSdk/targetSdk out of
+//	AndroidManifest.xml's <uses-sdk> (removed) and into Android.pro's
+//	ANDROID_MIN_SDK_VERSION/ANDROID_TARGET_SDK_VERSION, which
+//	androiddeployqt feeds into the generated build.gradle directly.
+//	Also cleaned up three real javac [-deprecation] warnings from the
+//	same build in MessengerForegroundService.java: two
+//	pre-notification-channel Notification.Builder(Context) branches and
+//	one setPriority() call, all unreachable/redundant now that
+//	minSdkVersion 28 guarantees notification channels always exist -
+//	none of these changed the wire protocol or settings format, so no
+//	new version-gate concerns beyond what "2.0.0" already cleared.
+#define IDA_VERSION		"2.0.10"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."
