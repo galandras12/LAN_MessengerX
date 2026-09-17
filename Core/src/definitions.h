@@ -75,10 +75,20 @@
 //	QtCore/qcoreapplication_platform.h, and fixed a real, separate
 //	[-Wunused-lambda-capture] warning in main.cpp (two notification
 //	lambdas captured &app but never used it - &app is still passed as
-//	QObject::connect's receiver/context argument, untouched) - none of
-//	these changed the wire protocol or settings format, so no new
-//	version-gate concerns beyond what "2.0.0" already cleared.
-#define IDA_VERSION		"2.0.8"
+//	QObject::connect's receiver/context argument, untouched), then to
+//	"2.0.9" for a real Android.pro linker break past that: dozens of
+//	"undefined symbol" errors for every single Core class. Root cause -
+//	confirmed from the actual Core/lib/ output, not guessed: Qt's
+//	Android mkspec auto-suffixes every target it builds with the ABI
+//	(liblmccore_arm64-v8a.a, not liblmccore.a, so multiple ABIs' static
+//	libs can coexist in Core.pro's one shared, non-ABI-qualified
+//	DESTDIR), but Android.pro's LIBS line still linked the bare,
+//	unsuffixed "-llmccore" - silently picking up an unrelated stale
+//	liblmccore.a instead of the freshly-built arm64-v8a one. Fixed to
+//	"-llmccore_$$ANDROID_TARGET_ARCH" - none of these changed the wire
+//	protocol or settings format, so no new version-gate concerns beyond
+//	what "2.0.0" already cleared.
+#define IDA_VERSION		"2.0.9"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."

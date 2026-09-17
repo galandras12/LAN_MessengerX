@@ -20,7 +20,16 @@ CORE_ROOT = $$PWD/../Core
 
 INCLUDEPATH += $$CORE_ROOT/src
 DEPENDPATH += $$CORE_ROOT/src
-LIBS += -L$$CORE_ROOT/lib -llmccore
+# Qt's Android mkspec auto-suffixes every target it builds with the ABI
+# (so multiple ABIs' outputs can coexist in Core.pro's single, non-ABI-
+# qualified DESTDIR without overwriting each other) - Core.pro's
+# TARGET = lmccore therefore actually builds liblmccore_arm64-v8a.a (or
+# _armeabi-v7a/_x86/_x86_64), never a plain liblmccore.a. A bare -llmccore
+# here silently links whatever unrelated liblmccore.a happens to already
+# be in Core/lib (e.g. a stale Windows build) instead - real symptom: a
+# clean compile followed by dozens of "undefined symbol" linker errors
+# for every single Core class (lmcMessaging, XmlMessage, History, ...).
+LIBS += -L$$CORE_ROOT/lib -llmccore_$$ANDROID_TARGET_ARCH
 
 SOURCES += \
     src/main.cpp \
