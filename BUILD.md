@@ -271,7 +271,28 @@ DLL-ek nincsenek mellette.
 ### 1.4 Futtatható, átadható mappa összeállítása (`windeployqt`)
 
 Ez az a lépés, ami a nyers `lmc.exe`-ből egy **más gépen is futtatható**
-mappát csinál:
+mappát csinál.
+
+**A) Automatikus szkripttel** (ajánlott — minden újrafordítás után csak
+ezt kell futtatni, nincs kézi `windeployqt`-hívás/DLL-másolgatás):
+```bat
+cd Windows
+package_release.bat mingw64
+REM vagy: package_release.bat msvc2022_64
+```
+Ez a `Windows-Release\` mappába (a repó gyökerében, a `Windows`/`Core`/
+`Android` mappák mellett) automatikusan megkeresi a legutóbb épített
+`lmc.exe`-t, lefuttatja rá a `windeployqt`-et, megkeresi és bemásolja az
+OpenSSL DLL-eket (ugyanazokat a helyeket nézi végig, amiket a lenti B)
+kézi lépés is leír, és ha sehol nem találja, ugyanazzal a `dir /s /b`
+technikával esik vissza, mint a [1.2. lépés 4.
+pontja](#12-openssl-beszerzése-és-elhelyezése)), majd bemásolja a
+`sounds`/`lang`/`license.txt` erőforrásokat is — a mappa a script
+lefutása után azonnal futtatható, nincs mit hozzáadni kézzel. A script
+tetején lévő `QT_BIN` elérési utat igazítsd a saját Qt-telepítésedhez
+(ugyanaz a konvenció, mint a `build_windows.bat`-ban).
+
+**B) Kézzel**:
 
 1. Hozz létre egy üres mappát, pl. `Windows\build-release-deploy\`
    (ezt a nevet várja alapból a telepítő-szkript is, lásd 1.5).
@@ -311,7 +332,9 @@ NSIS → Inno Setup" szakaszát a részletekért).
 2. Ha az 1.4. lépésben **nem** a `Windows\build-release-deploy\` nevet
    használtad, nyisd meg a `Windows\setup\win32\setup.iss`-t, és írd át
    a `SourceDir` alapértékét (vagy add meg fordításkor a
-   `/DSourceDir=<a te mappád>` kapcsolóval).
+   `/DSourceDir=<a te mappád>` kapcsolóval). Az 1.4-es A) automatikus
+   szkript kimenete a repó gyökerében lévő `Windows-Release\` — ehhez
+   `Windows\setup\win32\`-ból nézve: `/DSourceDir=..\..\..\Windows-Release`.
 3. Fordítsd le a telepítőt:
    ```bat
    cd Windows\setup\win32
