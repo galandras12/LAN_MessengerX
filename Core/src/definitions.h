@@ -110,8 +110,17 @@
 //	build has something real to link against - see the icon generator
 //	note in Android/README.md for swapping these for real artwork -
 //	none of these changed the wire protocol or settings format, so no
+//	new version-gate concerns beyond what "2.0.0" already cleared, then
+//	to "2.0.12" for a third AGP 9.0+ manifest restriction, same family
+//	as the <uses-sdk> one: ":packageDebug" failed on
+//	"android:extractNativeLibs is set to "true" in AndroidManifest.xml.
+//	... instead set android.packagingOptions.jniLibs.useLegacyPackaging
+//	to true in the build script". Removed the manifest attribute (not
+//	the behavior itself - Qt's own generated build.gradle is what
+//	actually needs to keep native libs extracted, and has for years) -
+//	none of these changed the wire protocol or settings format, so no
 //	new version-gate concerns beyond what "2.0.0" already cleared.
-#define IDA_VERSION		"2.0.11"
+#define IDA_VERSION		"2.0.12"
 #define IDA_DESCRIPTION	"LAN Messenger X is a free peer-to-peer messaging application for intra-network communication "\
 						"and does not require a server.\n"\
 						"LAN Messenger X works on essentially every popular desktop platform."
