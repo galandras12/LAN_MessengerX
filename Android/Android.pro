@@ -41,15 +41,25 @@ HEADERS += \
 
 RESOURCES += qml/qml.qrc
 
-# OpenSSL: crypto.cpp (built into lmccore, see Core/Core.pro) needs
+# OpenSSL headers: crypto.cpp itself is compiled in Core.pro (which has
+# its own matching INCLUDEPATH), but messengerbridge.cpp/main.cpp here
+# transitively include Core/src/crypto.h too (messengerbridge.h ->
+# Core/messaging.h -> network.h -> udpnetwork.h -> crypto.h), and each
+# .pro compiles its own sources against its own INCLUDEPATH regardless
+# of what Core.pro already built into liblmccore.a - real build error
+# without this: "crypto.h:27: fatal error: 'openssl/rand.h' file not
+# found". See Core/Core.pro's own copy of this line for why one shared
+# include/ tree covers every ABI.
+android: INCLUDEPATH += $$PWD/../openssl-android/include
+
+# OpenSSL libs: crypto.cpp (built into lmccore, see Core/Core.pro) needs
 # libcrypto at final link time here too, same as the Windows client - but
 # NOT the same prebuilt library. Android needs libcrypto cross-compiled
 # for each target ABI (arm64-v8a / armeabi-v7a / x86_64 / x86); vendored
 # here from the community "android_openssl" (KDAB) prebuilt package - see
-# Android/README.md for where it came from and what's in it, and
-# Core/Core.pro for the matching header INCLUDEPATH (crypto.cpp itself is
-# compiled there, not here - this file only links the already-compiled
-# lmccore static library against the final .so).
+# Android/README.md for where it came from and what's in it - this file
+# only links the already-compiled lmccore static library against the
+# final .so.
 #
 # -l:libcrypto_3.so (the "-l:<exact filename>" GNU ld/lld syntax, not the
 # usual "-lname" -> "lib<name>.so" pattern) links the real file directly,

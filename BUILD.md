@@ -316,7 +316,7 @@ NSIS → Inno Setup" szakaszát a részletekért).
    (Ez az `ISCC.exe`-t hívja meg — ha máshova telepítetted az Inno
    Setup-ot, mint `C:\Program Files (x86)\Inno Setup 6\`, igazítsd az
    elérési utat a `.bat` fájlban.)
-4. Az eredmény: `lanmessengerx-2.0.6-win32-setup.exe` a
+4. Az eredmény: `lanmessengerx-2.0.7-win32-setup.exe` a
    `Windows\setup\` mappában — **ez már egy önmagában átadható, kattints
    -és-települ telepítő**, amit bárkinek oda lehet adni.
 
@@ -1116,6 +1116,22 @@ vannak oldva:
   `Core/src/lmcstrings.h` fejléc-kommentjét), minden `#include` és
   projektfájl (`Core.pro`, `Core.vcxproj`, `Core.vcxproj.filters`)
   frissítve az új névre.
+- `Android.pro` build: `` crypto.h:27: fatal error: 'openssl/rand.h' file
+  not found `` (`messengerbridge.cpp`/`main.cpp`/`moc_messengerbridge.cpp`
+  fordításánál) → már javítva. A fenti `strings.h`-hiba után jelentkezett:
+  a `crypto.cpp` maga a `Core.pro`-ban fordul, aminek megvolt a saját
+  `openssl-android/include` `INCLUDEPATH`-ja — de az `Android.pro` saját
+  forrásfájljai (`messengerbridge.cpp` stb.) a
+  `messengerbridge.h → Core/messaging.h → network.h → udpnetwork.h →
+  crypto.h` láncon át **szintén** behúzzák a `crypto.h`-t, és az
+  `Android.pro`-nak saját, külön `INCLUDEPATH`-ja van — a `Core.pro`-ban
+  beállított útvonal nem öröklődik át. Az `Android.pro` most már maga is
+  tartalmazza az `openssl-android/include` utat.
+- `Android.pro` build: `` androidforegroundservice.cpp:5: error:
+  'QNativeInterface' file not found `` → már javítva. A `#include
+  <QNativeInterface>` kényelmi fejlécet ez a Qt-telepítés nem generálja
+  le erre a névtérre — átírva a mögötte álló, mindig létező valódi
+  fejlécre: `#include <QtCore/qnativeinterface.h>`.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
