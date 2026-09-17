@@ -11,17 +11,20 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.qualiatech.lanmessengerx"
-    android:versionName="2.0.9"
-    android:versionCode="9"
+    android:versionName="2.0.10"
+    android:versionCode="10"
     android:installLocation="auto">
 
-    <!-- minSdkVersion 28: Qt 6.11.2's Android kit itself refuses to
-         build against anything lower ("The API level set for the APK
-         is less than the minimum required by the kit", confirmed by a
-         real build) - this is a Qt toolchain floor, not a choice made
-         by this app; bump it further only if a newer Qt raises it
-         again. -->
-    <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="34"/>
+    <!-- minSdkVersion/targetSdkVersion intentionally NOT set here via
+         <uses-sdk> - Android Gradle Plugin 9.0+ rejects it outright
+         ("The <uses-sdk> tag ... is no longer allowed for controlling
+         SDK versions ... To fix: Remove <uses-sdk> from your
+         AndroidManifest.xml", a real build failure at the Gradle
+         manifest-merge step). The actual values (28/34, the Qt 6.11.2
+         Android kit's own floor - confirmed by a real build) now live
+         in Android.pro's ANDROID_MIN_SDK_VERSION/
+         ANDROID_TARGET_SDK_VERSION, which androiddeployqt feeds into
+         the generated build.gradle directly. -->
 
     <!-- LAN discovery + chat traffic -->
     <uses-permission android:name="android.permission.INTERNET"/>
