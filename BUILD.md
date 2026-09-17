@@ -316,7 +316,7 @@ NSIS → Inno Setup" szakaszát a részletekért).
    (Ez az `ISCC.exe`-t hívja meg — ha máshova telepítetted az Inno
    Setup-ot, mint `C:\Program Files (x86)\Inno Setup 6\`, igazítsd az
    elérési utat a `.bat` fájlban.)
-4. Az eredmény: `lanmessengerx-2.0.11-win32-setup.exe` a
+4. Az eredmény: `lanmessengerx-2.0.12-win32-setup.exe` a
    `Windows\setup\` mappában — **ez már egy önmagában átadható, kattints
    -és-települ telepítő**, amit bárkinek oda lehet adni.
 
@@ -1221,6 +1221,25 @@ vannak oldva:
   (`mipmap-mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi`, 48–192 px) — lásd
   [`Android/README.md`](Android/README.md) a lecserélésükről valódi
   grafikára.
+- `Android.pro` build (a hiányzó ikon miatti AAPT-hiba a 2.0.11-es
+  javítás után már nem jelentkezett — ez egy azutáni, új Gradle-hiba):
+  `` Execution failed for task ':packageDebug'. > android:extractNativeLibs
+  is set to "true" in AndroidManifest.xml. Avoid setting
+  android:extractNativeLibs="true" explicitly in AndroidManifest.xml,
+  and instead set android.packagingOptions.jniLibs.useLegacyPackaging
+  to true in the build script. `` → már javítva. Ugyanabba a családba
+  tartozik, mint a `<uses-sdk>`-hiba: Android Gradle Plugin 9.0+ ezt a
+  manifest-attribútumot is tiltja. Az `android:extractNativeLibs="true"`
+  eltávolítva az `AndroidManifest.xml`-ből — **a tényleges viselkedés
+  (a natív `.so`-k kicsomagolása lemezre, amire a Qt saját
+  library-betöltése régóta támaszkodik) nem változott**, csak a
+  manifestbeli, immár tiltott másolata tűnt el; ezt a Qt saját,
+  `androiddeployqt` által generált `build.gradle`-je biztosítja
+  tovább. ⚠️ Ha emiatt futásidőben natív library-betöltési hiba
+  jelentkezne (ami arra utalna, hogy a Qt 6.11.2 saját sablonja *nem*
+  állítja be a Gradle-oldali megfelelőt), jelezd — akkor egy saját,
+  kézzel írt `Android/android/build.gradle`-re lenne szükség, ami
+  felülírná a Qt beépített sablonját.
 
 Ha ezeken túl más hibába ütközöl, nézd meg a
 [`Windows/README.md`](Windows/README.md) és
