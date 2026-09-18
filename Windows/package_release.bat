@@ -1,10 +1,10 @@
 @echo off
 REM Packages an already-built Release lmc.exe into a single, ready-to-run
 REM folder at the repo root: Windows-Release\ - so after a rebuild you
-REM run ONE command and get a folder you can just double-click lmc.exe
-REM in, instead of manually windeployqt-ing and copying OpenSSL DLLs/
-REM resources by hand every time (see BUILD.md 1.4, which this
-REM automates).
+REM run ONE command (or just double-click this file) and get a folder
+REM you can double-click lmc.exe in, instead of manually windeployqt-ing
+REM and copying OpenSSL DLLs/resources by hand every time (see BUILD.md
+REM 1.4, which this automates).
 REM
 REM What it does, in order:
 REM   1. Finds the most recently built lmc.exe anywhere under Windows\lmc
@@ -24,44 +24,62 @@ REM      section deploys at install time (sounds, lang, license.txt) -
 REM      so this folder is genuinely standalone-runnable, not just
 REM      windeployqt's raw output.
 REM
-REM Usage: package_release.bat <kit>
-REM   kit: mingw64 | msvc2022_64
-REM Run from the Windows\ folder, AFTER a Release build (build_windows.bat
-REM <kit>, or a Qt Creator/Visual Studio Release build) - this script only
-REM gathers/deploys, it does not compile anything itself.
+REM Usage: just double-click this file in Explorer, or from a command
+REM prompt: package_release.bat [mingw64|msvc2022_64]
+REM   The kit argument is OPTIONAL - if omitted (e.g. when double-
+REM   clicked, which can't pass one), it auto-picks whichever of the two
+REM   QT_BIN paths below actually has windeployqt.exe, trying MinGW
+REM   first. Edit MINGW_QT_BIN/MSVC_QT_BIN below to match your actual Qt
+REM   installation(s) - same convention as build_windows.bat.
+REM Run AFTER a Release build (build_windows.bat <kit>, or a Qt Creator/
+REM Visual Studio Release build) - this script only gathers/deploys, it
+REM does not compile anything itself. The window stays open and waits
+REM for a keypress at the end (success or failure) so double-clicking
+REM never just flashes and vanishes.
 
 setlocal enabledelayedexpansion
 
-if "%~1"=="" (
-    echo Usage: package_release.bat ^<mingw64^|msvc2022_64^>
-    exit /b 1
-)
+REM adjust these two to match your local Qt 6 installation(s) - same
+REM convention/defaults as build_windows.bat's own mingw64/msvc2022_64
+REM branches
+set MINGW_QT_BIN=C:\Qt\6.8.0\mingw_64\bin
+set MSVC_QT_BIN=C:\Qt\6.8.0\msvc2022_64\bin
 
-set KIT=%~1
 set SCRIPT_DIR=%~dp0
 set REPO_ROOT=%SCRIPT_DIR%..
 set OUT_DIR=%REPO_ROOT%\Windows-Release
 
-if /i "%KIT%"=="mingw64" (
-    REM adjust this path to match your local Qt 6 mingw installation -
-    REM same convention/default as build_windows.bat's own mingw64 branch
-    set QT_BIN=C:\Qt\6.8.0\mingw_64\bin
-) else if /i "%KIT%"=="msvc2022_64" (
-    REM adjust this path to match your local Qt 6 msvc installation -
-    REM same convention/default as build_windows.bat's own msvc2022_64 branch
-    set QT_BIN=C:\Qt\6.8.0\msvc2022_64\bin
+if /i "%~1"=="mingw64" (
+    set QT_BIN=%MINGW_QT_BIN%
+) else if /i "%~1"=="msvc2022_64" (
+    set QT_BIN=%MSVC_QT_BIN%
+) else if "%~1"=="" (
+    if exist "%MINGW_QT_BIN%\windeployqt.exe" (
+        set QT_BIN=%MINGW_QT_BIN%
+    ) else if exist "%MSVC_QT_BIN%\windeployqt.exe" (
+        set QT_BIN=%MSVC_QT_BIN%
+    ) else (
+        echo Could not find windeployqt.exe in either configured Qt kit:
+        echo   %MINGW_QT_BIN%
+        echo   %MSVC_QT_BIN%
+        echo Edit MINGW_QT_BIN/MSVC_QT_BIN near the top of this script to
+        echo match your actual Qt installation.
+        goto :fail
+    )
 ) else (
-    echo Unknown kit "%KIT%" - expected mingw64 or msvc2022_64.
-    exit /b 1
+    echo Unknown kit "%~1" - expected mingw64 or msvc2022_64 ^(or no
+    echo argument at all, to auto-detect^).
+    goto :fail
 )
 
 if not exist "%QT_BIN%\windeployqt.exe" (
     echo windeployqt.exe not found at "%QT_BIN%".
-    echo Edit QT_BIN near the top of this script to match your actual Qt
-    echo installation - the same path you already adjusted in
-    echo build_windows.bat to build with.
-    exit /b 1
+    echo Edit MINGW_QT_BIN/MSVC_QT_BIN near the top of this script to
+    echo match your actual Qt installation - the same paths you already
+    echo adjusted in build_windows.bat to build with.
+    goto :fail
 )
+echo Using Qt kit: %QT_BIN%
 
 echo Searching for the most recently built lmc.exe under Windows\lmc ...
 set LMC_EXE=
@@ -70,9 +88,9 @@ for /f "delims=" %%F in ('dir /b /s /a-d /o-d "%SCRIPT_DIR%lmc\lmc.exe" 2^>nul')
 )
 if not defined LMC_EXE (
     echo Could not find a built lmc.exe anywhere under Windows\lmc - build
-    echo a Release configuration first ^(build_windows.bat %KIT%, or Qt
+    echo a Release configuration first ^(build_windows.bat, or Qt
     echo Creator/Visual Studio^) before running this script.
-    exit /b 1
+    goto :fail
 )
 echo Found: %LMC_EXE%
 
@@ -86,7 +104,7 @@ echo Running windeployqt ...
 "%QT_BIN%\windeployqt.exe" --release "%OUT_DIR%\lmc.exe"
 if errorlevel 1 (
     echo windeployqt failed - see output above.
-    exit /b 1
+    goto :fail
 )
 
 echo Searching for OpenSSL 3.x runtime DLLs ...
@@ -141,5 +159,15 @@ echo Done. Ready-to-run folder: %OUT_DIR%
 echo Just double-click lmc.exe in there to start the app - no separate
 echo windeployqt/copy steps needed next time either, just re-run this
 echo script after every rebuild.
-
+echo.
+pause
 endlocal
+exit /b 0
+
+:fail
+echo.
+echo FAILED - see the messages above.
+echo.
+pause
+endlocal
+exit /b 1
