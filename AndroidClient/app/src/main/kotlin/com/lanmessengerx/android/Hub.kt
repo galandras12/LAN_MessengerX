@@ -48,7 +48,7 @@ object Hub {
     var openChat: String? = null
     var openRoom: String? = null
 
-    val localUserName: String get() = engine?.localUser?.name ?: prefs.name
+    val localUserName: String get() = prefs.name
     val localId: String get() = engine?.localId ?: ""
     val avatarFile: File get() = File(app.filesDir, "avatar.png")
     val hasAvatar: Boolean get() = avatarFile.isFile
@@ -370,6 +370,6 @@ object Hub {
         changed()
     }
 
-    val status: String get() = engine?.localUser?.status ?: prefs.status
-    val note: String get() = engine?.localUser?.note ?: prefs.note
+    val status: String get() = prefs.status
+    val note: String get() = prefs.note
 }

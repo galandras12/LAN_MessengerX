@@ -1,90 +1,55 @@
 # LAN Messenger X
 
-**Alkalmazás neve:** LAN Messenger X · **Verzió:** 2.0.12
+**Verzió:** 3.0.0 · **Licenc:** GNU GPLv3
 
-Az eredeti, megszűnt támogatású **LAN Messenger** (QualiaTech / Dilip
-Radhakrishnan, GPLv3) modernizált, folyamatban lévő újrakiadása —
-Windows 11-kompatibilis asztali kliens és egy modern felületű Android
-kliens, közös hálózati/protokoll magkóddal. Az alkalmazás neve és a
-verziószám egyetlen helyről ([`Core/src/definitions.h`](Core/src/definitions.h),
-`IDA_TITLE`/`IDA_VERSION`) származik mindkét platformon.
+Az eredeti, megszűnt támogatású **LAN Messenger** (Dilip Radhakrishnan / Qualia Digital Solutions) teljes újraírása **Qt nélkül**:
+szerver és fiók nélküli csevegés és fájlküldés a helyi hálózaton, **az eredeti protokollal kompatibilisen** – az új kliensek és a régi LAN Messenger
+kliensek ugyanazon a hálózaton látják egymást, és mindkét irányban tudnak üzenetet, fájlt, csoportos beszélgetést váltani.
 
-## Mappa-elrendezés
+| Kliens | Nyelv / UI | Mappa |
+|---|---|---|
+| **Android** (8.0+) | Kotlin, Material 3 (saját, AndroidX/Compose nélküli komponensekkel, Android 12+ dinamikus színekkel) | [`AndroidClient/`](AndroidClient) |
+| **Windows** (10/11) és **Linux** | C# (.NET 8) + [Avalonia](https://avaloniaui.net) – egyetlen kódbázis, két célplatform | [`DesktopClient/`](DesktopClient) |
+| Protokoll-leírás, tesztvektorok, interop tesztek | – | [`Protocol/`](Protocol) |
 
-| Mappa | Tartalom |
-|---|---|
-| [`/Windows`](Windows) | A Qt Widgets-alapú asztali kliens (a modernizált `lmc` + `lmcapp` projekt) |
-| [`/Android`](Android) | A Qt Quick/QML Android kliens, a `/Core`-ra bekötve (kontaktlista, 1:1 chat, egyfájlos fájlátvitel működik forráskód-szinten; build még nincs ellenőrizve, lásd a mappa README-jét) |
-| [`/Core`](Core) | A két kliens által megosztott hálózati/protokoll/titkosítási/előzmény réteg |
+Funkciók mindhárom kliensben: automatikus felfedezés (UDP broadcast + multicast), 1:1 chat kézbesítési visszajelzéssel és „ír…” jelzéssel, csoportos
+chat (meghívás, csatlakozás, kilépés), broadcast üzenet, fájlküldés/fogadás folyamatjelzéssel, profilkép, állapot (elérhető / foglalt / ne zavarj /
+mindjárt jövök / távol / offline) és jegyzet, előzmények, értesítések. A mappaátvitelt a kliensek nem fogadják (udvariasan elutasítják, hogy a
+küldő ne ragadjon be).
 
-## Build
+## Telepítés
 
-Lépésről lépésre útmutató Windows `.exe` telepítő és Android `.apk`
-készítéséhez (szükséges eszközök, build-sorrend, csomagolás átadható
-formába): [`BUILD.md`](BUILD.md). Már megtalált és javított build-hibák
-kereshető listája: [`FAQ.md`](FAQ.md).
+* **Android:** a [`Releases/`](Releases) mappában lévő `LANMessengerX-3.0.0.apk` telepítése (ismeretlen forrásból telepítés engedélyezése kell).
+* **Windows:** `DesktopClient\publish-windows.bat` (dupla kattintás) → `dist\win-x64\LanMessengerX.exe`, egyetlen, önálló fájl; opcionálisan telepítő is
+  (Inno Setup). Első indításkor a Windows tűzfal engedélyt kér – privát hálózaton engedélyezd.
+* **Linux:** `DesktopClient/publish.sh` → `dist/` alatt `.deb` és `.tar.gz`.
 
-## Státusz
+Részletek, fejlesztői build, tesztek: [`BUILD.md`](BUILD.md). Gyakori kérdések: [`FAQ.md`](FAQ.md).
 
-Ez a repó a felhasználóval egyeztetett, jóváhagyott modernizációs terv
-alapján fejlődik, fázisokban:
+## Hogyan lett ellenőrizve
 
-- **Fázis 0 — Repó-struktúra**: ✅ kész (ez a munkamenet)
-- **Fázis 1 — Stabilizálás**: ✅ kész (ez a munkamenet) — konkrét
-  összeomlás-okok javítva a hálózati/titkosítási rétegben, lásd
-  [`Core/README.md`](Core/README.md) és [`Windows/README.md`](Windows/README.md)
-- **Fázis 2 — Windows kliens Qt 6 portolása**: ✅ forráskód-szinten kész
-  (elavult Qt5/Qt4 API-k lecserélve, telepítő NSIS-ről Inno Setup-ra
-  migrálva, magyar (`hu_HU`) fordítás hozzáadva a meglévő 17 mellé — lásd
-  [`Windows/README.md`](Windows/README.md)), ⏳ tényleges Qt6+OpenSSL3
-  build-bel (és az Inno Setup szkript tényleges fordítóval) még nincs
-  ellenőrizve (nincs Qt/Inno Setup telepítve ebben a fejlesztői
-  környezetben)
-- **Fázis 3 — Core kiemelése önálló, mindkét platform által linkelhető
-  library-vé**: ✅ forráskód/build-rendszer szinten kész (`Core.pro`,
-  Widgets-mentes — lásd [`Core/README.md`](Core/README.md)), ⏳ tényleges
-  build-bel még nincs ellenőrizve, Android (NDK) célzás még nem indult
-- **Fázis 4 — Android kliens (Qt Quick/QML)**: ✅ valóban a `/Core`-ra
-  bekötött verzió — kontaktlista, 1:1 chat, broadcast küldés, egyfájlos
-  fájlátvitel, csoportos chat szoba (meghívás/csatlakozás/üzenet/kilépés
-  és utólagos meghívás is, a Windows `chatroomwindow.cpp` protokollját
-  lekövetve), profil-beállítások (név/állapot/megjegyzés, avatar
-  szerkesztése és fogadása), üzenetelőzmény (`/Core`-beli `History`
-  fájlformátumra bekötve, Windowsszal kompatibilisen), foreground
-  service + Wi-Fi multicast lock a háttérbeli működéshez, push-jellegű
-  új-üzenet értesítés + `POST_NOTIFICATIONS` futásidejű engedélykérés —
-  lásd [`Android/README.md`](Android/README.md). ⏳ build/futtatás
-  ellenőrizetlen, néhány funkció (mappaátvitel, Public Chat, beépített
-  avatar-galéria) még nincs bekötve, **az
-  Android-specifikus OpenSSL linkelés megoldatlan** (lásd Android README
-  "Kritikus" szakasza), a fájlküldés pedig csak `file://` elérési útra
-  működik (`content://` SAF URI-kra még nem)
-- **Fázis 5 — Cross-platform interop tesztelés**: ⏳ tervezve
+* **Protokoll-kompatibilitás az eredeti klienssel – valódi forgalommal.** Az eredeti Qt-s klienst fej nélkül futtatva, két hálózati névtérben, mindkét új
+  implementáció (Kotlin, C#) ellen lefutnak: felfedezés, kézfogás, szöveg (unicode, escape), nyugta, állapot, adatlap, fájl mindkét irányban (40 MB-ig,
+  több száz ismétlés), profilkép és csoportos chat – lásd [`Protocol/interop`](Protocol/interop). A Kotlin ↔ C# páros is átmegy.
+* **Egységtesztek** (Kotlin: 16, C#: 23), köztük OpenSSL-lel előállított kripto-tesztvektorok ([`Protocol/testvectors`](Protocol/testvectors)).
+* **A C# asztali kliens** valódi, publikált Linux-bináris formájában, virtuális kijelzőn indítva, egérrel/billentyűzettel vezérelve működött az eredeti klienssel
+  szemben (felfedezés, üzenet oda-vissza, állapotváltozás, fájl elfogadása); a felület képernyőképei fejetlen Skia-renderelésből ellenőrizve (világos/sötét téma).
+* **Az Android alkalmazás:** a protokollmag a JVM-en az fenti módon tesztelt; az APK lefordul, R8-cal zsugorított, aláírt és az `aapt`/`apksigner` ellenőrzi.
+  **Eszközön vagy emulátoron nem futott** (a fejlesztői környezetben nincs Android SDK/emulátor) – az első valódi telefonos próba még hátravan, lásd
+  [`AndroidClient/README.md`](AndroidClient/README.md).
+* A Windows-kiadás ugyanaz a C# kód, amit Linuxon végig kipróbáltam; a Windows-specifikus részek (tűzfal, toast értesítés, telepítő) Windowson nem futottak.
 
-A döntések, amik a tervet alakították:
-- Android UI: Qt Quick/QML, megosztott C++ maggal (nem teljesen natív Kotlin)
-- Windows: Qt 6 LTS célzás
-- A régi, eredeti LAN Messenger kliensekkel a hálózati protokoll szintjén
-  **megmarad a kompatibilitás** — ez korlátozza, mennyire lehet a
-  protokollt/titkosítást modernizálni (lásd a Core README-jét).
+## Szerkezet
+
+```
+AndroidClient/   Kotlin mag (core/) + Android alkalmazás (app/) + build eszközök (tools/)
+DesktopClient/   C# mag (src/LanMessengerX.Core) + Avalonia alkalmazás (src/LanMessengerX.App) + tesztek + csomagoló scriptek
+Protocol/        PROTOCOL.md, tesztvektorok, interop tesztek (az eredeti klienssel szemben)
+Releases/        kész, aláírt Android APK
+legacy-qt/       a korábbi, Qt-s forráskód (Windows + Android) – már nem része a terméknek, törölhető
+```
 
 ## Szerzőség / Credits
 
-- **Eredeti LAN Messenger**: Dilip Radhakrishnan (Qualia Digital Solutions /
-  QualiaTech) — a GPLv3 fejléc-kommentek és az eredeti telepítő
-  verzióinformációi alapján (lásd a forrásfájlok fejlécét, pl.
-  [`Core/src/definitions.h`](Core/src/definitions.h)).
-- **LAN Messenger X** (ez a modernizált/továbbfejlesztett verzió):
-  továbbfejlesztő — [galandras12](https://github.com/galandras12/LAN_MessengerX).
-- **Visszajelzés és elérhetőség**: [github.com/galandras12/LAN_MessengerX](https://github.com/galandras12/LAN_MessengerX)
-
-Mindkét kliens Névjegy/Beállítások képernyője (Windows: Névjegy ablak
-"About" fül; Android: Beállítások képernyő alján "About" szakasz)
-megjeleníti mindkét szerzőséget és a fenti linket — lásd
-[`Core/src/definitions.h`](Core/src/definitions.h) `IDA_ORIGINAL_AUTHOR`/
-`IDA_FORK_AUTHOR`/`IDA_REPOSITORY` konstansait, ez az egyetlen hely, ahonnan
-mindkét platform ugyanazt a szöveget olvassa.
-
-## Licenc
-
-GPLv3, az eredeti projekt licencét megtartva (lásd [`LICENSE`](LICENSE)).
+* **Eredeti LAN Messenger:** Dilip Radhakrishnan (Qualia Digital Solutions / QualiaTech), GPLv3.
+* **LAN Messenger X** – modernizálás és továbbfejlesztés: [galandras12](https://github.com/galandras12/LAN_MessengerX).

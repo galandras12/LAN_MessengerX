@@ -204,6 +204,8 @@ internal class TcpServer(
         return try {
             val s = ServerSocket()
             s.reuseAddress = true
+            // inherited by accepted sockets: a roomy window keeps the original client's file sender from stalling
+            s.receiveBufferSize = 1 shl 20
             s.bind(InetSocketAddress(port), 64)
             server = s
             running = true
