@@ -1,0 +1,52 @@
+name: CI
+
+# Not run on GitHub yet: every step mirrors a command that was run by hand in the development environment
+# (see BUILD.md). The interop tests against the original client need root + Qt and are not part of CI.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  desktop:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build and test
+        run: dotnet test DesktopClient/LanMessengerX.sln -c Release
+      - name: Publish (single-file, self-contained)
+        run: >
+          dotnet publish DesktopClient/src/LanMessengerX.App -c Release
+          -r ${{ matrix.os == 'windows-latest' && 'win-x64' || 'linux-x64' }} --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
+          -p:DebugType=None -p:DebugSymbols=false -o dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          path: dist/*
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y aapt apksigner zipalign zip
+      - name: Fetch the toolchain (public sources only)
+        run: AndroidClient/tools/setup-toolchain.sh
+      - name: Build the release APK
+        run: AndroidClient/tools/build-apk.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: AndroidClient/build/LANMessengerX-*.apk
