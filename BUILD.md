@@ -274,23 +274,35 @@ Ez az a lépés, ami a nyers `lmc.exe`-ből egy **más gépen is futtatható**
 mappát csinál.
 
 **A) Automatikus szkripttel** (ajánlott — minden újrafordítás után csak
-ezt kell futtatni, nincs kézi `windeployqt`-hívás/DLL-másolgatás):
-```bat
-cd Windows
-package_release.bat mingw64
-REM vagy: package_release.bat msvc2022_64
-```
-Ez a `Windows-Release\` mappába (a repó gyökerében, a `Windows`/`Core`/
-`Android` mappák mellett) automatikusan megkeresi a legutóbb épített
-`lmc.exe`-t, lefuttatja rá a `windeployqt`-et, megkeresi és bemásolja az
-OpenSSL DLL-eket (ugyanazokat a helyeket nézi végig, amiket a lenti B)
-kézi lépés is leír, és ha sehol nem találja, ugyanazzal a `dir /s /b`
-technikával esik vissza, mint a [1.2. lépés 4.
-pontja](#12-openssl-beszerzése-és-elhelyezése)), majd bemásolja a
-`sounds`/`lang`/`license.txt` erőforrásokat is — a mappa a script
-lefutása után azonnal futtatható, nincs mit hozzáadni kézzel. A script
-tetején lévő `QT_BIN` elérési utat igazítsd a saját Qt-telepítésedhez
-(ugyanaz a konvenció, mint a `build_windows.bat`-ban).
+ezt kell futtatni/dupla-kattintani, nincs kézi `windeployqt`-hívás/
+DLL-másolgatás):
+
+- Intézőben egyszerűen **dupla-kattints** a `Windows\package_release.bat`
+  fájlra — a script paraméter nélkül is lefut, automatikusan
+  kitalálja, melyik Qt kitet (mingw/msvc) használod (megnézi, melyik
+  konfigurált `MINGW_QT_BIN`/`MSVC_QT_BIN` mappában van tényleg
+  `windeployqt.exe`), és a végén megvárja egy billentyű lenyomását,
+  mielőtt bezárná az ablakot — sikeres és hibás lefutás esetén is,
+  hogy ne tűnjön el az ablak, mielőtt elolvasnád, mi történt.
+- Vagy parancssorból, explicit kit-választással:
+  ```bat
+  cd Windows
+  package_release.bat mingw64
+  REM vagy: package_release.bat msvc2022_64
+  ```
+
+Mindkét esetben ugyanaz történik: a `Windows-Release\` mappába (a repó
+gyökerében, a `Windows`/`Core`/`Android` mappák mellett) automatikusan
+bekerül a legutóbb épített `lmc.exe`, lefut rá a `windeployqt`,
+megkeresi és bemásolja az OpenSSL DLL-eket (ugyanazokat a helyeket
+nézi végig, amiket a lenti B) kézi lépés is leír, és ha sehol nem
+találja, ugyanazzal a `dir /s /b` technikával esik vissza, mint a
+[1.2. lépés 4. pontja](#12-openssl-beszerzése-és-elhelyezése)), majd
+bemásolja a `sounds`/`lang`/`license.txt` erőforrásokat is — a mappa a
+script lefutása után azonnal futtatható, nincs mit hozzáadni kézzel. A
+script tetején lévő `MINGW_QT_BIN`/`MSVC_QT_BIN` elérési utakat
+igazítsd a saját Qt-telepítésedhez (ugyanaz a konvenció, mint a
+`build_windows.bat`-ban).
 
 **B) Kézzel**:
 
