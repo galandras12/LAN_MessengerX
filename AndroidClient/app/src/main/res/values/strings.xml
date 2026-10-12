@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LAN Messenger X</string>
+    <string name="ch_service">Connection</string>
+    <string name="ch_service_desc">Keeps LAN Messenger X reachable on your network</string>
+    <string name="ch_messages">Messages</string>
+    <string name="ch_messages_desc">New messages, files and broadcasts</string>
+</resources>

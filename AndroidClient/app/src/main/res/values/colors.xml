@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="m3_surface">#F4FBFA</color>
+    <color name="m3_surface_container">#E9EFEE</color>
+    <color name="m3_on_surface">#161D1D</color>
+    <color name="ic_launcher_background">#006A6A</color>
+</resources>

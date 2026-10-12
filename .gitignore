@@ -80,3 +80,12 @@ CMakeLists.txt.user*
 *.qmlproject.user.*
 .vs/
 .idea/
+
+# New clients: build output
+/AndroidClient/build/
+/AndroidClient/.gradle/
+/AndroidClient/local.properties
+/DesktopClient/**/bin/
+/DesktopClient/**/obj/
+/DesktopClient/**/.vs/
+*.idsig
