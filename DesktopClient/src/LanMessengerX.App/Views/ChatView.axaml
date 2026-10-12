@@ -1,0 +1,108 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMessengerX.App.ViewModels"
+             xmlns:c="using:LanMessengerX.App.Controls"
+             x:Class="LanMessengerX.App.Views.ChatView"
+             x:DataType="vm:ConversationVm">
+
+  <DockPanel>
+    <!-- header -->
+    <Border DockPanel.Dock="Top" Padding="16,10" BorderThickness="0,0,0,1" BorderBrush="#33808080">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <c:AvatarControl x:Name="HeaderAvatar" Width="40" Height="40" DisplayName="{Binding Title}" Image="{Binding AvatarImage}" Status="{Binding AvatarStatus}" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding Subtitle}" FontSize="12" Opacity="0.65" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal">
+          <Button x:Name="InviteButton" Classes="icon" Click="OnInvite" ToolTip.Tip="Invite people"><PathIcon Data="{StaticResource IconGroupAdd}" /></Button>
+          <Button x:Name="InfoButton" Classes="icon" Click="OnInfo" ToolTip.Tip="About this person"><PathIcon Data="{StaticResource IconInfo}" /></Button>
+          <Button x:Name="LeaveButton" Content="Leave" Click="OnLeave" Margin="4,0,0,0" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- composer -->
+    <Border DockPanel.Dock="Bottom" Padding="12,10" BorderThickness="0,1,0,0" BorderBrush="#33808080">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Button x:Name="AttachButton" Classes="icon" Click="OnAttach" IsEnabled="{Binding CanAttach}" VerticalAlignment="Bottom" Margin="0,0,8,0" ToolTip.Tip="Send a file">
+          <PathIcon Data="{StaticResource IconAttach}" />
+        </Button>
+        <TextBox x:Name="Input" Grid.Column="1" Text="{Binding Draft, Mode=TwoWay}" Watermark="Type a message - Enter to send, Shift+Enter for a new line"
+                 AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="140" MinHeight="40" CornerRadius="20" Padding="16,10" VerticalContentAlignment="Center" />
+        <Button Grid.Column="2" Classes="icon accent" Width="40" Height="40" Command="{Binding SendCommand}" VerticalAlignment="Bottom" Margin="8,0,0,0" ToolTip.Tip="Send">
+          <PathIcon Data="{StaticResource IconSend}" Foreground="White" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- messages -->
+    <ScrollViewer x:Name="Scroll" HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding Items}" Margin="12,8">
+        <ItemsControl.DataTemplates>
+
+          <DataTemplate DataType="vm:MessageVm">
+            <StackPanel Spacing="2">
+              <TextBlock IsVisible="{Binding ShowDay}" Text="{Binding DayText}" HorizontalAlignment="Center" FontSize="12" Opacity="0.6" Margin="0,12,0,6" />
+              <Border Classes="bubble" Classes.out="{Binding Outgoing}" HorizontalAlignment="{Binding Align}" Margin="0,2">
+                <StackPanel Spacing="2">
+                  <TextBlock IsVisible="{Binding ShowSender}" Text="{Binding Sender}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColor}" />
+                  <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+                    <TextBlock Text="{Binding TimeText}" FontSize="11" Opacity="0.65" />
+                    <TextBlock IsVisible="{Binding HasStateText}" Text="{Binding StateText}" FontSize="11" Opacity="0.75" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </DataTemplate>
+
+          <DataTemplate DataType="vm:FileVm">
+            <StackPanel Spacing="2">
+              <TextBlock IsVisible="{Binding ShowDay}" Text="{Binding DayText}" HorizontalAlignment="Center" FontSize="12" Opacity="0.6" Margin="0,12,0,6" />
+              <Border Classes="card" MaxWidth="460" HorizontalAlignment="Center" Margin="0,4">
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="Auto,*">
+                    <PathIcon Width="30" Height="30" Data="{StaticResource IconFile}" Opacity="0.8" />
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding StatusText}" FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Grid>
+                  <ProgressBar IsVisible="{Binding ShowProgress}" Value="{Binding Progress}" Minimum="0" Maximum="100" />
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                    <Button Content="Decline" Command="{Binding DeclineCommand}" IsVisible="{Binding CanDecline}" />
+                    <Button Content="Accept" Command="{Binding AcceptCommand}" IsVisible="{Binding CanAccept}" Classes="accent" Padding="16,6" />
+                    <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" />
+                    <Button Content="Open" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" />
+                    <Button Content="Show in folder" Command="{Binding ShowCommand}" IsVisible="{Binding CanOpen}" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </DataTemplate>
+
+          <DataTemplate DataType="vm:BroadcastVm">
+            <StackPanel Spacing="2">
+              <TextBlock IsVisible="{Binding ShowDay}" Text="{Binding DayText}" HorizontalAlignment="Center" FontSize="12" Opacity="0.6" Margin="0,12,0,6" />
+              <Border Classes="card" Background="#26F9A825" BorderBrush="#66F9A825" MaxWidth="460" HorizontalAlignment="Center" Margin="0,4">
+                <StackPanel Spacing="4">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Width="16" Height="16" Data="{StaticResource IconCampaign}" />
+                    <TextBlock Text="{Binding Header}" FontWeight="SemiBold" />
+                  </StackPanel>
+                  <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </DataTemplate>
+
+          <DataTemplate DataType="vm:NoticeVm">
+            <TextBlock Text="{Binding Text}" HorizontalAlignment="Center" FontSize="12" Opacity="0.65" Margin="0,8" />
+          </DataTemplate>
+
+        </ItemsControl.DataTemplates>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

@@ -89,3 +89,10 @@ CMakeLists.txt.user*
 /DesktopClient/**/obj/
 /DesktopClient/**/.vs/
 *.idsig
+
+/DesktopClient/dist/
+/DesktopClient/shots/
+
+# interop test artifacts
+__pycache__/
+/Protocol/interop/legacy-harness/build/

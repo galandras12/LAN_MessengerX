@@ -1,0 +1,88 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:svc="using:LanMessengerX.App.Services"
+        xmlns:c="using:LanMessengerX.App.Controls"
+        x:Class="LanMessengerX.App.Views.SettingsWindow"
+        x:DataType="svc:AppState"
+        Title="Settings" Width="520" Height="720" MinWidth="420"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+
+  <ScrollViewer>
+    <StackPanel Margin="24" Spacing="18">
+
+      <!-- profile -->
+      <Border Classes="card">
+        <StackPanel Spacing="14">
+          <Grid ColumnDefinitions="Auto,*">
+            <c:AvatarControl Width="72" Height="72" DisplayName="{Binding Name}" Image="{Binding MyAvatar}" Status="{Binding Status}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Choose picture…" Click="OnChoosePicture" />
+                <Button Content="Remove" Click="OnRemovePicture" />
+              </StackPanel>
+              <TextBlock Text="Other people see this picture next to your name." FontSize="12" Opacity="0.65" TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+          <StackPanel Spacing="4">
+            <TextBlock Text="Name" FontSize="12" Opacity="0.7" />
+            <TextBox x:Name="NameBox" />
+          </StackPanel>
+          <StackPanel Spacing="4">
+            <TextBlock Text="Note (optional)" FontSize="12" Opacity="0.7" />
+            <TextBox x:Name="NoteBox" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" />
+          </StackPanel>
+          <StackPanel Spacing="4">
+            <TextBlock Text="Status" FontSize="12" Opacity="0.7" />
+            <ComboBox x:Name="StatusBox" HorizontalAlignment="Stretch" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- preferences -->
+      <StackPanel Spacing="8">
+        <TextBlock Text="Preferences" FontWeight="SemiBold" />
+        <CheckBox x:Name="HistoryBox" Content="Save conversation history on this computer" />
+        <CheckBox x:Name="NotifyBox" Content="Show notifications for new messages" />
+        <CheckBox x:Name="TrayBox" Content="Keep running in the system tray when the window is closed" />
+        <CheckBox x:Name="MinimizedBox" Content="Start minimised to the tray" />
+        <StackPanel Spacing="4" Margin="0,6,0,0">
+          <TextBlock Text="Theme" FontSize="12" Opacity="0.7" />
+          <ComboBox x:Name="ThemeBox" HorizontalAlignment="Stretch">
+            <ComboBoxItem Content="Follow system" />
+            <ComboBoxItem Content="Light" />
+            <ComboBoxItem Content="Dark" />
+          </ComboBox>
+        </StackPanel>
+        <StackPanel Spacing="4" Margin="0,6,0,0">
+          <TextBlock Text="Save received files to" FontSize="12" Opacity="0.7" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox x:Name="DownloadBox" />
+            <Button Grid.Column="1" Content="Browse…" Click="OnBrowse" Margin="8,0,0,0" />
+          </Grid>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- network -->
+      <StackPanel Spacing="6">
+        <TextBlock Text="Network" FontWeight="SemiBold" />
+        <TextBlock x:Name="NetText" Opacity="0.75" TextWrapping="Wrap" />
+      </StackPanel>
+
+      <!-- about -->
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock x:Name="AboutTitle" FontWeight="SemiBold" />
+          <TextBlock TextWrapping="Wrap" Opacity="0.75"
+                     Text="Serverless messaging for local networks. Speaks the original LAN Messenger protocol, so it works with the Android, Windows, Linux and older clients on the same network." />
+          <TextBlock TextWrapping="Wrap" Opacity="0.75"
+                     Text="Original LAN Messenger by Dilip Radhakrishnan (Qualia Digital Solutions). Modernised and continued by galandras12. Free software, GNU GPL version 3." />
+        </StackPanel>
+      </Border>
+
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Content="Cancel" Click="OnCancel" MinWidth="88" HorizontalContentAlignment="Center" />
+        <Button Content="Save" Click="OnSave" Classes="accent" MinWidth="88" HorizontalContentAlignment="Center" Padding="16,7" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</Window>

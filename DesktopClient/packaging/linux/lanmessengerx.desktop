@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=LAN Messenger X
+GenericName=Local network messenger
+Comment=Serverless chat and file transfer for your local network
+Exec=lanmessengerx
+Icon=lanmessengerx
+Terminal=false
+Categories=Network;InstantMessaging;Chat;
+StartupWMClass=LanMessengerX
+Keywords=chat;lan;messenger;intranet;

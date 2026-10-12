@@ -1,0 +1,114 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LanMessengerX.App.ViewModels"
+        xmlns:svc="using:LanMessengerX.App.Services"
+        xmlns:c="using:LanMessengerX.App.Controls"
+        xmlns:v="using:LanMessengerX.App.Views"
+        x:Class="LanMessengerX.App.Views.MainWindow"
+        x:DataType="svc:AppState"
+        Title="LAN Messenger X"
+        Icon="/Assets/app.ico"
+        Width="1000" Height="680" MinWidth="760" MinHeight="480"
+        WindowStartupLocation="CenterScreen">
+
+  <Grid ColumnDefinitions="330,1,*">
+
+    <!-- ============ sidebar ============ -->
+    <DockPanel Grid.Column="0">
+      <Border DockPanel.Dock="Top" Padding="14,12">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <c:AvatarControl Width="44" Height="44" DisplayName="{Binding Name}" Image="{Binding MyAvatar}" Status="{Binding Status}"
+                           VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" Margin="12,0,6,0" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding ConnectionText}" FontSize="12" Opacity="0.65" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="0">
+            <Button Classes="icon" Click="OnRefresh" ToolTip.Tip="Look for people again"><PathIcon Data="{StaticResource IconRefresh}" /></Button>
+            <Button Classes="icon" Click="OnSettings" ToolTip.Tip="Settings"><PathIcon Data="{StaticResource IconSettings}" /></Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border DockPanel.Dock="Bottom" Padding="10,8" BorderThickness="0,1,0,0" BorderBrush="#33808080">
+        <Grid ColumnDefinitions="*,*,*">
+          <Button Grid.Column="0" Padding="6,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnBroadcast" ToolTip.Tip="Send a message to everyone who is online">
+            <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Width="15" Height="15" Data="{StaticResource IconCampaign}" /><TextBlock Text="Broadcast" FontSize="12" /></StackPanel>
+          </Button>
+          <Button Grid.Column="1" Padding="6,6" Margin="6,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnNewGroup" ToolTip.Tip="Start a group chat">
+            <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Width="15" Height="15" Data="{StaticResource IconGroupAdd}" /><TextBlock Text="Group" FontSize="12" /></StackPanel>
+          </Button>
+          <Button Grid.Column="2" Padding="6,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnHistory" ToolTip.Tip="Saved conversations">
+            <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Width="15" Height="15" Data="{StaticResource IconHistory}" /><TextBlock Text="History" FontSize="12" /></StackPanel>
+          </Button>
+        </Grid>
+      </Border>
+
+      <TabControl Padding="0" Margin="0">
+        <TabItem Header="People">
+          <Grid>
+            <ListBox x:Name="PeopleList" ItemsSource="{Binding Contacts}" SelectionChanged="OnPeopleSelected" Background="Transparent">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ContactVm">
+                  <Grid ColumnDefinitions="Auto,*,Auto" Margin="10,8">
+                    <c:AvatarControl Width="42" Height="42" DisplayName="{Binding Name}" Image="{Binding Avatar}" Status="{Binding Status}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding Subtitle}" FontSize="12" Opacity="0.65" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <Border Grid.Column="2" Classes="badge" IsVisible="{Binding HasUnread}" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding UnreadText}" Foreground="White" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <StackPanel x:Name="PeopleEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24" Spacing="8" IsHitTestVisible="False">
+              <PathIcon Width="44" Height="44" Opacity="0.4" Data="{StaticResource IconGroup}" />
+              <TextBlock Text="No one else is online" FontWeight="SemiBold" HorizontalAlignment="Center" />
+              <TextBlock Text="Make sure this computer is on the same network as the people you want to reach." TextWrapping="Wrap" TextAlignment="Center" Opacity="0.65" MaxWidth="240" />
+            </StackPanel>
+          </Grid>
+        </TabItem>
+        <TabItem Header="Groups">
+          <Grid>
+            <ListBox x:Name="RoomList" ItemsSource="{Binding Rooms}" SelectionChanged="OnRoomSelected" Background="Transparent">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:RoomVm">
+                  <Grid ColumnDefinitions="Auto,*" Margin="10,8">
+                    <Border Width="42" Height="42" CornerRadius="21" Background="#556B8EAF" VerticalAlignment="Center">
+                      <PathIcon Width="22" Height="22" Data="{StaticResource IconGroup}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Title}" FontSize="14" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding Subtitle}" FontSize="12" Opacity="0.65" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <StackPanel x:Name="RoomsEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24" Spacing="8" IsHitTestVisible="False">
+              <PathIcon Width="44" Height="44" Opacity="0.4" Data="{StaticResource IconGroupAdd}" />
+              <TextBlock Text="No group chats yet" FontWeight="SemiBold" HorizontalAlignment="Center" />
+              <TextBlock Text="Start one with &quot;New group&quot;, or wait for an invitation." TextWrapping="Wrap" TextAlignment="Center" Opacity="0.65" MaxWidth="240" />
+            </StackPanel>
+          </Grid>
+        </TabItem>
+      </TabControl>
+    </DockPanel>
+
+    <Border Grid.Column="1" Background="#33808080" />
+
+    <!-- ============ conversation ============ -->
+    <Grid Grid.Column="2">
+      <Grid IsVisible="{Binding HasSelection}">
+        <v:ChatView x:Name="Chat" DataContext="{Binding Selected}" />
+      </Grid>
+      <StackPanel IsVisible="{Binding !HasSelection}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10" IsHitTestVisible="False">
+        <PathIcon Width="64" Height="64" Opacity="0.3" Data="{StaticResource IconChat}" />
+        <TextBlock Text="LAN Messenger X" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" Opacity="0.8" />
+        <TextBlock Text="Pick someone from the list to start chatting." Opacity="0.6" HorizontalAlignment="Center" />
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>
