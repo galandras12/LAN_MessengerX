@@ -286,5 +286,18 @@ public partial class SettingsWindow : Window
         LogBox.CaretIndex = LogBox.Text?.Length ?? 0;
     }
 
+    private async void OnCopyLog(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            string text;
+            try { text = File.ReadAllText(FileLog.Path_); } catch (Exception) { text = FileLog.Tail(200); }
+            if (text.Length > 60000) text = text[^60000..];
+            if (Clipboard is { } cb) await cb.SetTextAsync(text);
+            FirewallText.Text = Loc.T("The log was copied to the clipboard.");
+        }
+        catch (Exception ex) { FirewallText.Text = ex.Message; }
+    }
+
     private void OnOpenLog(object? sender, RoutedEventArgs e) => Shell.Reveal(FileLog.Path_);
 }

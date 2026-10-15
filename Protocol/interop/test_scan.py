@@ -16,7 +16,7 @@ t0 = time.time()
 K = start_kotlin("k", "lab_b", "bob", "AABBCCDDEE01") if KIND == "kotlin" else start_csharp("k", "lab_b", "bob", "AABBCCDDEE01")
 try:
     ln, _ = A.wait_for(r"READY id=(\S+)"); aid = re.search(r"id=(\S+)", ln).group(1)
-    found, _ = K.wait_for(r"UserOnline.*id=" + aid, timeout=30)
+    found, _ = K.wait_for(r"UserOnline.*id=" + aid, timeout=45)
     check("found the original client although nothing can connect in (%.1fs)" % (time.time() - t0), found, K.dump())
     mA = A.mark()
     K.send(f"msg {aid} through the scan connection")

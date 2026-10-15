@@ -11,7 +11,7 @@
    (<https://dontkillmyapp.com>).
 6. A „Refresh Contacts List” gomb azonnal újra bejelentkezik (announce). Az **eredeti** kliensek az announce-ot csak induláskor és a „partnerlista frissítése” időközönként
    (alapból 5 percenként) küldik – ezért a később induló kliens régen sokáig nem látta a korábban indultakat. Az új kliensek ezért az alhálózat minden címének 50000-es portját is
-   végigpróbálják (a *Hálózat* oldalon kikapcsolható): a partnerek általában 3–8 másodperc alatt megjelennek, akkor is, ha a tűzfal a bejövő forgalmat eldobja.
+   végigpróbálják (a *Hálózat* oldalon kikapcsolható): ha a tűzfal a bejövő forgalmat eldobja, a partnerek kb. 20–30 másodperc alatt megjelennek (az átvizsgálás csak akkor indul, ha nem érkeznek bejövő kapcsolatok vagy nincs még felhasználó).
 7. **Fájl érkezik hozzád, de nem jön át?** A fájlt a *küldő* nyit kapcsolatot hozzád, ehhez a tűzfalnak engednie kell a LAN Messenger X-et (lásd 3. pont). Első indításkor a Windows-os
    kliens maga is felajánlja a tűzfalszabályt.
 

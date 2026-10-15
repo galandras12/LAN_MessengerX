@@ -268,11 +268,12 @@ public sealed class Messenger : IDisposable
         Emit(new MessengerEvent.ConnectionChanged(true, found.Ip));
         Broadcast(MessageType.Depart);
         Broadcast(MessageType.Announce);
-        // UDP is lossy (especially on Wi-Fi): repeat the announce a little later, and scan the subnet as a second way to find people
+        // Fallback for networks where nobody can connect to us (a firewall dropping incoming traffic): scan the subnet.
+        // Not while incoming connections arrive - the original client keeps one stream per peer, and an extra
+        // connection from us replaces its stream in the middle of its handshake and drops the user when it closes.
         _sweepRound = 0;
-        _timers.Add(new Timer(_ => Post(() => Broadcast(MessageType.Announce)), null, 2000, Timeout.Infinite));
-        _timers.Add(new Timer(_ => Post(() => Broadcast(MessageType.Announce)), null, 6000, Timeout.Infinite));
-        _timers.Add(new Timer(_ => Post(SweepSubnet), null, 3000, Timeout.Infinite));
+        _incomingSeen = 0;
+        _timers.Add(new Timer(_ => Post(SweepSubnet), null, 20000, Timeout.Infinite));
     }
 
     private void TeardownNetwork()
@@ -373,6 +374,7 @@ public sealed class Messenger : IDisposable
     private readonly HashSet<string> _probing = new();
     private readonly Dictionary<string, long> _notMessenger = new();
     private int _sweepRound;
+    private volatile int _incomingSeen;
 
     /// <summary>
     /// Announces are only sent when a client starts and every few minutes after that, so a client that was started
@@ -384,6 +386,7 @@ public sealed class Messenger : IDisposable
     {
         var lan = _lan;
         if (!_cfg.ScanSubnet || !IsConnected || lan == null || _rsa == null) return;
+        if (_incomingSeen > 0 && _users.Count > 0) return;   // inbound works: the other clients connect to us themselves
         // first minutes: every minute; later: every five minutes
         if (_sweepRound++ >= 10 && _sweepRound % 5 != 0) return;
         var known = new HashSet<string>(_users.Values.Select(u => u.Address));
@@ -482,6 +485,7 @@ public sealed class Messenger : IDisposable
             {
                 s.ReceiveTimeout = 0;
                 var peerId = Encoding.UTF8.GetString(first, 3, n - 3);
+                Interlocked.Increment(ref _incomingSeen);
                 _log($"TCP incoming from {peerId} @ {(s.RemoteEndPoint as IPEndPoint)?.Address}");
                 var conn = new Conn(s, incoming: true, peerId: peerId);
                 var key = _rsa?.PublicPem;
@@ -549,12 +553,9 @@ public sealed class Messenger : IDisposable
             if (_users.ContainsKey(peer) || conn.Closed) return;
             if (_streams.TryGetValue(peer, out var cur) && ReferenceEquals(cur, conn))
             {
-                _log($"no user data from {peer} within 10 s ({conn.FramesSeen} frames seen) - dropping the connection");
-                _streams.Remove(peer);
-                _keys.Remove(peer);
-                _connecting.Remove(peer);
+                // only report it: closing the connection would make the original client drop us from its list
+                _log($"no user data from {peer} within 10 s ({conn.FramesSeen} frames seen)");
             }
-            conn.Close();
         }));
     }
 

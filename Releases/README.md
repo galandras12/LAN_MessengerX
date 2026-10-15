@@ -2,8 +2,8 @@
 
 | Fájl | Mi | SHA-256 |
 |---|---|---|
-| `LANMessengerX-3.1.0.apk` | Android 8.0+ (min SDK 26, target 34), release, R8-zsugorított, v2/v3 aláírással | `b33c747b8a570d7200acf9f9a9b8f26324b96bc9436dfb5783df76f484e0d86a` |
-| `LanmessengerX-Windows.exe` | Windows 10/11 x64, önálló (self-contained, .NET nem kell hozzá), egyetlen fájl, ~46 MB | `c35bfca59052b8071660b7d5bfcc5b5bb9766684732716209541e8661001e44c` |
+| `LANMessengerX-3.1.0.apk` | Android 8.0+ (min SDK 26, target 34), release, R8-zsugorított, v2/v3 aláírással | `628719411cddf30555fd46df317b09b6b078b020683fdb42b1b99d5971b66dd0` |
+| `LanmessengerX-Windows.exe` | Windows 10/11 x64, önálló (self-contained, .NET nem kell hozzá), egyetlen fájl, ~46 MB | `ffbcf79b07f507b1561a3e0620e1fcd0282316e1accfd7376581ca0237f8c61d` |
 
 Az APK az `AndroidClient/tools/build-apk.sh` kimenete (lásd [`BUILD.md`](../BUILD.md)). Az aláírókulcs a repóban van (`AndroidClient/signing`), tehát *nyilvános*:
 saját terjesztéshez generálj újat. Az exe a `DesktopClient/publish.sh win-x64` / `publish-windows.bat` kimenete. A Linux csomagok (`.deb`, `.tar.gz`) és a Windows-telepítő nincsenek a repóban, a `publish.sh` készíti őket. Az exe **nincs kódaláírva**, ezért a Windows SmartScreen figyelmeztethet („További információ → Futtatás mindenképp"); első indításkor a tűzfal engedélyt kér – privát hálózaton engedélyezd.

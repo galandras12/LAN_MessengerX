@@ -178,6 +178,7 @@
             <Button x:Name="FirewallBtn" Content="{loc:T 'Allow in Windows Firewall...'}" Click="OnFirewall" />
             <Button Content="{loc:T 'Refresh Contacts List'}" Click="OnRefreshNetwork" />
             <Button Content="{loc:T 'Open log folder'}" Click="OnOpenLog" />
+            <Button Content="{loc:T 'Copy log'}" Click="OnCopyLog" />
           </StackPanel>
           <TextBlock x:Name="FirewallText" Classes="hint" />
           <TextBox x:Name="LogBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas,Menlo,monospace" FontSize="11" Height="150" />

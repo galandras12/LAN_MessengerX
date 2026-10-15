@@ -28,7 +28,7 @@ mehet (állítható); az egy példányos futást zárolófájl biztosítja.
 
 **Fájlválasztás:** először a klasszikus Windows-párbeszédablak, ha az nem jön létre, az Avalonia ablaka, végül a programba épített böngésző – a gomb sosem „csinál semmit”.
 
-**Felfedezés:** UDP broadcast/multicast **és** az alhálózat átvizsgálása (a bejövő forgalmat tiltó tűzfal mögött is másodpercek alatt megtalálja a partnereket). Az első indításkor Windowson felajánlja a tűzfalszabályt.
+**Felfedezés:** UDP broadcast/multicast **és** az alhálózat átvizsgálása (tartalékként, ha nem jön bejövő kapcsolat: a bejövő forgalmat tiltó tűzfal mögött is megtalálja a partnereket). Az első indításkor Windowson felajánlja a tűzfalszabályt.
 
 ## Adatok
 

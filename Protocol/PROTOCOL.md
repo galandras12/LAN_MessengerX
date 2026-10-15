@@ -92,13 +92,12 @@ Küldés célpontjai: a multicast csoport, az alhálózat irányított broadcast
 * **depart fogadása**: a felhasználó eltávolítása.
 * A saját `from` azonosítójú datagramot el kell dobni (visszahallgatás).
 * Az új kliensek 30 másodpercenként újra `announce`-olnak, hogy a későn induló vagy hálózatot váltó társak is megtalálják őket.
-* **Alhálózat-átvizsgálás** (nem része az eredeti protokollnak, de azzal teljesen kompatibilis): az eredeti kliensek az `announce`-ot csak induláskor és a
-  „partnerlista frissítése” időközönként (alapból 5 percenként) küldik, ezért az, aki *később* indul, a korábban indultakat csak sokára találná meg – és sosem, ha a
-  tűzfal a bejövő forgalmat eldobja. Az új kliensek ezért indulás után néhány másodperccel, majd percenként (az első 10 percben, utána ritkábban) **TCP-kapcsolatot
-  próbálnak nyitni az alhálózat minden címének 50000-es portjára** (legfeljebb /22, nagyobb hálózatnál a saját /24); ahol válaszol valami, ott a szokásos
-  `MSG`+azonosító / `PUBKEY` / `HNDSHK` kézfogás következik. A partner azonosítóját a kézfogás után az **első üzenet** (`userdata get`) `<from>` mezője adja.
-  Ami nem kezd kézfogást 6 mp alatt, azt 10 percig nem zaklatjuk. Csak kimenő kapcsolatot igényel, tehát tűzfal mögött is működik. Kikapcsolható (*Hálózat*).
-* Induláskor az `announce` 2 és 6 másodperc múlva megismétlődik (az UDP veszíthet, főleg Wi-Fin).
+* **Alhálózat-átvizsgálás** (nem része az eredeti protokollnak, tartalék): ha induláskor 20 másodpercig senki nem csatlakozik hozzánk, vagy csatlakoznak, de egyetlen
+  felhasználó sem jön létre, az új kliensek **TCP-kapcsolatot próbálnak nyitni az alhálózat minden címének 50000-es portjára** (legfeljebb /22, nagyobb hálózatnál a saját /24),
+  és ahol válaszol valami, ott lefuttatják a szokásos `MSG`+azonosító / `PUBKEY` / `HNDSHK` kézfogást; a partner azonosítóját az **első üzenet** (`userdata get`) `<from>` mezője adja.
+  Csak kimenő kapcsolatot igényel, tehát a bejövő forgalmat eldobó tűzfal mögött is működik. **Nem fut**, amíg bejövő kapcsolatok érkeznek és vannak felhasználók: az eredeti
+  kliens partnerenként egyetlen adatfolyamot tart, egy extra kapcsolat a kézfogás közben kicseréli azt, a bezárása pedig a felhasználó törlését okozza. Kikapcsolható (*Hálózat*).
+
 * **`tcpport` (az eredeti LAN Messenger 2.x-től)**: az announce `<body>`-jában `<tcpport>` mező mondja meg, melyik TCP-porton figyel a feladó. A 2.x kliens
   alapértelmezésben „automatikus” portot használ (előbb 50000, ha foglalt, bármelyik szabad portot), és **olyan társhoz, amelyik nem közli a portját, a 0-s portra
   próbál csatlakozni** – vagyis egy `tcpport` nélküli kliens a 2.x számára láthatatlan marad (megjelenik a hálózaton, de sosem kerül a partnerlistára). Ezért

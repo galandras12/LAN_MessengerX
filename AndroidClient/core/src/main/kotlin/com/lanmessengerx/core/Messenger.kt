@@ -222,11 +222,12 @@ class Messenger(
         emit(MessengerEvent.ConnectionChanged(true, found.ip))
         broadcast(MessageType.DEPART)
         broadcast(MessageType.ANNOUNCE)
-        // UDP is lossy (especially on Wi-Fi): repeat the announce a little later, and scan the subnet as a second way to find people
+        // Fallback for networks where nobody can connect to us (a firewall dropping incoming traffic): scan the subnet.
+        // Not while incoming connections arrive - the original client keeps one stream per peer, and an extra
+        // connection from us replaces its stream in the middle of its handshake and drops the user when it closes.
         sweepRound = 0
-        engine.schedule({ safe { broadcast(MessageType.ANNOUNCE) } }, 2, TimeUnit.SECONDS)
-        engine.schedule({ safe { broadcast(MessageType.ANNOUNCE) } }, 6, TimeUnit.SECONDS)
-        engine.schedule({ safe { sweepSubnet() } }, 3, TimeUnit.SECONDS)
+        incomingSeen = 0
+        engine.schedule({ safe { sweepSubnet() } }, 20, TimeUnit.SECONDS)
     }
 
     private fun teardownNetwork() {
@@ -313,6 +314,8 @@ class Messenger(
     private val probing = HashSet<String>()
     private val notMessenger = HashMap<String, Long>()
     private var sweepRound = 0
+    @Volatile
+    private var incomingSeen = 0
 
     /**
      * Announces are only sent when a client starts and every few minutes after that, so a client that was started
@@ -323,6 +326,7 @@ class Messenger(
     private fun sweepSubnet() {
         val l = lan ?: return
         if (!cfg.scanSubnet || !connected || rsa == null) return
+        if (incomingSeen > 0 && users.isNotEmpty()) return // inbound works: the other clients connect to us themselves
         // first minutes: every minute; later: every five minutes
         if (sweepRound++ >= 10 && sweepRound % 5 != 0) return
         val known = HashSet<String>()
@@ -418,6 +422,7 @@ class Messenger(
             val head = String(first, 0, minOf(n, 4), Charsets.US_ASCII)
             if (head.startsWith("MSG")) {
                 s.soTimeout = 0
+                incomingSeen++
                 val peerId = String(first, 3, n - 3, Charsets.UTF_8)
                 val conn = Conn(s, incoming = true, peerId = peerId)
                 val key = rsa?.publicPem
