@@ -53,6 +53,9 @@ public sealed class Messenger : IDisposable
 
     private readonly BlockingCollection<Action> _queue = new();
     private readonly Thread _engineThread;
+    private long _busySince;
+    private volatile string _busyName = "";
+    private long _lastStallLog;
     private readonly List<Timer> _timers = new();
     private readonly CancellationTokenSource _cts = new();
 
@@ -146,12 +149,29 @@ public sealed class Messenger : IDisposable
     public Messenger(MessengerConfig cfg, Action<string>? log, Action<MessengerEvent> listener)
     {
         _cfg = cfg;
+        ThreadPool.GetMinThreads(out var minW, out var minIo);
+        if (minW < 32) ThreadPool.SetMinThreads(32, Math.Max(minIo, 32));
         _log = log ?? (_ => { });
         _listener = listener;
         LocalId = BuildUserId(cfg.MachineId, cfg.LogonName);
         _localUser = new User(LocalId, Proto.Version, "", cfg.UserName, cfg.Status, cfg.Note, Proto.UcFile | Proto.UcGroupMessage | Proto.UcFolder);
         _engineThread = new Thread(EngineLoop) { IsBackground = true, Name = "lmx-engine" };
         _engineThread.Start();
+        // the engine must never be blocked: say so in the log if it is (the key exchanges wait for it)
+        _timers.Add(new Timer(_ =>
+        {
+            long since = Volatile.Read(ref _busySince);
+            if (since != 0 && Environment.TickCount64 - since > 3000 && Environment.TickCount64 - _lastStallLog > 10000)
+            {
+                _lastStallLog = Environment.TickCount64;
+                _log($"engine is stuck for {Environment.TickCount64 - since} ms in {_busyName} ({_queue.Count} jobs waiting)");
+            }
+            else if (_queue.Count > 200 && Environment.TickCount64 - _lastStallLog > 10000)
+            {
+                _lastStallLog = Environment.TickCount64;
+                _log($"engine queue is long: {_queue.Count} jobs waiting");
+            }
+        }, null, 2000, 2000));
     }
 
     // ==========================================================================================
@@ -162,10 +182,19 @@ public sealed class Messenger : IDisposable
     {
         foreach (var a in _queue.GetConsumingEnumerable())
         {
+            _busyName = a.Method.Name;
+            Volatile.Write(ref _busySince, Environment.TickCount64);
             try { a(); }
             catch (Exception e) { _log($"engine error: {e}"); }
+            long took = Environment.TickCount64 - Volatile.Read(ref _busySince);
+            Volatile.Write(ref _busySince, 0);
+            if (took > 1500) _log($"engine was busy for {took} ms in {_busyName}");
         }
     }
+
+    /// <summary>Anything that blocks on a socket gets its own thread: the thread pool is small and slow to grow, and a
+    /// starved pool delays the key exchange of every new connection.</summary>
+    private static void Spawn(string name, Action a) => new Thread(() => a(), 512 * 1024) { IsBackground = true, Name = name }.Start();
 
     private void Post(Action a)
     {
@@ -251,11 +280,11 @@ public sealed class Messenger : IDisposable
         _lan = found;
         _log($"network up: {found.Name} ({found.Description}) {found.Ip}/{found.PrefixLength}, broadcast {found.Broadcast}");
         foreach (var c in NetUtil.ListInterfaces()) _log($"  adapter: {c.Name} ({c.Description}) {c.Ip}/{c.PrefixLength}{(c.SameAs(found) ? "  <- used" : "")}");
-        var server = new TcpServer(_cfg.TcpPort, s => Task.Run(() => HandleIncoming(s)), _log);
+        var server = new TcpServer(_cfg.TcpPort, s => Spawn("lmx-in", () => HandleIncoming(s)), _log);
         if (!server.Start())
         {
             // like the current original client: if the port is taken, take any free one and advertise it in the announce
-            server = new TcpServer(0, sock => Task.Run(() => HandleIncoming(sock)), _log);
+            server = new TcpServer(0, sock => Spawn("lmx-in", () => HandleIncoming(sock)), _log);
             if (!server.Start()) server = null!;
         }
         _tcp = server;
@@ -402,10 +431,16 @@ public sealed class Messenger : IDisposable
         if (todo.Count == 0) return;
         foreach (var h in todo) _probing.Add(h);
         _log($"subnet scan #{_sweepRound}: {todo.Count} addresses");
-        Task.Run(() =>
+        Spawn("lmx-scan", () =>
         {
-            using var gate = new SemaphoreSlim(48);
-            Parallel.ForEach(todo, new ParallelOptions { MaxDegreeOfParallelism = 48 }, h => ProbeHost(h, gate));
+            using var gate = new SemaphoreSlim(32);
+            foreach (var h in todo)
+            {
+                gate.Wait();
+                var host = h;
+                Spawn("lmx-probe", () => { try { ProbeHost(host, gate); } finally { gate.Release(); } });
+            }
+            for (int i = 0; i < 32; i++) gate.Wait();   // wait for the last probes before the semaphore goes away
         });
     }
 
@@ -448,7 +483,7 @@ public sealed class Messenger : IDisposable
 
     private void ConnectTo(string userId, string ip, int port)
     {
-        Task.Run(() =>
+        Spawn("lmx-out", () =>
         {
             Conn? conn = null;
             try
@@ -530,6 +565,8 @@ public sealed class Messenger : IDisposable
             {
                 var frame = conn.ReadFrame();
                 if (frame == null) break;
+                if (++conn.FramesRead <= 4)
+                    _log($"received {(frame.Length >= 6 ? Encoding.ASCII.GetString(frame, 0, 6) : "?")} from {conn.PeerId} ({frame.Length} bytes, {_queue.Count} jobs waiting)");
                 Post(() => OnFrame(conn, frame));
             }
         }
@@ -580,7 +617,7 @@ public sealed class Messenger : IDisposable
     {
         if (frame.Length < 6) { _log($"short frame ({frame.Length} bytes) from {conn.PeerId}"); return; }
         var tag = Encoding.ASCII.GetString(frame, 0, 6);
-        if (++conn.FramesSeen <= 6) _log($"frame {tag} ({frame.Length - 6} bytes) from {conn.PeerId}");
+        conn.FramesSeen++;
         var data = frame.AsSpan(6).ToArray();
         switch (DatagramTags.FromTag(tag))
         {
@@ -1280,7 +1317,7 @@ public sealed class Messenger : IDisposable
                 // therefore get a paced stream (see PROTOCOL.md).
                 bool paced = Proto.CompareVersions(_users.GetValueOrDefault(from)?.Version ?? "0.0.0", "3.0.0") < 0;
                 var port = PeerPort(m);
-                Task.Run(() => SendFileLoop(t, addr, port, paced));
+                Spawn("lmx-send", () => SendFileLoop(t, addr, port, paced));
                 break;
             }
             case FileOp.Decline:

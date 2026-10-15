@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
-using System.Threading.Channels;
+using System.Collections.Concurrent;
 
 namespace LanMessengerX.Core;
 
@@ -17,9 +17,10 @@ internal sealed class Conn
     /// <summary>Opened by the subnet scan: the peer's user id is not known until its first message arrives.</summary>
     public bool Probe { get; set; }
     public int FramesSeen { get; set; }
+    public int FramesRead;
 
     private readonly NetworkStream _stream;
-    private readonly Channel<byte[]> _outbox = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions { SingleReader = true });
+    private readonly BlockingCollection<byte[]> _outbox = new();
 
     public Conn(Socket socket, bool incoming, string peerId)
     {
@@ -28,17 +29,18 @@ internal sealed class Conn
         PeerId = peerId;
         PeerAddress = (socket.RemoteEndPoint as IPEndPoint)?.Address.ToString() ?? "";
         _stream = new NetworkStream(socket, ownsSocket: false);
-        _ = Task.Run(WriteLoop);
+        // dedicated thread: connections stay open for hours, and the thread pool must never run out of threads
+        new Thread(WriteLoop, 256 * 1024) { IsBackground = true, Name = "lmx-write" }.Start();
     }
 
-    private async Task WriteLoop()
+    private void WriteLoop()
     {
         try
         {
-            await foreach (var chunk in _outbox.Reader.ReadAllAsync())
+            foreach (var chunk in _outbox.GetConsumingEnumerable())
             {
-                await _stream.WriteAsync(chunk);
-                await _stream.FlushAsync();
+                _stream.Write(chunk, 0, chunk.Length);
+                _stream.Flush();
             }
         }
         catch (Exception)
@@ -48,7 +50,7 @@ internal sealed class Conn
     }
 
     /// <summary>Raw, unframed bytes (only used for the leading "MSG"+id packet).</summary>
-    public void SendRaw(byte[] data) => _outbox.Writer.TryWrite(data);
+    public void SendRaw(byte[] data) { try { if (!_outbox.IsAddingCompleted) _outbox.Add(data); } catch (InvalidOperationException) { } }
 
     /// <summary>4 byte big endian length, then 6 byte type tag, then data.</summary>
     public void SendFrame(DatagramType type, byte[] data)
@@ -88,7 +90,7 @@ internal sealed class Conn
     {
         if (Closed) return;
         Closed = true;
-        _outbox.Writer.TryComplete();
+        try { _outbox.CompleteAdding(); } catch (Exception) { }
         try { Socket.Shutdown(SocketShutdown.Both); } catch (Exception) { }
         try { Socket.Close(); } catch (Exception) { }
     }

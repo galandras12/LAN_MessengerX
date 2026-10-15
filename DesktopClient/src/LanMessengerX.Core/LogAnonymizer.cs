@@ -44,6 +44,6 @@ public static class LogAnonymizer
         return "SUMMARY: " +
                $"announces seen={Count("UDP announce from")}, tcp incoming={Count("TCP incoming")}, tcp connect={Count("TCP connect to")}, " +
                $"key exchanges={Count("key exchange with")}, handshake failures={Count("handshake")} failed, decrypt failures={Count("could not decrypt")}, " +
-               $"users added={Count("user added:")}, no user data={Count("no user data")}, scans={Count("subnet scan #")}, connect failures={Count(" failed:")}";
+               $"users added={Count("user added:")}, no user data={Count("no user data")}, scans={Count("subnet scan #")}, connect failures={Count(" failed:")}, engine stalls={Count("engine is stuck") + Count("engine was busy")}, frames received={Count("received PUBKEY") + Count("received HNDSHK") + Count("received MSG")}";
     }
 }
