@@ -2,99 +2,222 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:svc="using:LanMessengerX.App.Services"
         xmlns:c="using:LanMessengerX.App.Controls"
+        xmlns:loc="using:LanMessengerX.App.Localization"
         x:Class="LanMessengerX.App.Views.SettingsWindow"
         x:DataType="svc:AppState"
-        Title="Settings" Width="520" Height="720" MinWidth="420"
+        Title="{loc:T 'Preferences'}" Width="860" Height="660" MinWidth="720" MinHeight="520"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
 
-  <ScrollViewer>
-    <StackPanel Margin="24" Spacing="18">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Padding="16,10" BorderThickness="0,1,0,0" BorderBrush="#33808080">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Button Content="{loc:T 'Reset Preferences'}" Click="OnReset" />
+        <Button Grid.Column="2" Content="{loc:T 'Cancel'}" Click="OnCancel" MinWidth="88" HorizontalContentAlignment="Center" />
+        <Button Grid.Column="3" Content="{loc:T 'OK'}" Click="OnSave" Classes="accent" MinWidth="88" HorizontalContentAlignment="Center" Padding="16,7" Margin="8,0,0,0" />
+      </Grid>
+    </Border>
 
-      <!-- profile -->
-      <Border Classes="card">
-        <StackPanel Spacing="14">
+    <Grid ColumnDefinitions="210,1,*">
+      <ListBox x:Name="Nav" Classes="nav" Background="Transparent" Margin="0,8" SelectionChanged="OnNavChanged">
+        <ListBoxItem Content="{loc:T 'General'}" />
+        <ListBoxItem Content="{loc:T 'Account'}" />
+        <ListBoxItem Content="{loc:T 'Messages'}" />
+        <ListBoxItem Content="{loc:T 'History'}" />
+        <ListBoxItem Content="{loc:T 'Alerts'}" />
+        <ListBoxItem Content="{loc:T 'Network'}" />
+        <ListBoxItem Content="{loc:T 'File Transfer'}" />
+        <ListBoxItem Content="{loc:T 'Appearance'}" />
+        <ListBoxItem Content="{loc:T 'Hotkeys'}" />
+      </ListBox>
+      <Border Grid.Column="1" Background="#33808080" />
+
+      <Grid Grid.Column="2">
+
+        <!-- ===== General ===== -->
+        <ScrollViewer x:Name="PageGeneral"><StackPanel Margin="24,12" Spacing="8">
+          <TextBlock Classes="h" Text="{loc:T 'System'}" />
+          <CheckBox x:Name="AutoStartBox" Content="{loc:T 'Start LAN Messenger X on system startup'}" />
+          <CheckBox x:Name="ShowMainBox" Content="{loc:T 'Show main window when LAN Messenger X starts'}" />
+          <TextBlock Classes="h" Text="{loc:T 'System Tray'}" />
+          <CheckBox x:Name="TrayBox" Content="{loc:T 'Show system tray icon'}" />
+          <CheckBox x:Name="CloseToTrayBox" Content="{loc:T 'Keep running in the system tray when the window is closed'}" />
+          <CheckBox x:Name="MinimizeTrayBox" Content="{loc:T 'Minimize main window to system tray'}" />
+          <CheckBox x:Name="SingleClickBox" Content="{loc:T 'Single click on tray icon to open'}" />
+          <CheckBox x:Name="BalloonBox" Content="{loc:T 'Show balloon notifications in tray'}" />
+          <TextBlock Classes="h" Text="{loc:T 'Language'}" />
+          <TextBlock Text="{loc:T 'Select language:'}" Opacity="0.75" />
+          <ComboBox x:Name="LanguageBox" MinWidth="260" />
+        </StackPanel></ScrollViewer>
+
+        <!-- ===== Account ===== -->
+        <ScrollViewer x:Name="PageAccount" IsVisible="False"><StackPanel Margin="24,12" Spacing="8">
+          <TextBlock Classes="h" Text="{loc:T 'Personal'}" />
           <Grid ColumnDefinitions="Auto,*">
-            <c:AvatarControl Width="72" Height="72" DisplayName="{Binding Name}" Image="{Binding MyAvatar}" Status="{Binding Status}" VerticalAlignment="Center" />
+            <c:AvatarControl Width="72" Height="72" DisplayName="{Binding Name}" Image="{Binding MyAvatar}" Status="{Binding Status}" VerticalAlignment="Top" />
             <StackPanel Grid.Column="1" Spacing="6" Margin="16,0,0,0" VerticalAlignment="Center">
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="Choose picture…" Click="OnChoosePicture" />
-                <Button Content="Remove" Click="OnRemovePicture" />
+                <Button Content="{loc:T 'Browse for more pictures...'}" Click="OnChoosePicture" />
+                <Button Content="{loc:T 'Remove'}" Click="OnRemovePicture" />
               </StackPanel>
-              <TextBlock Text="Other people see this picture next to your name." FontSize="12" Opacity="0.65" TextWrapping="Wrap" />
+              <TextBlock Classes="hint" Text="{loc:T 'Other people see this picture next to your name.'}" />
             </StackPanel>
           </Grid>
-          <StackPanel Spacing="4">
-            <TextBlock Text="Name" FontSize="12" Opacity="0.7" />
-            <TextBox x:Name="NameBox" />
+          <TextBlock Text="{loc:T 'User name as seen by contacts:'}" Opacity="0.75" Margin="0,8,0,0" />
+          <TextBox x:Name="NameBox" MaxLength="40" />
+          <TextBlock Text="{loc:T 'Status message'}" Opacity="0.75" />
+          <TextBox x:Name="NoteBox" MaxLength="120" />
+          <TextBlock Text="{loc:T 'First Name:'}" Opacity="0.75" />
+          <TextBox x:Name="FirstNameBox" MaxLength="40" />
+          <TextBlock Text="{loc:T 'Last Name:'}" Opacity="0.75" />
+          <TextBox x:Name="LastNameBox" MaxLength="40" />
+          <TextBlock Text="{loc:T 'About:'}" Opacity="0.75" />
+          <TextBox x:Name="AboutBox" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxLength="400" />
+          <TextBlock Classes="h" Text="{loc:T 'Contacts'}" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="{loc:T 'Refresh contacts list every'}" VerticalAlignment="Center" />
+            <NumericUpDown x:Name="RefreshBox" Minimum="20" Maximum="3600" Increment="10" FormatString="0" Width="130" />
+            <TextBlock Text="{loc:T 'seconds'}" VerticalAlignment="Center" />
           </StackPanel>
-          <StackPanel Spacing="4">
-            <TextBlock Text="Note (optional)" FontSize="12" Opacity="0.7" />
-            <TextBox x:Name="NoteBox" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" />
-          </StackPanel>
-          <StackPanel Spacing="4">
-            <TextBlock Text="Status" FontSize="12" Opacity="0.7" />
-            <ComboBox x:Name="StatusBox" HorizontalAlignment="Stretch" />
-          </StackPanel>
-        </StackPanel>
-      </Border>
+        </StackPanel></ScrollViewer>
 
-      <!-- preferences -->
-      <StackPanel Spacing="8">
-        <TextBlock Text="Preferences" FontWeight="SemiBold" />
-        <CheckBox x:Name="HistoryBox" Content="Save conversation history on this computer" />
-        <CheckBox x:Name="NotifyBox" Content="Show notifications for new messages" />
-        <CheckBox x:Name="TrayBox" Content="Keep running in the system tray when the window is closed" />
-        <CheckBox x:Name="MinimizedBox" Content="Start minimised to the tray" />
-        <StackPanel Spacing="4" Margin="0,6,0,0">
-          <TextBlock Text="Theme" FontSize="12" Opacity="0.7" />
-          <ComboBox x:Name="ThemeBox" HorizontalAlignment="Stretch">
-            <ComboBoxItem Content="Follow system" />
-            <ComboBoxItem Content="Light" />
-            <ComboBoxItem Content="Dark" />
-          </ComboBox>
-        </StackPanel>
-        <StackPanel Spacing="4" Margin="0,6,0,0">
-          <TextBlock Text="Save received files to" FontSize="12" Opacity="0.7" />
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBox x:Name="DownloadBox" />
-            <Button Grid.Column="1" Content="Browse…" Click="OnBrowse" Margin="8,0,0,0" />
+        <!-- ===== Messages ===== -->
+        <ScrollViewer x:Name="PageMessages" IsVisible="False"><StackPanel Margin="24,12" Spacing="8">
+          <TextBlock Classes="h" Text="{loc:T 'Message Window'}" />
+          <CheckBox x:Name="EmoticonBox" Content="{loc:T 'Show emoticons in instant messages'}" />
+          <CheckBox x:Name="TimeBox" Content="{loc:T 'Add time stamp to instant messages'}" />
+          <CheckBox x:Name="DateBox" Content="{loc:T 'Show date in time stamp'}" Margin="24,0,0,0" />
+          <CheckBox x:Name="LinksBox" Content="{loc:T 'Allow hyperlinks in instant messages'}" />
+          <CheckBox x:Name="PathLinkBox" Content="{loc:T 'Convert network paths to links'}" Margin="24,0,0,0" />
+          <CheckBox x:Name="TrimBox" Content="{loc:T 'Remove whitespace from start and end of messages'}" />
+          <CheckBox x:Name="ClearBox" Content="{loc:T 'Clear messages when window is closed'}" />
+          <TextBlock Classes="h" Text="{loc:T 'Message Font'}" />
+          <Grid ColumnDefinitions="*,Auto,Auto">
+            <ComboBox x:Name="FontBox" HorizontalAlignment="Stretch" />
+            <NumericUpDown x:Name="FontSizeBox" Grid.Column="1" Minimum="6" Maximum="36" FormatString="0" Width="110" Margin="8,0,0,0" />
+            <TextBox x:Name="ColorBox" Grid.Column="2" Width="110" MaxLength="7" Watermark="#RRGGBB" Margin="8,0,0,0" />
           </Grid>
-        </StackPanel>
-      </StackPanel>
+          <TextBlock Classes="hint" Text="{loc:T 'The font and colour other people see your messages in (clients of the 1.x series show them).'}" />
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+            <TextBlock Text="{loc:T 'Incoming message text size:'}" VerticalAlignment="Center" />
+            <NumericUpDown x:Name="TextSizeBox" Minimum="8" Maximum="32" FormatString="0" Width="110" />
+          </StackPanel>
+        </StackPanel></ScrollViewer>
 
-      <!-- network -->
-      <StackPanel Spacing="6">
-        <TextBlock Text="Network" FontWeight="SemiBold" />
-        <TextBlock x:Name="NetText" Opacity="0.75" TextWrapping="Wrap" />
-        <StackPanel Spacing="4" Margin="0,6,0,0">
-          <TextBlock Text="Network adapter" FontSize="12" Opacity="0.7" />
+        <!-- ===== History ===== -->
+        <ScrollViewer x:Name="PageHistory" IsVisible="False"><StackPanel Margin="24,12" Spacing="8">
+          <TextBlock Classes="h" Text="{loc:T 'Message History'}" />
+          <CheckBox x:Name="HistoryBox" Content="{loc:T 'Keep a history of conversations'}" />
+          <Button Content="{loc:T 'Clear Message History'}" Click="OnClearHistory" HorizontalAlignment="Left" />
+          <TextBlock Classes="h" Text="{loc:T 'History File Location'}" />
+          <RadioButton x:Name="HistoryDefaultRadio" GroupName="hp" Content="{loc:T 'System default location'}" />
+          <RadioButton x:Name="HistoryCustomRadio" GroupName="hp" Content="{loc:T 'Custom location'}" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox x:Name="HistoryDirBox" />
+            <Button Grid.Column="1" Content="..." Click="OnBrowseHistory" Margin="8,0,0,0" />
+          </Grid>
+          <TextBlock Classes="h" Text="{loc:T 'File Transfer History'}" />
+          <CheckBox x:Name="FileHistoryBox" Content="{loc:T 'Keep a history of file transfers'}" />
+          <Button Content="{loc:T 'Clear Transfer History'}" Click="OnClearFileHistory" HorizontalAlignment="Left" />
+        </StackPanel></ScrollViewer>
+
+        <!-- ===== Alerts ===== -->
+        <ScrollViewer x:Name="PageAlerts" IsVisible="False"><StackPanel Margin="24,12" Spacing="8">
+          <TextBlock Classes="h" Text="{loc:T 'Status Alerts'}" />
+          <CheckBox x:Name="AlertBox" Content="{loc:T 'Display status alerts'}" />
+          <CheckBox x:Name="NoBusyAlertBox" Content="{loc:T 'Suspend alerts when my status is Busy'}" Margin="24,0,0,0" />
+          <CheckBox x:Name="NoDndAlertBox" Content="{loc:T 'Suspend alerts when my status is Do Not Disturb'}" Margin="24,0,0,0" />
+          <TextBlock Classes="h" Text="{loc:T 'Sounds'}" />
+          <CheckBox x:Name="SoundBox" Content="{loc:T 'Provide feedback with sounds'}" />
+          <TextBlock Text="{loc:T 'Play sounds for these events:'}" Opacity="0.75" Margin="24,0,0,0" />
+          <CheckBox x:Name="SndMsgBox" Content="{loc:T 'New message'}" Margin="24,0,0,0" />
+          <CheckBox x:Name="SndOnlineBox" Content="{loc:T 'User online'}" Margin="24,0,0,0" />
+          <CheckBox x:Name="SndOfflineBox" Content="{loc:T 'User offline'}" Margin="24,0,0,0" />
+          <CheckBox x:Name="SndFileBox" Content="{loc:T 'New file'}" Margin="24,0,0,0" />
+          <CheckBox x:Name="SndDoneBox" Content="{loc:T 'File transfer finished'}" Margin="24,0,0,0" />
+          <CheckBox x:Name="NoBusySoundBox" Content="{loc:T 'Suspend sounds when my status is Busy'}" Margin="24,0,0,0" />
+          <CheckBox x:Name="NoDndSoundBox" Content="{loc:T 'Suspend sound when my status is Do Not Disturb'}" Margin="24,0,0,0" />
+        </StackPanel></ScrollViewer>
+
+        <!-- ===== Network ===== -->
+        <ScrollViewer x:Name="PageNetwork" IsVisible="False"><StackPanel Margin="24,12" Spacing="8">
+          <TextBlock x:Name="NetText" Classes="hint" />
+          <TextBlock Classes="h" Text="{loc:T 'Connection'}" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="{loc:T 'Connection timeout (seconds):'}" VerticalAlignment="Center" />
+            <NumericUpDown x:Name="TimeoutBox" Minimum="1" Maximum="120" FormatString="0" Width="110" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="{loc:T 'Maximum number of retries:'}" VerticalAlignment="Center" />
+            <NumericUpDown x:Name="RetriesBox" Minimum="0" Maximum="10" FormatString="0" Width="110" />
+          </StackPanel>
+          <TextBlock Text="{loc:T 'Network adapter'}" Opacity="0.75" Margin="0,6,0,0" />
           <ComboBox x:Name="AdapterBox" HorizontalAlignment="Stretch" />
-          <TextBlock Text="Pick the adapter of the network where your colleagues are if automatic detection chooses a VPN or virtual one." FontSize="12" Opacity="0.65" TextWrapping="Wrap" />
-        </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
-          <Button x:Name="FirewallBtn" Content="Allow in Windows Firewall…" Click="OnFirewall" />
-          <Button Content="Refresh" Click="OnRefreshNetwork" />
-          <Button Content="Open log folder" Click="OnOpenLog" />
-        </StackPanel>
-        <TextBlock x:Name="FirewallText" FontSize="12" Opacity="0.75" TextWrapping="Wrap" />
-        <TextBox x:Name="LogBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas,Menlo,monospace" FontSize="11" Height="150" />
-      </StackPanel>
+          <TextBlock Classes="hint" Text="{loc:T 'Pick the adapter of the network where your colleagues are if automatic detection chooses a VPN or virtual one.'}" />
+          <CheckBox x:Name="ScanBox" Content="{loc:T 'Also look for people by scanning the local network'}" Margin="0,6,0,0" />
+          <TextBlock Classes="hint" Text="{loc:T 'Finds people within seconds even if broadcasts are filtered or the firewall blocks incoming connections.'}" />
+          <TextBlock Classes="h" Text="{loc:T 'Broadcast'}" />
+          <TextBlock Text="{loc:T 'Broadcast list:'}" Opacity="0.75" />
+          <ListBox x:Name="BroadcastList" Height="90" />
+          <Grid ColumnDefinitions="*,Auto,Auto">
+            <TextBox x:Name="BroadcastBox" Watermark="{loc:T 'Broadcast address:'}" />
+            <Button Grid.Column="1" Content="{loc:T '&lt;- Add'}" Click="OnAddBroadcast" Margin="8,0,0,0" />
+            <Button Grid.Column="2" Content="{loc:T 'Delete'}" Click="OnDeleteBroadcast" Margin="8,0,0,0" />
+          </Grid>
+          <TextBlock Classes="h" Text="{loc:T 'Advanced'}" />
+          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+            <TextBlock Text="{loc:T 'Multicast address:'}" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <TextBox x:Name="MulticastBox" Grid.Column="1" Margin="0,0,0,8" />
+            <TextBlock Grid.Row="1" Text="{loc:T 'UDP Port*:'}" VerticalAlignment="Center" />
+            <NumericUpDown x:Name="UdpBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" Minimum="1024" Maximum="65535" FormatString="0" HorizontalAlignment="Left" Width="130" />
+            <TextBlock Grid.Row="2" Text="{loc:T 'TCP Port*:'}" VerticalAlignment="Center" />
+            <NumericUpDown x:Name="TcpBox" Grid.Row="2" Grid.Column="1" Minimum="1024" Maximum="65535" FormatString="0" HorizontalAlignment="Left" Width="130" />
+          </Grid>
+          <TextBlock Classes="hint" Text="{loc:T '* Takes effect after you restart LAN Messenger X.'}" />
+          <TextBlock Classes="h" Text="{loc:T 'Troubleshooting'}" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button x:Name="FirewallBtn" Content="{loc:T 'Allow in Windows Firewall...'}" Click="OnFirewall" />
+            <Button Content="{loc:T 'Refresh Contacts List'}" Click="OnRefreshNetwork" />
+            <Button Content="{loc:T 'Open log folder'}" Click="OnOpenLog" />
+          </StackPanel>
+          <TextBlock x:Name="FirewallText" Classes="hint" />
+          <TextBox x:Name="LogBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas,Menlo,monospace" FontSize="11" Height="150" />
+        </StackPanel></ScrollViewer>
 
-      <!-- about -->
-      <Border Classes="card">
-        <StackPanel Spacing="6">
-          <TextBlock x:Name="AboutTitle" FontWeight="SemiBold" />
-          <TextBlock TextWrapping="Wrap" Opacity="0.75"
-                     Text="Serverless messaging for local networks. Speaks the original LAN Messenger protocol, so it works with the Android, Windows, Linux and older clients on the same network." />
-          <TextBlock TextWrapping="Wrap" Opacity="0.75"
-                     Text="Original LAN Messenger by Dilip Radhakrishnan (Qualia Digital Solutions). Modernised and continued by galandras12. Free software, GNU GPL version 3." />
-        </StackPanel>
-      </Border>
+        <!-- ===== File transfer ===== -->
+        <ScrollViewer x:Name="PageFiles" IsVisible="False"><StackPanel Margin="24,12" Spacing="8">
+          <TextBlock Classes="h" Text="{loc:T 'Incoming File Request'}" />
+          <CheckBox x:Name="AutoFileBox" Content="{loc:T 'Accept and start receiving files automatically'}" />
+          <CheckBox x:Name="ShowTransfersBox" Content="{loc:T 'Show File Transfer window when sending or receiving files'}" />
+          <TextBlock Classes="h" Text="{loc:T 'Store Received Files in this Folder'}" />
+          <Grid ColumnDefinitions="*,Auto,Auto">
+            <TextBox x:Name="DownloadBox" />
+            <Button Grid.Column="1" Content="..." Click="OnBrowse" Margin="8,0,0,0" />
+            <Button Grid.Column="2" Content="{loc:T 'View Files'}" Click="OnViewFiles" Margin="8,0,0,0" />
+          </Grid>
+        </StackPanel></ScrollViewer>
 
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-        <Button Content="Cancel" Click="OnCancel" MinWidth="88" HorizontalContentAlignment="Center" />
-        <Button Content="Save" Click="OnSave" Classes="accent" MinWidth="88" HorizontalContentAlignment="Center" Padding="16,7" />
-      </StackPanel>
-    </StackPanel>
-  </ScrollViewer>
+        <!-- ===== Appearance ===== -->
+        <ScrollViewer x:Name="PageLook" IsVisible="False"><StackPanel Margin="24,12" Spacing="8">
+          <TextBlock Classes="h" Text="{loc:T 'Theme'}" />
+          <ComboBox x:Name="ThemeBox" HorizontalAlignment="Left" MinWidth="260">
+            <ComboBoxItem Content="{loc:T 'Follow system'}" />
+            <ComboBoxItem Content="{loc:T 'Light'}" />
+            <ComboBoxItem Content="{loc:T 'Dark'}" />
+          </ComboBox>
+          <TextBlock Classes="h" Text="{loc:T 'Contacts List'}" />
+          <CheckBox x:Name="TooltipBox" Content="{loc:T 'Show status as tooltip'}" />
+        </StackPanel></ScrollViewer>
+
+        <!-- ===== Hotkeys ===== -->
+        <ScrollViewer x:Name="PageKeys" IsVisible="False"><StackPanel Margin="24,12" Spacing="8">
+          <TextBlock Classes="h" Text="{loc:T 'Messages'}" />
+          <TextBlock Text="{loc:T 'Send messages using:'}" Opacity="0.75" />
+          <RadioButton x:Name="EnterRadio" GroupName="send" Content="{loc:T '&lt;Enter&gt;'}" />
+          <RadioButton x:Name="CtrlEnterRadio" GroupName="send" Content="{loc:T '&lt;Ctrl + Enter&gt;'}" />
+          <TextBlock Classes="hint" Text="{loc:T 'Shift+Enter always starts a new line.'}" />
+        </StackPanel></ScrollViewer>
+
+      </Grid>
+    </Grid>
+  </DockPanel>
 </Window>

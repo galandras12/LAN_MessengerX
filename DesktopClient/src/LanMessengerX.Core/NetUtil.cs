@@ -105,6 +105,19 @@ public static class NetUtil
         return list;
     }
 
+    /// <summary>Addresses of the interface's subnet (at most 1022; networks larger than /22 are cut down to the /24 around the address).</summary>
+    public static IEnumerable<string> SubnetHosts(LanInterface lan)
+    {
+        var a = lan.Address.GetAddressBytes();
+        uint ip = (uint)(a[0] << 24 | a[1] << 16 | a[2] << 8 | a[3]);
+        int prefix = lan.PrefixLength is < 22 or > 30 ? 24 : lan.PrefixLength;
+        uint mask = uint.MaxValue << (32 - prefix);
+        uint net = ip & mask;
+        uint bc = net | ~mask;
+        for (uint h = net + 1; h < bc; h++)
+            yield return $"{h >> 24}.{h >> 16 & 255}.{h >> 8 & 255}.{h & 255}";
+    }
+
     private static int SafeIndex(IPInterfaceProperties p)
     {
         try { return p.GetIPv4Properties()?.Index ?? 0; } catch (Exception) { return 0; }

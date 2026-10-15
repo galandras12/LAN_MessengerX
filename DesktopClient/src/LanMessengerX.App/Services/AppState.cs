@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using LanMessengerX.App.Localization;
 using LanMessengerX.App.ViewModels;
 using LanMessengerX.Core;
 
@@ -12,10 +13,15 @@ public sealed class AppState : Observable
     public static AppState Current { get; private set; } = null!;
 
     public AppSettings Settings { get; }
-    public HistoryStore History { get; }
+    public HistoryStore History { get; private set; }
     public Messenger? Messenger { get; private set; }
     public ObservableCollection<ContactVm> Contacts { get; } = new();
+    /// <summary>What the people list shows: group headers and the contacts below them.</summary>
+    public ObservableCollection<RosterRow> Roster { get; } = new();
     public ObservableCollection<RoomVm> Rooms { get; } = new();
+    public PublicVm PublicChat { get; }
+    /// <summary>Every file transfer of this session, newest first (the File Transfers window).</summary>
+    public ObservableCollection<FileVm> Transfers { get; } = new();
     private readonly Dictionary<string, ChatVm> _chats = new();
     private readonly Dictionary<string, ContactVm> _contactById = new();
     private readonly HashSet<string> _online = new();
@@ -40,7 +46,9 @@ public sealed class AppState : Observable
     {
         Current = this;
         Settings = settings;
-        History = new HistoryStore(AppSettings.DataDir);
+        Loc.Use(settings.Language);
+        History = new HistoryStore(settings.EffectiveHistoryDir);
+        PublicChat = new PublicVm(this);
         Directory.CreateDirectory(CacheDir);
         if (string.IsNullOrEmpty(settings.MachineId))
         {
@@ -51,8 +59,12 @@ public sealed class AppState : Observable
         _name = settings.Name;
         _note = settings.Note;
         _status = settings.Status;
+        if (settings.Groups.Count == 0 && settings.UserGroups.Count == 0) { /* no custom groups: flat list */ }
+        Avatars.EnsureDefault(this);
         if (File.Exists(AvatarFile)) _myAvatar = LoadBitmap(AvatarFile);
     }
+
+    public IReadOnlyList<Bitmap?> StockAvatars { get; } = Enumerable.Range(0, Avatars.StockCount).Select(Avatars.Stock).ToList();
 
     // ---- profile / connection ---------------------------------------------------------------------
 
@@ -71,42 +83,77 @@ public sealed class AppState : Observable
         get => _selected;
         set
         {
+            var previous = _selected;
             if (!Set(ref _selected, value)) return;
+            if (Settings.ClearOnClose && previous != null && previous != value) previous.Items.Clear();
             if (value is ChatVm c) { c.Contact.Unread = 0; }
             if (value is RoomVm r) { r.Unread = 0; RoomsChanged(); }
+            if (value is PublicVm pv) { pv.Unread = 0; RoomsChanged(); }
             Raise(nameof(HasSelection));
             Raise(nameof(TotalUnread));
         }
     }
 
     public bool HasSelection => _selected != null;
-    public int TotalUnread => Contacts.Sum(c => c.Unread) + Rooms.Sum(r => r.Unread);
+    public int TotalUnread => Contacts.Sum(c => c.Unread) + Rooms.Sum(r => r.Unread) + PublicChat.Unread;
     public event Action? UnreadChanged;
 
     // ---- lifecycle ----------------------------------------------------------------------------------
 
+    public MessengerConfig BuildConfig() => new()
+    {
+        UserName = Settings.Name,
+        Status = Settings.Status,
+        Note = Settings.Note,
+        MachineId = Settings.MachineId,
+        LogonName = Environment.UserName,
+        HostName = Environment.MachineName,
+        OsName = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
+        CacheDir = CacheDir,
+        UdpPort = Settings.UdpPort,
+        TcpPort = Settings.TcpPort,
+        Multicast = string.IsNullOrWhiteSpace(Settings.Multicast) ? Proto.DefaultMulticast : Settings.Multicast,
+        TimeoutSec = Math.Max(1, Settings.TimeoutSeconds),
+        MaxRetries = Math.Max(0, Settings.MaxRetries),
+        RefreshSec = Settings.RefreshSeconds,
+        PreferredInterface = Settings.PreferredInterface,
+        ScanSubnet = Settings.ScanSubnet,
+        ExtraBroadcasts = Settings.ExtraBroadcasts.ToList(),
+        FirstName = Settings.FirstName,
+        LastName = Settings.LastName,
+        About = Settings.About,
+        MessageFont = FontSpec(Settings.MessageFont, Settings.MessageFontSize),
+        MessageColor = Settings.MessageColor,
+    };
+
+    /// <summary>Qt's QFont string form, which the original clients parse.</summary>
+    public static string FontSpec(string family, int size) => $"{family},{size},-1,5,50,0,0,0,0,0";
+
     public void Start()
     {
         FileLog.Reset();
-        var cfg = new MessengerConfig
-        {
-            UserName = Settings.Name,
-            Status = Settings.Status,
-            Note = Settings.Note,
-            MachineId = Settings.MachineId,
-            LogonName = Environment.UserName,
-            HostName = Environment.MachineName,
-            OsName = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
-            CacheDir = CacheDir,
-            UdpPort = Settings.Port,
-            TcpPort = Settings.Port,
-            PreferredInterface = Settings.PreferredInterface,
-            ExtraBroadcasts = Settings.ExtraBroadcasts.ToList(),
-        };
-        Messenger = new Messenger(cfg, FileLog.Write, e => Dispatcher.UIThread.Post(() => OnEvent(e)));
+        Messenger = new Messenger(BuildConfig(), FileLog.Write, e => Dispatcher.UIThread.Post(() => OnEvent(e)));
         Messenger.Start();
         if (File.Exists(AvatarFile)) Messenger.SetLocalAvatar(AvatarFile);
+        RebuildRoster();
     }
+
+    /// <summary>Called after the settings window saved: everything that can change without a restart.</summary>
+    public void ApplySettings()
+    {
+        Loc.Use(Settings.Language);
+        Messenger?.UpdateDetails(Settings.FirstName, Settings.LastName, Settings.About, FontSpec(Settings.MessageFont, Settings.MessageFontSize), Settings.MessageColor);
+        if (Messenger != null) Messenger.PreferredInterface = Settings.PreferredInterface;
+        Autostart.Set(Settings.AutoStart);
+        (Avalonia.Application.Current as App)?.ApplyTheme(Settings.Theme);
+        (Avalonia.Application.Current as App)?.ApplyTray();
+        RebuildRoster();
+        Raise(nameof(ConnectionText));
+        Settings.Save();
+        SettingsApplied?.Invoke();
+    }
+
+    public event Action? SettingsApplied;
 
     public void Shutdown()
     {
@@ -148,6 +195,83 @@ public sealed class AppState : Observable
             int cur = Contacts.IndexOf(sorted[i]);
             if (cur != i) Contacts.Move(cur, i);
         }
+        RebuildRoster();
+    }
+
+    // ---- contact groups ----------------------------------------------------------------------------
+
+    public IReadOnlyList<AppSettings.ContactGroup> Groups => Settings.Groups;
+
+    /// <summary>Group headers (only once the user made a group of their own) and the contacts below them, collapsed groups without contacts.</summary>
+    public void RebuildRoster()
+    {
+        var keepSelected = _selected;
+        Roster.Clear();
+        var known = Settings.Groups.Select(g => g.Id).ToHashSet();
+        var ordered = Contacts.OrderBy(c => Proto.IsOffline(c.Status)).ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+        foreach (var c in ordered) if (!known.Contains(c.GroupId)) c.GroupId = "";
+        if (Settings.Groups.Count == 0)
+        {
+            foreach (var c in ordered) Roster.Add(c);
+            return;
+        }
+        foreach (var g in Settings.Groups.Prepend(new AppSettings.ContactGroup { Id = "", Name = Loc.T("General"), Collapsed = _generalCollapsed }))
+        {
+            var members = ordered.Where(c => c.GroupId == g.Id).ToList();
+            Roster.Add(new GroupRowVm(g.Id, g.Name, g.Collapsed, members.Count));
+            if (!g.Collapsed) foreach (var c in members) Roster.Add(c);
+        }
+        _selected = keepSelected;
+        RosterChanged?.Invoke();
+    }
+
+    private bool _generalCollapsed;
+    public event Action? RosterChanged;
+
+    public void ToggleGroup(GroupRowVm row)
+    {
+        if (row.IsDefault) _generalCollapsed = !_generalCollapsed;
+        else if (Settings.Groups.FirstOrDefault(g => g.Id == row.Id) is { } g) g.Collapsed = !g.Collapsed;
+        Settings.Save();
+        RebuildRoster();
+    }
+
+    public void AddGroup(string name)
+    {
+        name = name.Trim();
+        if (name.Length == 0 || Settings.Groups.Any(g => string.Equals(g.Name, name, StringComparison.CurrentCultureIgnoreCase))) return;
+        Settings.Groups.Add(new AppSettings.ContactGroup { Name = name });
+        Settings.Save();
+        RebuildRoster();
+    }
+
+    public bool GroupExists(string name) => Settings.Groups.Any(g => string.Equals(g.Name, name.Trim(), StringComparison.CurrentCultureIgnoreCase));
+
+    public void RenameGroup(string id, string name)
+    {
+        name = name.Trim();
+        if (name.Length == 0 || Settings.Groups.FirstOrDefault(g => g.Id == id) is not { } g) return;
+        g.Name = name;
+        Settings.Save();
+        RebuildRoster();
+    }
+
+    public void DeleteGroup(string id)
+    {
+        Settings.Groups.RemoveAll(g => g.Id == id);
+        foreach (var k in Settings.UserGroups.Where(kv => kv.Value == id).Select(kv => kv.Key).ToList()) Settings.UserGroups.Remove(k);
+        foreach (var c in Contacts.Where(c => c.GroupId == id)) c.GroupId = "";
+        Settings.Save();
+        RebuildRoster();
+    }
+
+    public void MoveContact(ContactVm c, string groupId)
+    {
+        c.GroupId = groupId;
+        if (groupId.Length == 0) Settings.UserGroups.Remove(c.Id);
+        else Settings.UserGroups[c.Id] = groupId;
+        Settings.Save();
+        RebuildRoster();
     }
 
     private static long Now() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -159,16 +283,19 @@ public sealed class AppState : Observable
             case MessengerEvent.ConnectionChanged c:
                 Connected = c.Connected;
                 Ip = c.Ip;
-                ConnectionText = c.Connected ? $"Online · {c.Ip}" : "Waiting for a network…";
+                ConnectionText = c.Connected ? Loc.F("Online · {0}", c.Ip ?? "") : Loc.T("Waiting for a network…");
                 break;
             case MessengerEvent.UserOnline u:
             {
                 var chat = ChatFor(u.User.Id, u.User);
+                bool wasOnline = chat.Online;
                 chat.Online = true;
                 _online.Add(u.User.Id);
+                chat.Contact.GroupId = Settings.UserGroups.GetValueOrDefault(u.User.Id, "");
                 if (!Contacts.Contains(chat.Contact)) Contacts.Add(chat.Contact);
                 SortContacts();
                 chat.RaiseHeader();
+                if (!wasOnline && !Proto.IsOffline(u.User.Status)) StatusAlert(Loc.F("{0} is online.", u.User.Name), SoundEvent.UserOnline);
                 break;
             }
             case MessengerEvent.UserUpdated u:
@@ -186,8 +313,10 @@ public sealed class AppState : Observable
                     chat.Online = false;
                     chat.Contact.Typing = false;
                     Contacts.Remove(chat.Contact);
+                    RebuildRoster();
                     chat.RaiseHeader();
                     if (_selected == chat) Raise(nameof(Selected));
+                    StatusAlert(Loc.F("{0} is offline.", u.Name), SoundEvent.UserOffline);
                 }
                 break;
             }
@@ -200,7 +329,7 @@ public sealed class AppState : Observable
                 chat.Contact.Typing = false;
                 chat.AddItem(new MessageVm(t.Text, false, chat.Title, t.TimeMs, t.MessageId, Delivery.Delivered, false));
                 SaveHistory(chat.Key, chat.Title, chat.Title, t.Text, false, t.TimeMs);
-                Incoming(chat, chat.Title, t.Text);
+                Incoming(chat, chat.Title, t.Text, SoundEvent.NewMessage);
                 ItemAdded?.Invoke(chat);
                 break;
             }
@@ -213,9 +342,9 @@ public sealed class AppState : Observable
             case MessengerEvent.BroadcastMessage b:
             {
                 var chat = ChatFor(b.UserId);
-                chat.AddItem(new BroadcastVm($"Broadcast from {chat.Title}", b.Text, b.TimeMs));
+                chat.AddItem(new BroadcastVm(Loc.F("Broadcast from {0}", chat.Title), b.Text, b.TimeMs));
                 SaveHistory(chat.Key, chat.Title, chat.Title, "[broadcast] " + b.Text, false, b.TimeMs);
-                Incoming(chat, $"{chat.Title} · broadcast", b.Text);
+                Incoming(chat, Loc.F("{0} · broadcast", chat.Title), b.Text, SoundEvent.NewMessage);
                 ItemAdded?.Invoke(chat);
                 break;
             }
@@ -252,7 +381,7 @@ public sealed class AppState : Observable
             case MessengerEvent.RoomNotice rn:
             {
                 var room = Rooms.FirstOrDefault(r => r.ThreadId == rn.ThreadId);
-                room?.AddItem(new NoticeVm($"{NameOf(rn.UserId)} {(rn.Joined ? "joined" : "left")}", rn.TimeMs));
+                room?.AddItem(new NoticeVm(Loc.F(rn.Joined ? "{0} joined" : "{0} left", NameOf(rn.UserId)), rn.TimeMs));
                 if (room != null) ItemAdded?.Invoke(room);
                 break;
             }
@@ -267,10 +396,19 @@ public sealed class AppState : Observable
                 var who = NameOf(rm.UserId);
                 room.AddItem(new MessageVm(rm.Text, false, who, rm.TimeMs, 0, Delivery.Delivered, true));
                 room.LastTime = rm.TimeMs;
-                SaveHistory("group", "Group conversations", who, rm.Text, false, rm.TimeMs);
-                Incoming(room, $"Group · {who}", rm.Text);
+                SaveHistory("group", Loc.T("Group conversations"), who, rm.Text, false, rm.TimeMs);
+                Incoming(room, Loc.F("Group · {0}", who), rm.Text, SoundEvent.NewMessage);
                 ItemAdded?.Invoke(room);
                 RoomsChanged();
+                break;
+            }
+            case MessengerEvent.PublicMessage pm:
+            {
+                var who = NameOf(pm.UserId);
+                PublicChat.AddItem(new MessageVm(pm.Text, false, who, pm.TimeMs, 0, Delivery.Delivered, true));
+                SaveHistory(PublicVm.KeyValue, Loc.T("Public chat"), who, pm.Text, false, pm.TimeMs);
+                Incoming(PublicChat, Loc.F("Public chat · {0}", who), pm.Text, SoundEvent.NewMessage);
+                ItemAdded?.Invoke(PublicChat);
                 break;
             }
             case MessengerEvent.Transfer tr:
@@ -291,22 +429,33 @@ public sealed class AppState : Observable
     public string RoomTitle(RoomVm r)
     {
         var names = r.Participants.Where(p => p != LocalId).Select(NameOf).ToList();
-        return names.Count == 0 ? "Group chat" : string.Join(", ", names);
+        return names.Count == 0 ? Loc.T("Group chat") : string.Join(", ", names);
     }
 
-    private void Incoming(ConversationVm conv, string title, string text)
+    private void Incoming(ConversationVm conv, string title, string text, SoundEvent sound)
     {
         bool visible = WindowActive && _selected == conv;
         if (visible) return;
         if (conv is ChatVm c) c.Contact.Unread++;
         else if (conv is RoomVm r) r.Unread++;
+        else if (conv is PublicVm p) p.Unread++;
         Raise(nameof(TotalUnread));
         UnreadChanged?.Invoke();
-        if (Settings.Notifications)
+        Sounds.Play(Settings, Status, sound);
+        if (Settings.Notifications && !SuspendedAlerts)
         {
             Notification?.Invoke(title, text, conv.Key);
             if (!WindowActive) Shell.Notify(title, text);
         }
+    }
+
+    private bool SuspendedAlerts => (Settings.NoBusyAlert && Status == "busy") || (Settings.NoDndAlert && Status == "dnd");
+
+    /// <summary>"X is online/offline" popup and sound (the original's status alerts).</summary>
+    private void StatusAlert(string text, SoundEvent sound)
+    {
+        Sounds.Play(Settings, Status, sound);
+        if (Settings.StatusAlerts && !SuspendedAlerts && Settings.Notifications) Shell.Notify("LAN Messenger X", text);
     }
 
     private void OnTransfer(TransferInfo t)
@@ -315,25 +464,57 @@ public sealed class AppState : Observable
         var vm = chat.Items.OfType<FileVm>().FirstOrDefault(f => f.FileId == t.Id);
         if (vm == null)
         {
-            vm = new FileVm(t, OnFileAction);
+            vm = new FileVm(t, OnFileAction) { Peer = chat.Title };
             chat.AddItem(vm);
-            if (!t.Outgoing && t.State == TransferState.Requested) Incoming(chat, chat.Title, $"Wants to send you {t.Name}");
+            Transfers.Insert(0, vm);
+            if (!t.Outgoing && t.State == TransferState.Requested)
+            {
+                Sounds.Play(Settings, Status, SoundEvent.NewFile);
+                if (Settings.AutoAcceptFiles && Messenger != null)
+                {
+                    if (t.IsFolder) Messenger.AcceptFolder(t.UserId, t.Id, Settings.EffectiveDownloadDir);
+                    else Messenger.AcceptFile(t.UserId, t.Id, new LocalFileSink(Shell.FreeFileName(Settings.EffectiveDownloadDir, vm.Name)));
+                }
+                else Incoming(chat, chat.Title, Loc.F("Wants to send you {0}", t.Name), SoundEvent.NewFile);
+                if (Settings.ShowTransferWindow) TransferStarted?.Invoke();
+            }
+            else if (t.Outgoing && Settings.ShowTransferWindow) TransferStarted?.Invoke();
             ItemAdded?.Invoke(chat);
         }
-        else vm.Update(t);
+        else
+        {
+            var before = vm.State;
+            vm.Update(t);
+            if (before != vm.State && vm.State == TransferState.Complete)
+            {
+                Sounds.Play(Settings, Status, SoundEvent.FileDone);
+                LogTransfer(vm);
+            }
+            else if (before != vm.State && vm.State is TransferState.Declined or TransferState.Cancelled or TransferState.Error) LogTransfer(vm);
+        }
+    }
+
+    public event Action? TransferStarted;
+
+    private void LogTransfer(FileVm f)
+    {
+        if (!Settings.SaveFileHistory) return;
+        TransferLog.Append(new TransferLog.Entry(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), f.Peer, f.Name, f.Size, f.Outgoing, f.State.ToString(), f.Location));
     }
 
     private void OnFileAction(FileVm f, string action)
     {
         var userId = _chats.Values.FirstOrDefault(c => c.Items.Contains(f))?.Key;
+        if (userId == null) userId = _chats.Values.FirstOrDefault(c => c.Title == f.Peer)?.Key;
         if (userId == null || Messenger == null) return;
         switch (action)
         {
             case "accept":
-                Messenger.AcceptFile(userId, f.FileId, new LocalFileSink(Shell.FreeFileName(Settings.EffectiveDownloadDir, f.Name)));
+                if (f.IsFolder) Messenger.AcceptFolder(userId, f.FileId, Settings.EffectiveDownloadDir);
+                else Messenger.AcceptFile(userId, f.FileId, new LocalFileSink(Shell.FreeFileName(Settings.EffectiveDownloadDir, f.Name)));
                 break;
-            case "decline": Messenger.DeclineFile(userId, f.FileId); break;
-            case "cancel": Messenger.CancelFile(userId, f.FileId); break;
+            case "decline": if (f.IsFolder) Messenger.DeclineFolder(userId, f.FileId); else Messenger.DeclineFile(userId, f.FileId); break;
+            case "cancel": if (f.IsFolder) Messenger.CancelFolder(userId, f.FileId); else Messenger.CancelFile(userId, f.FileId); break;
             case "open": if (f.Location != null) Shell.Open(f.Location); break;
             case "show": if (f.Location != null) Shell.Reveal(f.Location); break;
         }
@@ -409,6 +590,39 @@ public sealed class AppState : Observable
         RoomsChanged();
     }
 
+    public void SendPublicText(PublicVm pub, string text)
+    {
+        if (Messenger == null) return;
+        Messenger.SendPublicText(text);
+        long now = Now();
+        pub.AddItem(new MessageVm(text, true, Name, now, 0, Delivery.Delivered, false));
+        SaveHistory(PublicVm.KeyValue, Loc.T("Public chat"), Name, text, true, now);
+        ItemAdded?.Invoke(pub);
+    }
+
+    public ChatVm ChatOf(ContactVm c) => ChatFor(c.Id);
+
+    public void SendFolder(ChatVm chat, string path)
+    {
+        if (Messenger == null || !chat.Online) return;
+        Messenger.SendFolder(chat.Key, path);
+    }
+
+    /// <summary>The history folder was changed in the settings.</summary>
+    public void UseHistoryFolder() => History = new HistoryStore(Settings.EffectiveHistoryDir);
+
+    /// <summary>Preferences back to their defaults; who you are (name, picture, groups, id) stays.</summary>
+    public void ResetPreferences()
+    {
+        var fresh = new AppSettings();
+        var keep = new HashSet<string> { nameof(AppSettings.MachineId), nameof(AppSettings.Name), nameof(AppSettings.Note), nameof(AppSettings.Status),
+            nameof(AppSettings.StockAvatar), nameof(AppSettings.Groups), nameof(AppSettings.UserGroups), nameof(AppSettings.WindowWidth), nameof(AppSettings.WindowHeight) };
+        foreach (var p in typeof(AppSettings).GetProperties())
+            if (p.CanWrite && !keep.Contains(p.Name)) p.SetValue(Settings, p.GetValue(fresh));
+        UseHistoryFolder();
+        ApplySettings();
+    }
+
     public void SendFile(ChatVm chat, string path)
     {
         if (Messenger == null || !chat.Online) return;
@@ -419,12 +633,19 @@ public sealed class AppState : Observable
     {
         if (Messenger == null) return;
         var ids = Contacts.Where(c => !Proto.IsOffline(c.Status)).Select(c => c.Id).ToList();
+        Broadcast(text, ids);
+    }
+
+    /// <summary>A broadcast message to chosen people (they all get the same text).</summary>
+    public void Broadcast(string text, IReadOnlyCollection<string> ids)
+    {
+        if (Messenger == null || ids.Count == 0) return;
         Messenger.SendBroadcastText(ids, text);
         long now = Now();
         foreach (var id in ids)
         {
-            var chat = _chats[id];
-            chat.AddItem(new BroadcastVm("You sent a broadcast", text, now));
+            if (!_chats.TryGetValue(id, out var chat)) continue;
+            chat.AddItem(new BroadcastVm(Loc.T("You sent a broadcast"), text, now));
             ItemAdded?.Invoke(chat);
         }
     }
@@ -476,6 +697,17 @@ public sealed class AppState : Observable
             Note = note;
             Messenger?.SetNote(note);
         }
+        Settings.Save();
+    }
+
+    /// <summary>The line under the name ("status message"): shown to everyone next to the name.</summary>
+    public void SetNote(string note)
+    {
+        note = note.Trim();
+        if (note == Note) return;
+        Settings.Note = note;
+        Note = note;
+        Messenger?.SetNote(note);
         Settings.Save();
     }
 

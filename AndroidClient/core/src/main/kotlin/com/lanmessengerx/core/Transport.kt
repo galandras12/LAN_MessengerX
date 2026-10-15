@@ -33,6 +33,10 @@ internal class Conn(val socket: Socket, val incoming: Boolean, var peerId: Strin
     @Volatile
     var closed = false
 
+    /** Opened by the subnet scan: the peer's user id is not known until its first message arrives. */
+    @Volatile
+    var probe = false
+
     private val input = DataInputStream(socket.getInputStream().buffered())
     private val output = socket.getOutputStream()
     private val writer = Executors.newSingleThreadExecutor(Threads.factory)

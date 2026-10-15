@@ -38,6 +38,11 @@ public abstract class ConversationVm : Observable
 
     public ICommand SendCommand { get; }
 
+    /// <summary>Watermark of the input box (depends on the send key and the language).</summary>
+    public string Hint => Localization.Loc.T(Services.AppState.Current?.Settings.SendWithEnter == false
+        ? "Type a message - Ctrl+Enter to send, Enter for a new line"
+        : "Type a message - Enter to send, Shift+Enter for a new line");
+
     public string Draft
     {
         get => _draft;
@@ -96,7 +101,7 @@ public sealed class ChatVm : ConversationVm
 
     public override string Key => Contact.Id;
     public override string Title => Contact.Name;
-    public override string Subtitle => Online ? Contact.Subtitle : "Offline";
+    public override string Subtitle => Online ? Contact.Subtitle : Localization.Loc.T("Offline");
     public override bool CanAttach => Online;
     public override Bitmap? AvatarImage => Contact.Avatar;
     public override string? AvatarStatus => Online ? Contact.Status : "gone";
@@ -105,7 +110,7 @@ public sealed class ChatVm : ConversationVm
     {
         if (!Online)
         {
-            AddItem(new NoticeVm($"{Title} is offline - message not sent", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            AddItem(new NoticeVm(Localization.Loc.F("{0} is offline - message not sent", Title), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
             return;
         }
         App.SendText(this, text);
@@ -129,9 +134,25 @@ public sealed class RoomVm : ConversationVm
     public override string Key => ThreadId;
     public override bool IsGroup => true;
     public override string Title => App.RoomTitle(this);
-    public override string Subtitle => $"{Participants.Count} participants";
+    public override string Subtitle => Localization.Loc.F("{0} participants", Participants.Count);
 
     public string LastText => (Items.LastOrDefault(i => i is MessageVm) as MessageVm) is { } m ? $"{m.Sender}: {m.Text}" : Subtitle;
 
     protected override void SendText(string text) => App.SendRoomText(this, text);
+}
+
+/// <summary>The public chat: everybody on the network who has it open sees what is written here.</summary>
+public sealed class PublicVm : ConversationVm
+{
+    public const string KeyValue = "public";
+    private int _unread;
+    public int Unread { get => _unread; set { if (Set(ref _unread, value)) { Raise(nameof(HasUnread)); Raise(nameof(UnreadText)); } } }
+    public bool HasUnread => _unread > 0;
+    public string UnreadText => _unread > 99 ? "99+" : _unread.ToString();
+    public PublicVm(Services.AppState app) : base(app) { }
+    public override string Key => KeyValue;
+    public override bool IsGroup => true;
+    public override string Title => Localization.Loc.T("Public chat");
+    public override string Subtitle => Localization.Loc.T("Everyone on the network");
+    protected override void SendText(string text) => App.SendPublicText(this, text);
 }

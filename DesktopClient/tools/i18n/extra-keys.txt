@@ -1,0 +1,7 @@
+# texts that are chosen at run time in a way the scanner does not see
+Available
+Busy
+Do not disturb
+Be right back
+Away
+Appear offline

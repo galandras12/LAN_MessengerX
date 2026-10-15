@@ -162,4 +162,6 @@ public static class Xn
     public const string UserCaps = "usercaps";
     public const string FolderId = "folderid";
     public const string TcpPort = "tcpport";
+    public const string RelPath = "relpath";
+    public const string FileCount = "filecount";
 }

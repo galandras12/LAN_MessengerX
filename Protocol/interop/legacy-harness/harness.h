@@ -35,6 +35,12 @@ public slots:
     } else if (p.value(0) == "accept") {
       XmlMessage x; x.addData(XN_MODE, "receive"); x.addData(XN_FILETYPE, "normal"); x.addData(XN_FILEOP, "accept"); x.addData(XN_FILEID, p.value(2)); x.addData(XN_FILESIZE, p.value(3));
       QString id = p.value(1); m->sendMessage(MT_File, &id, &x);
+    } else if (p.value(0) == "folder") {
+      XmlMessage x; x.addData(XN_FILETYPE, "normal"); x.addData(XN_FILEOP, "request"); x.addData(XN_FILEPATH, p.value(2));
+      QString id = p.value(1); m->sendMessage(MT_Folder, &id, &x);
+    } else if (p.value(0) == "acceptfolder") {
+      XmlMessage x; x.addData(XN_MODE, "receive"); x.addData(XN_FILETYPE, "normal"); x.addData(XN_FILEOP, "accept"); x.addData(XN_FILEID, p.value(2));
+      QString id = p.value(1); m->sendMessage(MT_Folder, &id, &x);
     } else if (p.value(0) == "status") {
       XmlMessage x; x.addData(XN_STATUS, p.value(1)); m->sendMessage(MT_Status, nullptr, &x);
     } else if (p.value(0) == "group") {

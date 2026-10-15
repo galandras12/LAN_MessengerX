@@ -3,6 +3,7 @@ using LanMessengerX.Core;
 // Headless command line client used for interoperability testing against the original LAN Messenger
 // (see Protocol/interop). Commands on stdin:
 //   msg <userId> <text...> | file <userId> <path> | accept <userId> <fileId> <savePath>
+//   folder <userId> <path> | acceptfolder <userId> <folderId> <parentDir>
 //   avatar <png> | status <code> | group <userId,userId,..> | gsay <thread> <text...>
 //   query <userId> | users | quit
 var name = args.Length > 0 ? args[0] : "csharp";
@@ -29,6 +30,8 @@ while ((line = Console.In.ReadLine()) != null)
         case "msg": Out("SENT id=" + m.SendText(p[1], string.Join(' ', p.Skip(2)))); break;
         case "file": Out("FILEID " + m.SendFile(p[1], new LocalFileSource(p[2]))); break;
         case "accept": m.AcceptFile(p[1], p[2], new LocalFileSink(p[3])); break;
+        case "folder": Out("FOLDERID " + m.SendFolder(p[1], p[2])); break;
+        case "acceptfolder": m.AcceptFolder(p[1], p[2], p[3]); break;
         case "avatar": m.SetLocalAvatar(p[1]); break;
         case "status": m.SetStatus(p[1]); break;
         case "group": Out("THREAD " + m.CreateGroupChat(p[1].Split(','))); break;
@@ -57,6 +60,6 @@ static string Describe(MessengerEvent e) => e switch
     MessengerEvent.RoomClosed r => $"RoomClosed(threadId={r.ThreadId})",
     MessengerEvent.RoomMessage r => $"RoomMessage(threadId={r.ThreadId}, userId={r.UserId}, text={r.Text}, timeMs={r.TimeMs})",
     MessengerEvent.RoomNotice r => $"RoomNotice(threadId={r.ThreadId}, userId={r.UserId}, joined={r.Joined.ToString().ToLowerInvariant()}, timeMs={r.TimeMs})",
-    MessengerEvent.Transfer t => $"Transfer(info=TransferInfo(id={t.Info.Id}, userId={t.Info.UserId}, name={t.Info.Name}, size={t.Info.Size}, bytes={t.Info.Bytes}, outgoing={t.Info.Outgoing.ToString().ToLowerInvariant()}, state={t.Info.State.ToString().ToUpperInvariant()}, location={t.Info.Location}))",
+    MessengerEvent.Transfer t => $"Transfer(info=TransferInfo(id={t.Info.Id}, userId={t.Info.UserId}, name={t.Info.Name}, size={t.Info.Size}, bytes={t.Info.Bytes}, outgoing={t.Info.Outgoing.ToString().ToLowerInvariant()}, state={t.Info.State.ToString().ToUpperInvariant()}, location={t.Info.Location}, isFolder={t.Info.IsFolder.ToString().ToLowerInvariant()}, fileCount={t.Info.FileCount}))",
     _ => e.ToString() ?? "",
 };

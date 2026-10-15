@@ -28,6 +28,8 @@ class MessengerConfig(
     val timeoutSec: Int = 10,
     val maxRetries: Int = 1,
     val preferredInterface: String? = null,
+    /** Also look for people by connecting to the TCP port of every address in the subnet. */
+    val scanSubnet: Boolean = true,
     val firstName: String = "",
     val lastName: String = "",
     val about: String = "",
@@ -73,7 +75,7 @@ class Messenger(
     @Volatile
     var localUser: User = User(
         localId, Proto.VERSION, "", cfg.userName, cfg.status, cfg.note,
-        Proto.UC_FILE or Proto.UC_GROUP_MESSAGE,
+        Proto.UC_FILE or Proto.UC_GROUP_MESSAGE or Proto.UC_FOLDER,
     )
         private set
 
@@ -105,6 +107,25 @@ class Messenger(
         var folderId: String = "",
     )
 
+    /** A folder is transferred as a series of ordinary file transfers (filetype "folder"), one after the other. */
+    private class FolderTx(
+        val id: String,
+        val userId: String,
+        val outgoing: Boolean,
+        var name: String = "",
+        var size: Long = 0,
+        var count: Int = 0,
+        var state: TransferState = TransferState.REQUESTED,
+        val files: MutableList<File> = ArrayList(), // outgoing
+        var root: File? = null,                      // outgoing: the folder sent; incoming: where it is written
+        var done: Int = 0,
+        var doneBytes: Long = 0,
+        var currentFileId: String? = null,
+        var accepted: Boolean = false,
+    )
+
+    private val folders = HashMap<String, FolderTx>()
+
     // ==========================================================================================
     // lifecycle
     // ==========================================================================================
@@ -120,6 +141,7 @@ class Messenger(
             engine.scheduleWithFixedDelay({ safe { networkTick() } }, 2, 2, TimeUnit.SECONDS)
             engine.scheduleWithFixedDelay({ safe { checkPending() } }, 1, 1, TimeUnit.SECONDS)
             engine.scheduleWithFixedDelay({ safe { keepAlive() } }, 30, 30, TimeUnit.SECONDS)
+            engine.scheduleWithFixedDelay({ safe { sweepSubnet() } }, 60, 60, TimeUnit.SECONDS)
         }
     }
 
@@ -199,6 +221,11 @@ class Messenger(
         emit(MessengerEvent.ConnectionChanged(true, found.ip))
         broadcast(MessageType.DEPART)
         broadcast(MessageType.ANNOUNCE)
+        // UDP is lossy (especially on Wi-Fi): repeat the announce a little later, and scan the subnet as a second way to find people
+        sweepRound = 0
+        engine.schedule({ safe { broadcast(MessageType.ANNOUNCE) } }, 2, TimeUnit.SECONDS)
+        engine.schedule({ safe { broadcast(MessageType.ANNOUNCE) } }, 6, TimeUnit.SECONDS)
+        engine.schedule({ safe { sweepSubnet() } }, 3, TimeUnit.SECONDS)
     }
 
     private fun teardownNetwork() {
@@ -208,6 +235,7 @@ class Messenger(
         streams.clear()
         keys.clear()
         connecting.clear()
+        probing.clear()
         val gone = users.values.toList()
         users.clear()
         pending.clear()
@@ -276,6 +304,84 @@ class Messenger(
     // ==========================================================================================
     // TCP: connection establishment
     // ==========================================================================================
+
+    // ==========================================================================================
+    // subnet scan
+    // ==========================================================================================
+
+    private val probing = HashSet<String>()
+    private val notMessenger = HashMap<String, Long>()
+    private var sweepRound = 0
+
+    /**
+     * Announces are only sent when a client starts and every few minutes after that, so a client that was started
+     * earlier is found late (or never, if broadcasts are filtered / incoming connections are blocked here).
+     * Connecting to the messenger port of every address of the subnet finds them within seconds, and works with
+     * outgoing connections only.
+     */
+    private fun sweepSubnet() {
+        val l = lan ?: return
+        if (!cfg.scanSubnet || !connected || rsa == null) return
+        // first minutes: every minute; later: every five minutes
+        if (sweepRound++ >= 10 && sweepRound % 5 != 0) return
+        val known = HashSet<String>()
+        users.values.forEach { known.add(it.address) }
+        streams.values.forEach { known.add(it.peerAddress) }
+        val now = System.currentTimeMillis()
+        val todo = l.subnetHosts().filter { h ->
+            h != l.ip && h !in known && h !in probing && (notMessenger[h]?.let { now - it >= 600_000 } ?: true)
+        }
+        if (todo.isEmpty()) return
+        probing.addAll(todo)
+        log("subnet scan #$sweepRound: ${todo.size} addresses")
+        // submit from an io thread: waiting for a free slot must not block the engine thread
+        io.execute {
+            val gate = java.util.concurrent.Semaphore(48)
+            for (h in todo) {
+                gate.acquireUninterruptibly()
+                io.execute {
+                    try {
+                        probeHost(h)
+                    } finally {
+                        gate.release()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun probeHost(ip: String) {
+        var conn: Conn? = null
+        try {
+            val s = Socket()
+            s.tcpNoDelay = true
+            try {
+                s.connect(InetSocketAddress(ip, cfg.tcpPort), 800)
+            } catch (e: Exception) {
+                runCatching { s.close() }
+                post { probing.remove(ip) }
+                return
+            }
+            s.keepAlive = true
+            val c = Conn(s, incoming = false, peerId = "probe@$ip")
+            c.probe = true
+            conn = c
+            // something listens there; if it does not behave like a messenger within a few seconds, forget it for a while
+            engine.schedule({
+                safe {
+                    if (c.probe && !c.closed) {
+                        notMessenger[ip] = System.currentTimeMillis()
+                        c.close()
+                    }
+                }
+            }, 6, TimeUnit.SECONDS)
+            c.sendRaw(("MSG$localId").toByteArray(Charsets.UTF_8))
+            readLoop(c)
+        } catch (e: Exception) {
+            conn?.close()
+            post { probing.remove(ip) }
+        }
+    }
 
     /** TCP port a peer advertised (announce / file accept), or our own configured port for older peers. */
     private fun peerPort(m: XmlMessage): Int = m.data(Xn.TCP_PORT).toIntOrNull()?.takeIf { it in 1..65535 } ?: cfg.tcpPort
@@ -367,6 +473,8 @@ class Messenger(
 
     private fun onConnClosed(conn: Conn) {
         connecting.remove(conn.peerId)
+        probing.remove(conn.peerAddress)
+        if (conn.probe) return
         if (streams[conn.peerId] === conn) {
             streams.remove(conn.peerId)
             keys.remove(conn.peerId)
@@ -386,7 +494,7 @@ class Messenger(
                     val material = LmxCrypto.newSessionMaterial()
                     conn.cipher = SessionCipher(material)
                     conn.sendFrame(DatagramType.HANDSHAKE, LmxCrypto.rsaEncrypt(pub, material))
-                    registerStream(conn)
+                    if (!conn.probe) registerStream(conn)
                 } catch (e: Exception) {
                     log("handshake with ${conn.peerId} failed: $e")
                     conn.close()
@@ -410,6 +518,16 @@ class Messenger(
                     return
                 }
                 val m = XmlMessage.parse(String(clear, Charsets.UTF_8)) ?: return
+                if (conn.probe) {
+                    // the first message of a scanned peer tells who it is
+                    val real = m.header(Xn.FROM)
+                    if (real.isEmpty() || real == localId) { conn.close(); return }
+                    log("subnet scan found $real @ ${conn.peerAddress}")
+                    conn.probe = false
+                    conn.peerId = real
+                    probing.remove(conn.peerAddress)
+                    registerStream(conn)
+                }
                 processMessage(conn, m)
             }
             null -> {}
@@ -843,9 +961,9 @@ class Messenger(
         requestSend(userId, UUID.randomUUID().toString().replace("-", "").uppercase(), LocalFileSource(f), FileType.AVATAR)
     }
 
-    private fun requestSend(userId: String, fileId: String, source: FileSource, type: FileType) {
+    private fun requestSend(userId: String, fileId: String, source: FileSource, type: FileType, extra: ((XmlMessage) -> Unit)? = null, folderId: String = "") {
         if (!users.containsKey(userId)) return
-        val t = Transfer(fileId, userId, source.name, source.size, true, type, TransferState.REQUESTED, source = source)
+        val t = Transfer(fileId, userId, source.name, source.size, true, type, TransferState.REQUESTED, source = source, folderId = folderId)
         transfers[fileId] = t
         val b = XmlMessage()
         b.addData(Xn.FILE_TYPE, type.wire)
@@ -854,6 +972,7 @@ class Messenger(
         b.addData(Xn.MODE, FileMode.SEND.wire)
         b.addData(Xn.FILE_NAME, source.name)
         b.addData(Xn.FILE_SIZE, source.size.toString())
+        extra?.invoke(b)
         val mt = if (type == FileType.AVATAR) MessageType.AVATAR else MessageType.FILE
         transmit(userId, mt, msgIdSeq.getAndIncrement(), b)
         if (type == FileType.NORMAL) emitTransfer(t)
@@ -907,6 +1026,10 @@ class Messenger(
     }
 
     private fun emitTransfer(t: Transfer, location: String? = null) {
+        if (t.type == FileType.FOLDER) {
+            folders[t.folderId]?.let { emitFolder(it) }
+            return
+        }
         if (t.type != FileType.NORMAL) return
         emit(MessengerEvent.Transfer(TransferInfo(t.id, t.userId, t.name, t.size, t.bytes, t.outgoing, t.state, location)))
     }
@@ -929,12 +1052,37 @@ class Messenger(
         if (fileId.length != Proto.FILE_ID_LENGTH) return
         when (op) {
             FileOp.REQUEST -> {
-                if (ft == FileType.FOLDER) {
-                    declineFolder(from, fileId, m.data(Xn.FOLDER_ID).ifEmpty { fileId }); return
-                }
                 val size = m.data(Xn.FILE_SIZE).toLongLong()
                 val name = sanitizeFileName(m.data(Xn.FILE_NAME))
                 val t = Transfer(fileId, from, name, size, false, ft, TransferState.REQUESTED)
+                if (ft == FileType.FOLDER) {
+                    // one file of a folder we accepted: take it without asking again
+                    val folderId = m.data(Xn.FOLDER_ID)
+                    val folder = folders[folderId]
+                    if (folder == null || folder.outgoing || !folder.accepted || folder.userId != from) {
+                        val d = XmlMessage()
+                        d.addData(Xn.MODE, FileMode.RECEIVE.wire)
+                        d.addData(Xn.FILE_TYPE, FileType.FOLDER.wire)
+                        d.addData(Xn.FILE_OP, FileOp.DECLINE.wire)
+                        d.addData(Xn.FILE_ID, fileId)
+                        transmit(from, MessageType.FILE, msgIdSeq.getAndIncrement(), d)
+                        return
+                    }
+                    t.folderId = folderId
+                    t.sink = LocalFileSink(File(folder.root!!, safeRelative(m.data(Xn.REL_PATH))))
+                    t.state = TransferState.TRANSFERRING
+                    folder.currentFileId = fileId
+                    transfers[fileId] = t
+                    val a = XmlMessage()
+                    a.addData(Xn.MODE, FileMode.RECEIVE.wire)
+                    a.addData(Xn.FILE_TYPE, FileType.FOLDER.wire)
+                    a.addData(Xn.FILE_OP, FileOp.ACCEPT.wire)
+                    a.addData(Xn.FILE_ID, fileId)
+                    a.addData(Xn.FILE_SIZE, size.toString())
+                    tcp?.let { a.addData(Xn.TCP_PORT, it.boundPort.toString()) }
+                    transmit(from, MessageType.FILE, msgIdSeq.getAndIncrement(), a)
+                    return
+                }
                 transfers[fileId] = t
                 if (ft == FileType.AVATAR) {
                     // avatars are accepted silently into the cache directory
@@ -973,29 +1121,192 @@ class Messenger(
             FileOp.CANCEL, FileOp.ABORT -> {
                 val t = transfers[fileId] ?: return
                 if (t.userId != from) return
+                if (t.type == FileType.FOLDER) folders[t.folderId]?.let { endFolder(it, TransferState.CANCELLED); return }
                 cancelTransferLocally(t, TransferState.CANCELLED)
             }
             else -> {}
         }
     }
 
-    private fun processFolder(from: String, m: XmlMessage) {
-        val op = FileOp.fromWire(m.data(Xn.FILE_OP)) ?: return
-        if (op == FileOp.REQUEST) {
-            val folderId = m.data(Xn.FOLDER_ID).ifEmpty { m.data(Xn.FILE_ID) }
-            declineFolder(from, folderId, folderId)
+    // ---- folders ----------------------------------------------------------------------------------
+
+    /** Offers a whole folder (all files below it) to [userId]. Returns the folder id. */
+    fun sendFolder(userId: String, dir: File): String? {
+        if (!dir.isDirectory) return null
+        val folderId = UUID.randomUUID().toString().replace("-", "").uppercase()
+        post {
+            val u = users[userId] ?: return@post
+            if (u.caps and Proto.UC_FOLDER == 0) return@post
+            val f = FolderTx(folderId, userId, true, name = dir.name, root = dir)
+            // the original client's receiver cannot take an empty file (it aborts the whole folder), so older peers do not get them
+            val skipEmpty = Proto.compareVersions(u.version, "3.0.0") < 0
+            dir.walkTopDown().filter { it.isFile }.forEach { file ->
+                if (file.length() == 0L && skipEmpty) return@forEach
+                f.files.add(file)
+                f.size += file.length()
+            }
+            f.count = f.files.size
+            if (f.count == 0) return@post
+            folders[folderId] = f
+            val b = XmlMessage()
+            b.addData(Xn.FOLDER_ID, folderId)
+            b.addData(Xn.FILE_ID, folderId)
+            b.addData(Xn.FILE_TYPE, FileType.NORMAL.wire)
+            b.addData(Xn.FILE_OP, FileOp.REQUEST.wire)
+            b.addData(Xn.MODE, FileMode.SEND.wire)
+            b.addData(Xn.FILE_NAME, f.name)
+            b.addData(Xn.FILE_SIZE, f.size.toString())
+            b.addData(Xn.FILE_COUNT, f.count.toString())
+            transmit(userId, MessageType.FOLDER, msgIdSeq.getAndIncrement(), b)
+            emitFolder(f)
+        }
+        return folderId
+    }
+
+    /** Accept an offered folder; it is stored in a new sub-folder of [parentDir]. */
+    fun acceptFolder(userId: String, folderId: String, parentDir: File) {
+        post {
+            val f = folders[folderId] ?: return@post
+            if (f.outgoing || f.userId != userId || f.accepted) return@post
+            val base = sanitizeFileName(f.name)
+            var dir = File(parentDir, base)
+            var i = 1
+            while (dir.exists()) dir = File(parentDir, "$base [${i++}]")
+            if (!dir.mkdirs()) { log("folder ${dir}: cannot create"); return@post }
+            f.root = dir
+            f.accepted = true
+            f.state = TransferState.TRANSFERRING
+            val b = XmlMessage()
+            b.addData(Xn.MODE, FileMode.RECEIVE.wire)
+            b.addData(Xn.FILE_TYPE, FileType.NORMAL.wire)
+            b.addData(Xn.FILE_OP, FileOp.ACCEPT.wire)
+            b.addData(Xn.FILE_ID, folderId)
+            b.addData(Xn.FOLDER_ID, folderId)
+            tcp?.let { b.addData(Xn.TCP_PORT, it.boundPort.toString()) }
+            transmit(userId, MessageType.FOLDER, msgIdSeq.getAndIncrement(), b)
+            emitFolder(f)
         }
     }
 
-    /** Folder transfer is not supported by this client; politely decline so the sender is not left hanging. */
-    private fun declineFolder(userId: String, fileId: String, folderId: String) {
+    fun declineFolder(userId: String, folderId: String) {
+        post {
+            val f = folders[folderId] ?: return@post
+            if (f.userId != userId) return@post
+            sendFolderOp(f, FileOp.DECLINE, FileMode.RECEIVE)
+            folders.remove(folderId)
+            f.state = TransferState.DECLINED
+            emitFolder(f)
+        }
+    }
+
+    fun cancelFolder(userId: String, folderId: String) {
+        post {
+            val f = folders[folderId] ?: return@post
+            if (f.userId != userId) return@post
+            sendFolderOp(f, FileOp.CANCEL, if (f.outgoing) FileMode.SEND else FileMode.RECEIVE)
+            endFolder(f, TransferState.CANCELLED)
+        }
+    }
+
+    private fun sendFolderOp(f: FolderTx, op: FileOp, mode: FileMode) {
         val b = XmlMessage()
-        b.addData(Xn.MODE, FileMode.RECEIVE.wire)
-        b.addData(Xn.FILE_TYPE, FileType.FOLDER.wire)
-        b.addData(Xn.FILE_OP, FileOp.DECLINE.wire)
-        b.addData(Xn.FILE_ID, fileId)
-        b.addData(Xn.FOLDER_ID, folderId)
-        transmit(userId, MessageType.FOLDER, msgIdSeq.getAndIncrement(), b)
+        b.addData(Xn.MODE, mode.wire)
+        b.addData(Xn.FILE_TYPE, FileType.NORMAL.wire)
+        b.addData(Xn.FILE_OP, op.wire)
+        b.addData(Xn.FILE_ID, f.id)
+        b.addData(Xn.FOLDER_ID, f.id)
+        transmit(f.userId, MessageType.FOLDER, msgIdSeq.getAndIncrement(), b)
+    }
+
+    private fun endFolder(f: FolderTx, state: TransferState) {
+        folders.remove(f.id)
+        f.currentFileId?.let { id -> transfers[id]?.let { cancelTransferLocally(it, state) } }
+        f.state = state
+        emitFolder(f)
+    }
+
+    private fun emitFolder(f: FolderTx, location: String? = null) {
+        val current = f.currentFileId?.let { transfers[it]?.bytes } ?: 0L
+        emit(MessengerEvent.Transfer(TransferInfo(f.id, f.userId, f.name, f.size, f.doneBytes + current, f.outgoing, f.state, location, isFolder = true, fileCount = f.count)))
+    }
+
+    private fun processFolder(from: String, m: XmlMessage) {
+        val op = FileOp.fromWire(m.data(Xn.FILE_OP)) ?: return
+        val folderId = m.data(Xn.FOLDER_ID).ifEmpty { m.data(Xn.FILE_ID) }
+        if (folderId.isEmpty()) return
+        when (op) {
+            FileOp.REQUEST -> {
+                val f = FolderTx(folderId, from, false, name = sanitizeFileName(m.data(Xn.FILE_NAME)),
+                    size = m.data(Xn.FILE_SIZE).toLongLong(), count = m.data(Xn.FILE_COUNT).toIntOrNull() ?: 0)
+                folders[folderId] = f
+                emitFolder(f)
+            }
+            FileOp.ACCEPT -> {
+                val f = folders[folderId] ?: return
+                if (!f.outgoing || f.userId != from) return
+                f.accepted = true
+                f.state = TransferState.TRANSFERRING
+                emitFolder(f)
+                sendNextFolderFile(f)
+            }
+            FileOp.DECLINE -> {
+                val f = folders[folderId] ?: return
+                if (f.userId != from) return
+                folders.remove(folderId)
+                f.state = TransferState.DECLINED
+                emitFolder(f)
+            }
+            FileOp.CANCEL, FileOp.ABORT -> {
+                val f = folders[folderId] ?: return
+                if (f.userId != from) return
+                endFolder(f, TransferState.CANCELLED)
+            }
+            else -> {}
+        }
+    }
+
+    private fun sendNextFolderFile(f: FolderTx) {
+        if (f.done >= f.count) {
+            folders.remove(f.id)
+            f.state = TransferState.COMPLETE
+            emitFolder(f, f.root?.absolutePath)
+            return
+        }
+        val file = f.files[f.done]
+        val fileId = UUID.randomUUID().toString().replace("-", "").uppercase()
+        f.currentFileId = fileId
+        val rel = file.relativeTo(f.root!!).path.replace('\\', '/')
+        requestSend(f.userId, fileId, LocalFileSource(file), FileType.FOLDER, { b ->
+            b.addData(Xn.FOLDER_ID, f.id)
+            b.addData(Xn.REL_PATH, rel)
+        }, f.id)
+    }
+
+    /** A file of a folder finished (or failed): go on with the next one. */
+    private fun onFolderFileFinished(t: Transfer, ok: Boolean) {
+        val f = folders[t.folderId] ?: return
+        f.currentFileId = null
+        if (!ok) {
+            if (f.state == TransferState.TRANSFERRING) {
+                sendFolderOp(f, FileOp.ABORT, if (f.outgoing) FileMode.SEND else FileMode.RECEIVE)
+                endFolder(f, TransferState.ERROR)
+            }
+            return
+        }
+        f.done++
+        f.doneBytes += t.size
+        if (f.outgoing) sendNextFolderFile(f)
+        else if (f.done >= f.count) {
+            folders.remove(f.id)
+            f.state = TransferState.COMPLETE
+            emitFolder(f, f.root?.absolutePath)
+        } else emitFolder(f)
+    }
+
+    /** The folder path a peer sent, made safe: no drive letters, no ".." and no characters Windows rejects. */
+    private fun safeRelative(rel: String): String {
+        val parts = rel.replace('\\', '/').split('/').filter { it.isNotEmpty() && it != "." && it != ".." }.map { sanitizeFileName(it) }
+        return if (parts.isEmpty()) "file" else parts.joinToString(File.separator)
     }
 
     /** Dedicated thread: connect to the receiver, wait for START, stream the file raw. */
@@ -1056,10 +1367,10 @@ class Messenger(
             transfers.remove(t.id)
             if (ok) {
                 t.state = TransferState.COMPLETE
-                emitTransfer(t)
+                if (t.type == FileType.FOLDER) onFolderFileFinished(t, true) else emitTransfer(t)
             } else {
                 t.state = TransferState.ERROR
-                emitTransfer(t)
+                if (t.type == FileType.FOLDER) onFolderFileFinished(t, false) else emitTransfer(t)
                 abortOnWire(t)
             }
         }
@@ -1121,10 +1432,11 @@ class Messenger(
                 if (t.type == FileType.AVATAR) {
                     updateUser(t.userId) { it.copy(avatarPath = location) }
                     emit(MessengerEvent.AvatarUpdated(t.userId, location))
-                } else emitTransfer(t, location)
+                } else if (t.type == FileType.FOLDER) onFolderFileFinished(t, true)
+                else emitTransfer(t, location)
             } else {
                 t.state = TransferState.ERROR
-                emitTransfer(t)
+                if (t.type == FileType.FOLDER) onFolderFileFinished(t, false) else emitTransfer(t)
                 abortOnWire(t)
             }
         }

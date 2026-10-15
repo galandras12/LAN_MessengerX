@@ -23,6 +23,13 @@ public sealed class MessengerConfig
     public int TimeoutSec { get; set; } = 10;
     public int MaxRetries { get; set; } = 1;
     public string? PreferredInterface { get; set; }
+    /// <summary>Also look for people by connecting to the TCP port of every address in the subnet (finds people although broadcasts are filtered or the firewall blocks incoming connections).</summary>
+    public bool ScanSubnet { get; set; } = true;
+    /// <summary>Outgoing message font in Qt's QFont string form ("Family,size,-1,5,50,0,0,0,0,0") and colour (#RRGGBB), as 1.x displays them.</summary>
+    public string MessageFont { get; set; } = "Segoe UI,9,-1,5,50,0,0,0,0,0";
+    public string MessageColor { get; set; } = "#000000";
+    /// <summary>Seconds between two announces / liveness pings.</summary>
+    public int RefreshSec { get; set; } = 60;
     public string FirstName { get; set; } = "";
     public string LastName { get; set; } = "";
     public string About { get; set; } = "";
@@ -53,6 +60,13 @@ public sealed class Messenger : IDisposable
 
     /// <summary>Takes effect on the next network check (every two seconds).</summary>
     public string? PreferredInterface { get => _cfg.PreferredInterface; set => _cfg.PreferredInterface = value; }
+
+    /// <summary>Settings that may change while running (message font/colour, the details others can look up).</summary>
+    public void UpdateDetails(string firstName, string lastName, string about, string messageFont, string messageColor)
+    {
+        _cfg.FirstName = firstName; _cfg.LastName = lastName; _cfg.About = about;
+        _cfg.MessageFont = messageFont; _cfg.MessageColor = messageColor;
+    }
 
     private readonly Dictionary<string, User> _users = new();
     private readonly Dictionary<string, Conn> _streams = new();
@@ -106,7 +120,28 @@ public sealed class Messenger : IDisposable
         public long Bytes;
         public volatile bool Cancelled;
         public volatile Socket? Socket;
+        /// <summary>Set when this file is one of the files of a folder transfer.</summary>
+        public string FolderId = "";
     }
+
+    /// <summary>A folder is transferred as a series of ordinary file transfers (filetype "folder"), one after the other.</summary>
+    private sealed class FolderTx
+    {
+        public string Id = "";
+        public string UserId = "";
+        public string Name = "";
+        public long Size;
+        public int Count;
+        public bool Outgoing;
+        public TransferState State = TransferState.Requested;
+        public List<string> Files = new();   // outgoing: absolute paths
+        public string Root = "";             // outgoing: the folder being sent; incoming: where it is written
+        public int Done;                     // files finished
+        public long DoneBytes;               // bytes of the finished files
+        public string? CurrentFileId;
+        public bool Accepted;
+    }
+    private readonly Dictionary<string, FolderTx> _folders = new();
 
     public Messenger(MessengerConfig cfg, Action<string>? log, Action<MessengerEvent> listener)
     {
@@ -114,7 +149,7 @@ public sealed class Messenger : IDisposable
         _log = log ?? (_ => { });
         _listener = listener;
         LocalId = BuildUserId(cfg.MachineId, cfg.LogonName);
-        _localUser = new User(LocalId, Proto.Version, "", cfg.UserName, cfg.Status, cfg.Note, Proto.UcFile | Proto.UcGroupMessage);
+        _localUser = new User(LocalId, Proto.Version, "", cfg.UserName, cfg.Status, cfg.Note, Proto.UcFile | Proto.UcGroupMessage | Proto.UcFolder);
         _engineThread = new Thread(EngineLoop) { IsBackground = true, Name = "lmx-engine" };
         _engineThread.Start();
     }
@@ -164,7 +199,9 @@ public sealed class Messenger : IDisposable
             });
             _timers.Add(new Timer(_ => Post(NetworkTick), null, 2000, 2000));
             _timers.Add(new Timer(_ => Post(CheckPending), null, 1000, 1000));
-            _timers.Add(new Timer(_ => Post(KeepAlive), null, 30000, 30000));
+            int refresh = Math.Clamp(_cfg.RefreshSec, 20, 3600) * 1000;
+            _timers.Add(new Timer(_ => Post(KeepAlive), null, refresh, refresh));
+            _timers.Add(new Timer(_ => Post(SweepSubnet), null, 60000, 60000));
         });
     }
 
@@ -231,6 +268,11 @@ public sealed class Messenger : IDisposable
         Emit(new MessengerEvent.ConnectionChanged(true, found.Ip));
         Broadcast(MessageType.Depart);
         Broadcast(MessageType.Announce);
+        // UDP is lossy (especially on Wi-Fi): repeat the announce a little later, and scan the subnet as a second way to find people
+        _sweepRound = 0;
+        _timers.Add(new Timer(_ => Post(() => Broadcast(MessageType.Announce)), null, 2000, Timeout.Infinite));
+        _timers.Add(new Timer(_ => Post(() => Broadcast(MessageType.Announce)), null, 6000, Timeout.Infinite));
+        _timers.Add(new Timer(_ => Post(SweepSubnet), null, 3000, Timeout.Infinite));
     }
 
     private void TeardownNetwork()
@@ -241,6 +283,7 @@ public sealed class Messenger : IDisposable
         _streams.Clear();
         _keys.Clear();
         _connecting.Clear();
+        _probing.Clear();
         var gone = _users.Values.ToList();
         _users.Clear();
         _pending.Clear();
@@ -322,6 +365,80 @@ public sealed class Messenger : IDisposable
     // ==========================================================================================
     // TCP: connection establishment
     // ==========================================================================================
+
+    // ==========================================================================================
+    // subnet scan
+    // ==========================================================================================
+
+    private readonly HashSet<string> _probing = new();
+    private readonly Dictionary<string, long> _notMessenger = new();
+    private int _sweepRound;
+
+    /// <summary>
+    /// Announces are only sent when a client starts and every few minutes after that, so a client that was started
+    /// earlier is found late (or never, if broadcasts are filtered / incoming connections are blocked here).
+    /// Connecting to the messenger port of every address of the subnet finds them within seconds, and works with
+    /// outgoing connections only.
+    /// </summary>
+    private void SweepSubnet()
+    {
+        var lan = _lan;
+        if (!_cfg.ScanSubnet || !IsConnected || lan == null || _rsa == null) return;
+        // first minutes: every minute; later: every five minutes
+        if (_sweepRound++ >= 10 && _sweepRound % 5 != 0) return;
+        var known = new HashSet<string>(_users.Values.Select(u => u.Address));
+        foreach (var c in _streams.Values) known.Add(c.PeerAddress);
+        var now = Now();
+        var todo = new List<string>();
+        foreach (var h in NetUtil.SubnetHosts(lan))
+        {
+            if (h == lan.Ip || known.Contains(h) || _probing.Contains(h)) continue;
+            if (_notMessenger.TryGetValue(h, out var t) && now - t < 600_000) continue;
+            todo.Add(h);
+        }
+        if (todo.Count == 0) return;
+        foreach (var h in todo) _probing.Add(h);
+        _log($"subnet scan #{_sweepRound}: {todo.Count} addresses");
+        Task.Run(() =>
+        {
+            using var gate = new SemaphoreSlim(48);
+            Parallel.ForEach(todo, new ParallelOptions { MaxDegreeOfParallelism = 48 }, h => ProbeHost(h, gate));
+        });
+    }
+
+    private void ProbeHost(string ip, SemaphoreSlim gate)
+    {
+        Conn? conn = null;
+        try
+        {
+            var s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+            if (!s.ConnectAsync(new IPEndPoint(IPAddress.Parse(ip), _cfg.TcpPort)).Wait(800))
+            {
+                try { s.Close(); } catch (Exception) { }
+                Post(() => _probing.Remove(ip));
+                return;
+            }
+            s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+            conn = new Conn(s, incoming: false, peerId: "probe@" + ip) { Probe = true };
+            var c = conn;
+            // something listens there; if it does not behave like a messenger within a few seconds, forget it for a while
+            _ = Task.Delay(6000).ContinueWith(_ => Post(() =>
+            {
+                if (c.Probe && !c.Closed)
+                {
+                    _notMessenger[ip] = Now();
+                    c.Close();
+                }
+            }));
+            conn.SendRaw(Encoding.UTF8.GetBytes("MSG" + LocalId));
+            ReadLoop(conn);
+        }
+        catch (Exception)
+        {
+            conn?.Close();
+            Post(() => _probing.Remove(ip));
+        }
+    }
 
     /// <summary>TCP port a peer advertised (announce / file accept), or our own configured port for older peers.</summary>
     private int PeerPort(XmlMessage m) => int.TryParse(m.Data(Xn.TcpPort), out var p) && p is > 0 and < 65536 ? p : _cfg.TcpPort;
@@ -430,6 +547,12 @@ public sealed class Messenger : IDisposable
     private void OnConnClosed(Conn conn)
     {
         _connecting.Remove(conn.PeerId);
+        if (conn.Probe)
+        {
+            _probing.Remove(conn.PeerAddress);
+            return;
+        }
+        _probing.Remove(conn.PeerAddress);
         if (_streams.TryGetValue(conn.PeerId, out var cur) && ReferenceEquals(cur, conn))
         {
             _streams.Remove(conn.PeerId);
@@ -453,7 +576,7 @@ public sealed class Messenger : IDisposable
                     conn.Cipher = new SessionCipher(material);
                     conn.SendFrame(DatagramType.Handshake, LmxCrypto.RsaEncrypt(pub, material));
                     _log($"key exchange with {conn.PeerId}: {pub.KeySize} bit public key, session key sent");
-                    RegisterStream(conn);
+                    if (!conn.Probe) RegisterStream(conn);
                 }
                 catch (Exception e)
                 {
@@ -484,7 +607,19 @@ public sealed class Messenger : IDisposable
                     return;
                 }
                 var m = XmlMessage.Parse(Encoding.UTF8.GetString(clear));
-                if (m != null) ProcessMessage(conn, m);
+                if (m == null) break;
+                if (conn.Probe)
+                {
+                    // the first message of a scanned peer tells who it is
+                    var real = m.Header(Xn.From);
+                    if (real.Length == 0 || real == LocalId) { conn.Close(); break; }
+                    _log($"subnet scan found {real} @ {conn.PeerAddress}");
+                    conn.Probe = false;
+                    conn.PeerId = real;
+                    _probing.Remove(conn.PeerAddress);
+                    RegisterStream(conn);
+                }
+                ProcessMessage(conn, m);
                 break;
         }
     }
@@ -575,8 +710,8 @@ public sealed class Messenger : IDisposable
             if (!_users.ContainsKey(userId)) { Emit(new MessengerEvent.MessageFailed(userId, id)); return; }
             var b = new XmlMessage();
             b.AddData(Xn.Message, text);
-            b.AddData(Xn.Font, DefaultFont);
-            b.AddData(Xn.Color, DefaultColor);
+            b.AddData(Xn.Font, _cfg.MessageFont);
+            b.AddData(Xn.Color, _cfg.MessageColor);
             if (!SendTracked(userId, MessageType.Message, b, id))
             {
                 _pending.RemoveAll(p => p.MsgId == id);
@@ -602,8 +737,8 @@ public sealed class Messenger : IDisposable
         foreach (var uid in _users.Keys.ToList())
         {
             var b = new XmlMessage();
-            b.AddData(Xn.Font, DefaultFont);
-            b.AddData(Xn.Color, DefaultColor);
+            b.AddData(Xn.Font, _cfg.MessageFont);
+            b.AddData(Xn.Color, _cfg.MessageColor);
             b.AddData(Xn.Message, text);
             Transmit(uid, MessageType.PublicMessage, id, b);
         }
@@ -852,8 +987,8 @@ public sealed class Messenger : IDisposable
         {
             if (uid == LocalId) continue;
             var b = new XmlMessage();
-            b.AddData(Xn.Font, DefaultFont);
-            b.AddData(Xn.Color, DefaultColor);
+            b.AddData(Xn.Font, _cfg.MessageFont);
+            b.AddData(Xn.Color, _cfg.MessageColor);
             b.AddData(Xn.Message, text);
             b.AddData(Xn.Thread, threadId);
             b.AddData(Xn.GroupMsgOp, GroupMsgOp.Message.Name());
@@ -959,13 +1094,13 @@ public sealed class Messenger : IDisposable
         RequestSend(userId, Guid.NewGuid().ToString("N").ToUpperInvariant(), new LocalFileSource(f), FileType.Avatar);
     }
 
-    private void RequestSend(string userId, string fileId, IFileSource source, FileType type)
+    private void RequestSend(string userId, string fileId, IFileSource source, FileType type, Action<XmlMessage>? extra = null, string folderId = "")
     {
         if (!_users.ContainsKey(userId)) return;
         var t = new Transfer
         {
             Id = fileId, UserId = userId, Name = source.Name, Size = source.Size, Outgoing = true, Type = type,
-            State = TransferState.Requested, Source = source,
+            State = TransferState.Requested, Source = source, FolderId = folderId,
         };
         _transfers[fileId] = t;
         var b = new XmlMessage();
@@ -975,6 +1110,7 @@ public sealed class Messenger : IDisposable
         b.AddData(Xn.Mode, FileMode.Send.Name());
         b.AddData(Xn.FileName, source.Name);
         b.AddData(Xn.FileSize, source.Size.ToString());
+        extra?.Invoke(b);
         Transmit(userId, type == FileType.Avatar ? MessageType.Avatar : MessageType.File, NextId(), b);
         if (type == FileType.Normal) EmitTransfer(t);
     }
@@ -1024,6 +1160,11 @@ public sealed class Messenger : IDisposable
 
     private void EmitTransfer(Transfer t, string? location = null)
     {
+        if (t.Type == FileType.Folder)
+        {
+            if (_folders.TryGetValue(t.FolderId, out var f)) EmitFolder(f);
+            return;
+        }
         if (t.Type != FileType.Normal) return;
         Emit(new MessengerEvent.Transfer(new TransferInfo(t.Id, t.UserId, t.Name, t.Size, Interlocked.Read(ref t.Bytes), t.Outgoing, t.State, location)));
     }
@@ -1051,14 +1192,38 @@ public sealed class Messenger : IDisposable
         {
             case FileOp.Request:
             {
-                if (ft == FileType.Folder)
-                {
-                    DeclineFolder(from, fileId, m.Data(Xn.FolderId) is { Length: > 0 } f ? f : fileId);
-                    return;
-                }
                 long size = long.TryParse(m.Data(Xn.FileSize), out var sz) ? sz : 0;
                 var name = SanitizeFileName(m.Data(Xn.FileName));
                 var t = new Transfer { Id = fileId, UserId = from, Name = name, Size = size, Outgoing = false, Type = ft, State = TransferState.Requested };
+                if (ft == FileType.Folder)
+                {
+                    // one file of a folder we accepted: take it without asking again
+                    var folderId = m.Data(Xn.FolderId);
+                    if (!_folders.TryGetValue(folderId, out var folder) || folder.Outgoing || !folder.Accepted || folder.UserId != from)
+                    {
+                        var d = new XmlMessage();
+                        d.AddData(Xn.Mode, FileMode.Receive.Name());
+                        d.AddData(Xn.FileType, FileType.Folder.Name());
+                        d.AddData(Xn.FileOp, FileOp.Decline.Name());
+                        d.AddData(Xn.FileId, fileId);
+                        Transmit(from, MessageType.File, NextId(), d);
+                        return;
+                    }
+                    t.FolderId = folderId;
+                    t.Sink = new LocalFileSink(Path.Combine(folder.Root, SafeRelative(m.Data(Xn.RelPath))));
+                    t.State = TransferState.Transferring;
+                    folder.CurrentFileId = fileId;
+                    _transfers[fileId] = t;
+                    var a = new XmlMessage();
+                    a.AddData(Xn.Mode, FileMode.Receive.Name());
+                    a.AddData(Xn.FileType, FileType.Folder.Name());
+                    a.AddData(Xn.FileOp, FileOp.Accept.Name());
+                    a.AddData(Xn.FileId, fileId);
+                    a.AddData(Xn.FileSize, size.ToString());
+                    if (_tcp != null) a.AddData(Xn.TcpPort, _tcp.Port.ToString());
+                    Transmit(from, MessageType.File, NextId(), a);
+                    return;
+                }
                 _transfers[fileId] = t;
                 if (ft == FileType.Avatar)
                 {
@@ -1107,29 +1272,214 @@ public sealed class Messenger : IDisposable
             case FileOp.Abort:
             {
                 if (!_transfers.TryGetValue(fileId, out var t) || t.UserId != from) return;
+                if (t.Type == FileType.Folder && _folders.TryGetValue(t.FolderId, out var ff)) { EndFolder(ff, TransferState.Cancelled); break; }
                 CancelTransferLocally(t, TransferState.Cancelled);
                 break;
             }
         }
     }
 
-    private void ProcessFolder(string from, XmlMessage m)
+    // ---- folders ----------------------------------------------------------------------------------
+
+    /// <summary>Offers a whole folder (all files below it) to <paramref name="userId"/>.</summary>
+    public string? SendFolder(string userId, string path)
     {
-        if (Wire.ParseFileOp(m.Data(Xn.FileOp)) != FileOp.Request) return;
-        var folderId = m.Data(Xn.FolderId) is { Length: > 0 } f ? f : m.Data(Xn.FileId);
-        DeclineFolder(from, folderId, folderId);
+        if (!Directory.Exists(path)) return null;
+        var folderId = Guid.NewGuid().ToString("N").ToUpperInvariant();
+        Post(() =>
+        {
+            if (!_users.TryGetValue(userId, out var u) || (u.Caps & Proto.UcFolder) == 0) return;
+            var f = new FolderTx { Id = folderId, UserId = userId, Outgoing = true, Root = path, Name = new DirectoryInfo(path).Name };
+            try
+            {
+                // the original client's receiver cannot take an empty file (it aborts the whole folder), so older peers do not get them
+                bool skipEmpty = Proto.CompareVersions(u.Version, "3.0.0") < 0;
+                foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                {
+                    long len = new FileInfo(file).Length;
+                    if (len == 0 && skipEmpty) continue;
+                    f.Files.Add(file);
+                    f.Size += len;
+                }
+            }
+            catch (Exception e) { _log($"folder {path}: {e.Message}"); return; }
+            f.Count = f.Files.Count;
+            if (f.Count == 0) return;
+            _folders[folderId] = f;
+            var b = new XmlMessage();
+            b.AddData(Xn.FolderId, folderId);
+            b.AddData(Xn.FileId, folderId);
+            b.AddData(Xn.FileType, FileType.Normal.Name());
+            b.AddData(Xn.FileOp, FileOp.Request.Name());
+            b.AddData(Xn.Mode, FileMode.Send.Name());
+            b.AddData(Xn.FileName, f.Name);
+            b.AddData(Xn.FileSize, f.Size.ToString());
+            b.AddData(Xn.FileCount, f.Count.ToString());
+            Transmit(userId, MessageType.Folder, NextId(), b);
+            EmitFolder(f);
+        });
+        return folderId;
     }
 
-    /// <summary>Folder transfer is not supported; politely decline so the sender is not left hanging.</summary>
-    private void DeclineFolder(string userId, string fileId, string folderId)
+    /// <summary>Accept an offered folder; it is stored in a new sub-folder of <paramref name="parentDir"/>.</summary>
+    public void AcceptFolder(string userId, string folderId, string parentDir) => Post(() =>
     {
+        if (!_folders.TryGetValue(folderId, out var f) || f.Outgoing || f.UserId != userId || f.Accepted) return;
+        string dir = Path.Combine(parentDir, SanitizeFileName(f.Name));
+        for (int i = 1; Directory.Exists(dir); i++) dir = Path.Combine(parentDir, $"{SanitizeFileName(f.Name)} [{i}]");
+        try { Directory.CreateDirectory(dir); }
+        catch (Exception e) { _log($"folder {dir}: {e.Message}"); return; }
+        f.Root = dir;
+        f.Accepted = true;
+        f.State = TransferState.Transferring;
         var b = new XmlMessage();
         b.AddData(Xn.Mode, FileMode.Receive.Name());
-        b.AddData(Xn.FileType, FileType.Folder.Name());
-        b.AddData(Xn.FileOp, FileOp.Decline.Name());
-        b.AddData(Xn.FileId, fileId);
+        b.AddData(Xn.FileType, FileType.Normal.Name());
+        b.AddData(Xn.FileOp, FileOp.Accept.Name());
+        b.AddData(Xn.FileId, folderId);
         b.AddData(Xn.FolderId, folderId);
+        if (_tcp != null) b.AddData(Xn.TcpPort, _tcp.Port.ToString());
         Transmit(userId, MessageType.Folder, NextId(), b);
+        EmitFolder(f);
+    });
+
+    public void DeclineFolder(string userId, string folderId) => Post(() =>
+    {
+        if (!_folders.TryGetValue(folderId, out var f) || f.UserId != userId) return;
+        SendFolderOp(f, FileOp.Decline, FileMode.Receive);
+        _folders.Remove(folderId);
+        f.State = TransferState.Declined;
+        EmitFolder(f);
+    });
+
+    public void CancelFolder(string userId, string folderId) => Post(() =>
+    {
+        if (!_folders.TryGetValue(folderId, out var f) || f.UserId != userId) return;
+        SendFolderOp(f, FileOp.Cancel, f.Outgoing ? FileMode.Send : FileMode.Receive);
+        EndFolder(f, TransferState.Cancelled);
+    });
+
+    private void SendFolderOp(FolderTx f, FileOp op, FileMode mode)
+    {
+        var b = new XmlMessage();
+        b.AddData(Xn.Mode, mode.Name());
+        b.AddData(Xn.FileType, FileType.Normal.Name());
+        b.AddData(Xn.FileOp, op.Name());
+        b.AddData(Xn.FileId, f.Id);
+        b.AddData(Xn.FolderId, f.Id);
+        Transmit(f.UserId, MessageType.Folder, NextId(), b);
+    }
+
+    private void EndFolder(FolderTx f, TransferState state)
+    {
+        _folders.Remove(f.Id);
+        if (f.CurrentFileId != null && _transfers.TryGetValue(f.CurrentFileId, out var cur)) CancelTransferLocally(cur, state);
+        f.State = state;
+        EmitFolder(f);
+    }
+
+    private void EmitFolder(FolderTx f, string? location = null)
+    {
+        long current = 0;
+        if (f.CurrentFileId != null && _transfers.TryGetValue(f.CurrentFileId, out var cur)) current = Interlocked.Read(ref cur.Bytes);
+        Emit(new MessengerEvent.Transfer(new TransferInfo(f.Id, f.UserId, f.Name, f.Size, f.DoneBytes + current, f.Outgoing, f.State, location, IsFolder: true, FileCount: f.Count)));
+    }
+
+    private void ProcessFolder(string from, XmlMessage m)
+    {
+        if (Wire.ParseFileOp(m.Data(Xn.FileOp)) is not { } op) return;
+        var folderId = m.Data(Xn.FolderId) is { Length: > 0 } fid ? fid : m.Data(Xn.FileId);
+        if (folderId.Length == 0) return;
+        switch (op)
+        {
+            case FileOp.Request:
+            {
+                long size = long.TryParse(m.Data(Xn.FileSize), out var sz) ? sz : 0;
+                int count = int.TryParse(m.Data(Xn.FileCount), out var c) ? c : 0;
+                var f = new FolderTx { Id = folderId, UserId = from, Name = SanitizeFileName(m.Data(Xn.FileName)), Size = size, Count = count, Outgoing = false };
+                _folders[folderId] = f;
+                EmitFolder(f);
+                break;
+            }
+            case FileOp.Accept:
+            {
+                if (!_folders.TryGetValue(folderId, out var f) || !f.Outgoing || f.UserId != from) return;
+                f.Accepted = true;
+                f.State = TransferState.Transferring;
+                EmitFolder(f);
+                SendNextFolderFile(f);
+                break;
+            }
+            case FileOp.Decline:
+            {
+                if (!_folders.TryGetValue(folderId, out var f) || f.UserId != from) return;
+                _folders.Remove(folderId);
+                f.State = TransferState.Declined;
+                EmitFolder(f);
+                break;
+            }
+            case FileOp.Cancel:
+            case FileOp.Abort:
+            {
+                if (!_folders.TryGetValue(folderId, out var f) || f.UserId != from) return;
+                EndFolder(f, TransferState.Cancelled);
+                break;
+            }
+        }
+    }
+
+    private void SendNextFolderFile(FolderTx f)
+    {
+        if (f.Done >= f.Count)
+        {
+            _folders.Remove(f.Id);
+            f.State = TransferState.Complete;
+            EmitFolder(f, f.Root);
+            return;
+        }
+        var path = f.Files[f.Done];
+        var fileId = Guid.NewGuid().ToString("N").ToUpperInvariant();
+        f.CurrentFileId = fileId;
+        var rel = Path.GetRelativePath(f.Root, path).Replace('\\', '/');
+        RequestSend(f.UserId, fileId, new LocalFileSource(path), FileType.Folder, b =>
+        {
+            b.AddData(Xn.FolderId, f.Id);
+            b.AddData(Xn.RelPath, rel);
+        }, f.Id);
+    }
+
+    /// <summary>A file of a folder finished (or failed): go on with the next one.</summary>
+    private void OnFolderFileFinished(Transfer t, bool ok)
+    {
+        if (!_folders.TryGetValue(t.FolderId, out var f)) return;
+        f.CurrentFileId = null;
+        if (!ok)
+        {
+            if (f.State == TransferState.Transferring)
+            {
+                SendFolderOp(f, FileOp.Abort, f.Outgoing ? FileMode.Send : FileMode.Receive);
+                EndFolder(f, TransferState.Error);
+            }
+            return;
+        }
+        f.Done++;
+        f.DoneBytes += t.Size;
+        if (f.Outgoing) SendNextFolderFile(f);
+        else if (f.Done >= f.Count)
+        {
+            _folders.Remove(f.Id);
+            f.State = TransferState.Complete;
+            EmitFolder(f, f.Root);
+        }
+        else EmitFolder(f);
+    }
+
+    /// <summary>The folder path a peer sent, made safe: no drive letters, no ".." and no characters Windows rejects.</summary>
+    private static string SafeRelative(string rel)
+    {
+        var parts = rel.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Where(p => p != "." && p != "..").Select(SanitizeFileName).ToArray();
+        return parts.Length == 0 ? "file" : Path.Combine(parts);
     }
 
     /// <summary>Dedicated thread: connect to the receiver, wait for START, stream the file raw.</summary>
@@ -1193,6 +1543,7 @@ public sealed class Messenger : IDisposable
             if (t.Cancelled) return;
             _transfers.TryRemove(t.Id, out _);
             t.State = ok ? TransferState.Complete : TransferState.Error;
+            if (t.Type == FileType.Folder) { OnFolderFileFinished(t, ok); if (!ok) AbortOnWire(t); return; }
             EmitTransfer(t);
             if (!ok) AbortOnWire(t);
         });
@@ -1266,12 +1617,14 @@ public sealed class Messenger : IDisposable
                     UpdateUser(t.UserId, u => u with { AvatarPath = location });
                     Emit(new MessengerEvent.AvatarUpdated(t.UserId, location));
                 }
+                else if (t.Type == FileType.Folder) OnFolderFileFinished(t, true);
                 else EmitTransfer(t, location);
             }
             else
             {
                 t.State = TransferState.Error;
-                EmitTransfer(t);
+                if (t.Type == FileType.Folder) OnFolderFileFinished(t, false);
+                else EmitTransfer(t);
                 AbortOnWire(t);
             }
         });

@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LanMessengerX.App.ViewModels"
+        xmlns:svc="using:LanMessengerX.App.Services"
+        xmlns:loc="using:LanMessengerX.App.Localization"
+        x:Class="LanMessengerX.App.Views.TransfersWindow"
+        x:DataType="svc:AppState"
+        Title="{loc:T 'File Transfers'}" Width="560" Height="520" MinWidth="420" MinHeight="320"
+        WindowStartupLocation="CenterOwner" Icon="/Assets/app.ico">
+  <DockPanel Margin="16">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+      <Button Content="{loc:T 'View Files'}" Click="OnViewFiles" />
+      <Button Content="{loc:T 'Clear finished'}" Click="OnClearFinished" />
+      <Button Content="{loc:T 'Clear Transfer History'}" Click="OnClearHistory" />
+    </StackPanel>
+    <TextBlock DockPanel.Dock="Top" Text="{loc:T 'File Transfers'}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
+    <Grid>
+      <ScrollViewer>
+        <StackPanel Spacing="8">
+          <ItemsControl ItemsSource="{Binding Transfers}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:FileVm">
+                <Border Classes="card">
+                  <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="Auto,*">
+                      <PathIcon Width="26" Height="26" Data="{StaticResource IconFile}" Opacity="0.8" />
+                      <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Direction}" FontSize="12" Opacity="0.7" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding StatusText}" FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Grid>
+                    <ProgressBar IsVisible="{Binding ShowProgress}" Value="{Binding Progress}" Minimum="0" Maximum="100" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                      <Button Content="{loc:T 'Decline'}" Command="{Binding DeclineCommand}" IsVisible="{Binding CanDecline}" />
+                      <Button Content="{loc:T 'Accept'}" Command="{Binding AcceptCommand}" IsVisible="{Binding CanAccept}" Classes="accent" Padding="16,6" />
+                      <Button Content="{loc:T 'Cancel'}" Command="{Binding CancelCommand}" IsVisible="{Binding CanCancel}" />
+                      <Button Content="{loc:T 'Open'}" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" />
+                      <Button Content="{loc:T 'Show in folder'}" Command="{Binding ShowCommand}" IsVisible="{Binding CanOpen}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock x:Name="HistoryTitle" Text="{loc:T 'Earlier'}" FontWeight="SemiBold" Margin="0,12,0,0" />
+          <ItemsControl x:Name="HistoryList" />
+        </StackPanel>
+      </ScrollViewer>
+      <TextBlock x:Name="EmptyText" Text="{loc:T 'No file transfers yet.'}" Opacity="0.6" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
+    </Grid>
+  </DockPanel>
+</Window>

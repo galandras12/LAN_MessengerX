@@ -9,7 +9,8 @@ public sealed record User(
 public enum TransferState { Requested, Transferring, Complete, Declined, Cancelled, Error }
 
 public sealed record TransferInfo(
-    string Id, string UserId, string Name, long Size, long Bytes, bool Outgoing, TransferState State, string? Location = null);
+    string Id, string UserId, string Name, long Size, long Bytes, bool Outgoing, TransferState State, string? Location = null,
+    bool IsFolder = false, int FileCount = 0);
 
 public sealed record RoomInfo(string ThreadId, IReadOnlyList<string> Participants);
 

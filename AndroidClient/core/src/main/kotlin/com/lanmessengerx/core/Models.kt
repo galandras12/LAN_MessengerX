@@ -29,6 +29,9 @@ data class TransferInfo(
     val state: TransferState,
     /** Final local location of a completed incoming transfer, if the sink reports one. */
     val location: String? = null,
+    /** A folder offer / transfer (name = folder name, size = all bytes, fileCount files). */
+    val isFolder: Boolean = false,
+    val fileCount: Int = 0,
 )
 
 data class RoomInfo(val threadId: String, val participants: List<String>)

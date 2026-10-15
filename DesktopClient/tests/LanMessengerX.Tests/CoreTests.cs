@@ -179,3 +179,34 @@ public class ProtocolTests
         Assert.Null(Wire.ParseFileOp("bogus"));
     }
 }
+
+public class DiscoveryTests
+{
+    private static LanInterface Lan(string ip, int prefix) => new("eth0", "test", System.Net.IPAddress.Parse(ip), prefix, 1, "");
+
+    [Fact]
+    public void SubnetHostsCoverTheWholeSlash24WithoutNetworkAndBroadcast()
+    {
+        var hosts = NetUtil.SubnetHosts(Lan("192.168.1.77", 24)).ToList();
+        Assert.Equal(254, hosts.Count);
+        Assert.Equal("192.168.1.1", hosts[0]);
+        Assert.Equal("192.168.1.254", hosts[^1]);
+    }
+
+    [Fact]
+    public void SubnetHostsOfAHugeNetworkAreCutDownToTheSlash24()
+    {
+        var hosts = NetUtil.SubnetHosts(Lan("10.20.30.40", 8)).ToList();
+        Assert.Equal(254, hosts.Count);
+        Assert.All(hosts, h => Assert.StartsWith("10.20.30.", h));
+    }
+
+    [Fact]
+    public void SubnetHostsOfASlash22AreAllScanned()
+    {
+        var hosts = NetUtil.SubnetHosts(Lan("10.0.5.9", 22)).ToList();
+        Assert.Equal(1022, hosts.Count);
+        Assert.Equal("10.0.4.1", hosts[0]);
+        Assert.Equal("10.0.7.254", hosts[^1]);
+    }
+}

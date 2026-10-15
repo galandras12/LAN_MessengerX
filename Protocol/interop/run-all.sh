@@ -15,6 +15,11 @@ if [ -x "$UP" ]; then
   for c in kotlin csharp; do echo "=== $c vs upstream 2.x ==="; LEGACYD="$UP" CLIENT=$c python3 test_legacy.py | grep -E '^(PASS|FAIL|RESULT)' || fail=1; done
   for c in kotlin csharp; do echo "=== file stress: $c vs upstream 2.x ==="; LEGACYD="$UP" CLIENT=$c python3 test_files.py | grep -E '^(FAIL|RESULT)' || fail=1; done
 fi
+for c in kotlin csharp; do echo "=== folders: $c vs original ==="; CLIENT=$c python3 test_folders.py | grep -E '^(FAIL|RESULT)' || fail=1; done
+for c in kotlin csharp; do echo "=== discovery with every incoming packet dropped: $c ==="; CLIENT=$c python3 test_scan.py | grep -E '^(PASS|FAIL|RESULT)' || fail=1; done
+if [ -x "$UP" ]; then
+  for c in kotlin csharp; do echo "=== folders: $c vs upstream 2.x ==="; LEGACYD="$UP" CLIENT=$c python3 test_folders.py | grep -E '^(FAIL|RESULT)' || fail=1; done
+fi
 echo "=== kotlin vs csharp ==="; python3 test_kotlin_csharp.py | grep -E '^(PASS|FAIL|RESULT)' || fail=1
 for c in kotlin csharp; do echo "=== file stress: $c vs original ==="; CLIENT=$c python3 test_files.py | grep -E '^(FAIL|RESULT)' || fail=1; done
 exit $fail

@@ -35,30 +35,44 @@ void Shot(Window w, string name)
 
 Dispatcher.UIThread.Invoke(() =>
 {
-    var settings = new AppSettings { Name = "Me", MachineId = "AABBCCDDEEFF" };
+    var lang = Environment.GetEnvironmentVariable("LMX_LANG") ?? "en_US";
+    var settings = new AppSettings { Name = "Me", MachineId = "AABBCCDDEEFF", Language = lang, StockAvatar = 3 };
     var state = new AppState(settings);
     state.LoadDemo();
     var app = (App)Application.Current!;
+    string suffix = lang == "en_US" ? "" : "-" + lang;
     foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
     {
         app.RequestedThemeVariant = variant;
         string v = variant == ThemeVariant.Light ? "light" : "dark";
         var main = new MainWindow { DataContext = state, Width = 1000, Height = 680 };
         main.Show();
-        Shot(main, "main-" + v);
+        Shot(main, "main-" + v + suffix);
         main.Close();
     }
     app.RequestedThemeVariant = ThemeVariant.Light;
     var main2 = new MainWindow { DataContext = state, Width = 1000, Height = 680 };
     main2.Show();
     state.Selected = state.Rooms[0];
-    Shot(main2, "room-light");
+    Shot(main2, "room-light" + suffix);
+    state.Selected = state.PublicChat;
+    Shot(main2, "public-light" + suffix);
     state.Selected = null;
-    Shot(main2, "empty-light");
+    Shot(main2, "empty-light" + suffix);
     main2.Close();
+    var names = new[] { "general", "account", "messages", "history", "alerts", "network", "files", "look", "keys" };
     var settingsWin = new SettingsWindow { DataContext = state };
     settingsWin.Show();
-    Shot(settingsWin, "settings-light");
+    var nav = settingsWin.FindControl<ListBox>("Nav")!;
+    for (int i = 0; i < names.Length; i++)
+    {
+        nav.SelectedIndex = i;
+        Shot(settingsWin, "settings-" + names[i] + suffix);
+    }
     settingsWin.Close();
+    var tw = new TransfersWindow { DataContext = state };
+    tw.Show();
+    Shot(tw, "transfers" + suffix);
+    tw.Close();
 });
 Console.WriteLine("done");

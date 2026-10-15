@@ -8,7 +8,7 @@ namespace LanMessengerX.App.ViewModels;
 
 public static class StatusText
 {
-    public static string Label(string code) => code switch
+    public static string Label(string code) => Localization.Loc.T(code switch
     {
         "chat" => "Available",
         "busy" => "Busy",
@@ -17,7 +17,7 @@ public static class StatusText
         "away" => "Away",
         "gone" => "Appear offline",
         _ => code,
-    };
+    });
 
     public static readonly IBrush Online = new SolidColorBrush(Color.Parse("#2E9E5B"));
     public static readonly IBrush Busy = new SolidColorBrush(Color.Parse("#D32F2F"));
@@ -28,7 +28,22 @@ public static class StatusText
         Proto.IsOffline(code) ? Offline : Proto.IsBusy(code) ? Busy : Proto.IsAway(code) ? Away : Online;
 }
 
-public sealed class ContactVm : Observable
+/// <summary>One row of the people list: a group header or a contact.</summary>
+public abstract class RosterRow : Observable { }
+
+public sealed class GroupRowVm : RosterRow
+{
+    public string Id { get; }
+    public string Name { get; }
+    public bool Collapsed { get; }
+    public int Count { get; }
+    public bool IsDefault => Id.Length == 0;
+    public GroupRowVm(string id, string name, bool collapsed, int count) { Id = id; Name = name; Collapsed = collapsed; Count = count; }
+    public string Title => $"{Name} ({Count})";
+    public string Chevron => Collapsed ? "▸" : "▾";
+}
+
+public sealed class ContactVm : RosterRow
 {
     public string Id { get; }
     private string _name = "";
@@ -49,6 +64,9 @@ public sealed class ContactVm : Observable
         Name = u.Name;
         Note = u.Note;
         Status = u.Status;
+        Address = u.Address;
+        Version = u.Version;
+        Raise(nameof(Tooltip));
     }
 
     public string Name { get => _name; set { if (Set(ref _name, value)) { Raise(nameof(Subtitle)); } } }
@@ -65,7 +83,12 @@ public sealed class ContactVm : Observable
     public bool HasUnread => _unread > 0;
     public string UnreadText => _unread > 99 ? "99+" : _unread.ToString();
     public IBrush Presence => StatusText.Presence(_status);
-    public string Subtitle => _typing ? "typing…" : !string.IsNullOrWhiteSpace(_note) ? _note : StatusText.Label(_status);
+    public string GroupId { get; set; } = "";
+    public string Address { get; set; } = "";
+    public string Version { get; set; } = "";
+    public string? Tooltip => Services.AppState.Current?.Settings.ContactTooltips == false ? null
+        : $"{Name}\n{StatusText.Label(_status)}" + (string.IsNullOrWhiteSpace(_note) ? "" : "\n" + _note);
+    public string Subtitle => _typing ? Localization.Loc.T("typing…") : !string.IsNullOrWhiteSpace(_note) ? _note : StatusText.Label(_status);
 }
 
 public sealed class StatusChoice

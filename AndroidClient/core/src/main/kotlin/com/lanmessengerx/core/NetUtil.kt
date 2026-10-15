@@ -25,6 +25,24 @@ data class LanInterface(
             return InetAddress.getByAddress(bytes) as Inet4Address
         }
 
+    /** Addresses of the subnet (at most 1022; networks larger than /22 are cut down to the /24 around the address). */
+    fun subnetHosts(): List<String> {
+        val a = address.address
+        val ip = ((a[0].toInt() and 0xFF) shl 24) or ((a[1].toInt() and 0xFF) shl 16) or
+            ((a[2].toInt() and 0xFF) shl 8) or (a[3].toInt() and 0xFF)
+        val p = if (prefixLength < 22 || prefixLength > 30) 24 else prefixLength
+        val mask = -1 shl (32 - p)
+        val net = ip and mask
+        val bc = net or mask.inv()
+        val out = ArrayList<String>()
+        var h = net + 1
+        while (Integer.compareUnsigned(h, bc) < 0) {
+            out.add("${(h ushr 24) and 255}.${(h ushr 16) and 255}.${(h ushr 8) and 255}.${h and 255}")
+            h++
+        }
+        return out
+    }
+
     /** Same interface, same address? Used to detect that the network changed. */
     fun sameAs(o: LanInterface?) = o != null && o.name == name && o.address == address
 }

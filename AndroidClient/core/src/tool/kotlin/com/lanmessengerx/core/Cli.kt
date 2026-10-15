@@ -29,6 +29,8 @@ fun main(args: Array<String>) {
             "msg" -> out("SENT id=" + m.sendText(p[1], p.drop(2).joinToString(" ")))
             "file" -> out("FILEID " + m.sendFile(p[1], LocalFileSource(File(p[2]))))
             "accept" -> m.acceptFile(p[1], p[2], LocalFileSink(File(p[3])))
+            "folder" -> out("FOLDERID " + m.sendFolder(p[1], File(p[2])))
+            "acceptfolder" -> m.acceptFolder(p[1], p[2], File(p[3]))
             "avatar" -> m.setLocalAvatar(File(p[1]))
             "status" -> m.setStatus(p[1])
             "group" -> out("THREAD " + m.createGroupChat(p[1].split(',')))

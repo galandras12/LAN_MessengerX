@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Layout;
+using LanMessengerX.App.Localization;
 using LanMessengerX.Core;
 
 namespace LanMessengerX.App.ViewModels;
@@ -9,14 +10,23 @@ public abstract class ChatItemVm : Observable
 {
     public long Time { get; }
     protected ChatItemVm(long time) => Time = time;
-    public string TimeText => DateTimeOffset.FromUnixTimeMilliseconds(Time).ToLocalTime().ToString("t");
+    public string TimeText
+    {
+        get
+        {
+            var set = Services.AppState.Current?.Settings;
+            var t = DateTimeOffset.FromUnixTimeMilliseconds(Time).ToLocalTime();
+            return set is { ShowDate: true } ? t.ToString("g") : t.ToString("t");
+        }
+    }
+    public bool HasTime => Services.AppState.Current?.Settings.ShowTimestamp ?? true;
     public string DayText
     {
         get
         {
             var d = DateTimeOffset.FromUnixTimeMilliseconds(Time).ToLocalTime().Date;
             var today = DateTime.Today;
-            return d == today ? "Today" : d == today.AddDays(-1) ? "Yesterday" : d.ToString("D");
+            return d == today ? Loc.T("Today") : d == today.AddDays(-1) ? Loc.T("Yesterday") : d.ToString("D");
         }
     }
 
@@ -51,8 +61,9 @@ public sealed class MessageVm : ChatItemVm
         _state = state;
     }
 
+    public Avalonia.Media.IBrush LinkBrush => Outgoing ? Avalonia.Media.Brushes.White : new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3D8BFD"));
     public HorizontalAlignment Align => Outgoing ? HorizontalAlignment.Right : HorizontalAlignment.Left;
-    public string StateText => State switch { Delivery.Sending => "sending…", Delivery.Failed => "not delivered", _ => "✓" };
+    public string StateText => State switch { Delivery.Sending => Loc.T("sending…"), Delivery.Failed => Loc.T("not delivered"), _ => "✓" };
     public bool HasStateText => Outgoing;
     public bool IsFailed => State == Delivery.Failed;
 }
@@ -77,9 +88,13 @@ public sealed class BroadcastVm : ChatItemVm
 public sealed class FileVm : ChatItemVm
 {
     public string FileId { get; }
+    /// <summary>Display name of the other side.</summary>
+    public string Peer { get; set; } = "";
     public string Name { get; }
     public long Size { get; }
     public bool Outgoing { get; }
+    public bool IsFolder { get; }
+    public int FileCount { get; }
     private readonly Action<FileVm, string> _act;
 
     private TransferState _state;
@@ -92,6 +107,8 @@ public sealed class FileVm : ChatItemVm
         Name = t.Name;
         Size = t.Size;
         Outgoing = t.Outgoing;
+        IsFolder = t.IsFolder;
+        FileCount = t.FileCount;
         _act = act;
         Update(t);
         AcceptCommand = new RelayCommand(() => _act(this, "accept"));
@@ -117,15 +134,17 @@ public sealed class FileVm : ChatItemVm
     public bool CanOpen => !Outgoing && _state == TransferState.Complete && _location != null;
     public bool IsError => _state == TransferState.Error;
     public string SizeText => Format(Size);
+    public string Direction => Outgoing ? Loc.F("To {0}", Peer) : Loc.F("From {0}", Peer);
 
     public string StatusText => _state switch
     {
-        TransferState.Requested => Outgoing ? $"Waiting for the other side to accept · {Format(Size)}" : $"Wants to send you this file · {Format(Size)}",
-        TransferState.Transferring => $"{Format(_bytes)} of {Format(Size)}",
-        TransferState.Complete => (Outgoing ? "Sent" : "Saved") + $" · {Format(Size)}",
-        TransferState.Declined => "Declined",
-        TransferState.Cancelled => "Cancelled",
-        _ => "Transfer failed",
+        TransferState.Requested when IsFolder => Outgoing ? Loc.F("Waiting for the other side to accept · {0} files, {1}", FileCount, Format(Size)) : Loc.F("Wants to send you this folder · {0} files, {1}", FileCount, Format(Size)),
+        TransferState.Requested => Outgoing ? Loc.F("Waiting for the other side to accept · {0}", Format(Size)) : Loc.F("Wants to send you this file · {0}", Format(Size)),
+        TransferState.Transferring => Loc.F("{0} of {1}", Format(_bytes), Format(Size)),
+        TransferState.Complete => Loc.F(Outgoing ? "Sent · {0}" : "Saved · {0}", Format(Size)),
+        TransferState.Declined => Loc.T("Declined"),
+        TransferState.Cancelled => Loc.T("Cancelled"),
+        _ => Loc.T("Transfer failed"),
     };
 
     public void Update(TransferInfo t)
