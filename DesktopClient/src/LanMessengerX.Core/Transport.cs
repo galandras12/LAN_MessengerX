@@ -16,6 +16,7 @@ internal sealed class Conn
 
     /// <summary>Opened by the subnet scan: the peer's user id is not known until its first message arrives.</summary>
     public bool Probe { get; set; }
+    public int FramesSeen { get; set; }
 
     private readonly NetworkStream _stream;
     private readonly Channel<byte[]> _outbox = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions { SingleReader = true });

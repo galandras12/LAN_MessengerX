@@ -542,6 +542,20 @@ public sealed class Messenger : IDisposable
         _streams[conn.PeerId] = conn;
         if (conn.Cipher != null) _keys[conn.PeerId] = conn.Cipher;
         _connecting.Remove(conn.PeerId);
+        // a connection that never delivers the peer's user data would block every new attempt: give up after 10 s
+        var peer = conn.PeerId;
+        _ = Task.Delay(10000).ContinueWith(_ => Post(() =>
+        {
+            if (_users.ContainsKey(peer) || conn.Closed) return;
+            if (_streams.TryGetValue(peer, out var cur) && ReferenceEquals(cur, conn))
+            {
+                _log($"no user data from {peer} within 10 s ({conn.FramesSeen} frames seen) - dropping the connection");
+                _streams.Remove(peer);
+                _keys.Remove(peer);
+                _connecting.Remove(peer);
+            }
+            conn.Close();
+        }));
     }
 
     private void OnConnClosed(Conn conn)
@@ -563,8 +577,9 @@ public sealed class Messenger : IDisposable
 
     private void OnFrame(Conn conn, byte[] frame)
     {
-        if (frame.Length < 6) return;
+        if (frame.Length < 6) { _log($"short frame ({frame.Length} bytes) from {conn.PeerId}"); return; }
         var tag = Encoding.ASCII.GetString(frame, 0, 6);
+        if (++conn.FramesSeen <= 6) _log($"frame {tag} ({frame.Length - 6} bytes) from {conn.PeerId}");
         var data = frame.AsSpan(6).ToArray();
         switch (DatagramTags.FromTag(tag))
         {
@@ -603,11 +618,16 @@ public sealed class Messenger : IDisposable
                 var clear = conn.Cipher?.Decrypt(data) ?? (_keys.TryGetValue(conn.PeerId, out var k) ? k.Decrypt(data) : null);
                 if (clear == null)
                 {
-                    _log($"could not decrypt message from {conn.PeerId}");
+                    _log($"could not decrypt message from {conn.PeerId} ({data.Length} bytes)");
                     return;
                 }
                 var m = XmlMessage.Parse(Encoding.UTF8.GetString(clear));
-                if (m == null) break;
+                if (m == null)
+                {
+                    var txt = Encoding.UTF8.GetString(clear);
+                    _log($"unreadable message from {conn.PeerId}: {(txt.Length > 120 ? txt[..120] : txt).Replace('\n', ' ')}");
+                    break;
+                }
                 if (conn.Probe)
                 {
                     // the first message of a scanned peer tells who it is
@@ -814,6 +834,7 @@ public sealed class Messenger : IDisposable
         var type = Wire.ParseMessageType(m.Header(Xn.Type));
         if (type == null) return;
         long id = long.TryParse(m.Header(Xn.MessageId), out var idv) ? idv : 0;
+        if (!_users.ContainsKey(from)) _log($"message {m.Header(Xn.Type)} from not yet known {from}");
         switch (type)
         {
             case MessageType.UserData:
