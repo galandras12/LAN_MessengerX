@@ -1,5 +1,7 @@
 # Kiadások – 3.1.0
 
+Változások: [`CHANGELOG.md`](CHANGELOG.md) (angolul, folyamatosan vezetve).
+
 | Fájl | Mi | SHA-256 |
 |---|---|---|
 | `LANMessengerX-3.1.0.apk` | Android 8.0+ (min SDK 26, target 34), release, R8-zsugorított, v2/v3 aláírással | `628719411cddf30555fd46df317b09b6b078b020683fdb42b1b99d5971b66dd0` |
