@@ -77,6 +77,34 @@ public static class NetUtil
         return best;
     }
 
+    /// <summary>One line per usable IPv4 adapter address, for the diagnostics log and the interface picker.</summary>
+    public static List<LanInterface> ListInterfaces()
+    {
+        var list = new List<LanInterface>();
+        try
+        {
+            foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                try
+                {
+                    if (ni.OperationalStatus != OperationalStatus.Up) continue;
+                    if (ni.NetworkInterfaceType is NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel) continue;
+                    var props = ni.GetIPProperties();
+                    foreach (var ua in props.UnicastAddresses)
+                    {
+                        if (ua.Address.AddressFamily != AddressFamily.InterNetwork) continue;
+                        var b = ua.Address.GetAddressBytes();
+                        if (b[0] == 127 || (b[0] == 169 && b[1] == 254)) continue;
+                        list.Add(new LanInterface(ni.Name, ni.Description, ua.Address, PrefixOf(ua), SafeIndex(props), Hex(ni.GetPhysicalAddress().GetAddressBytes())));
+                    }
+                }
+                catch (Exception) { }
+            }
+        }
+        catch (Exception) { }
+        return list;
+    }
+
     private static int SafeIndex(IPInterfaceProperties p)
     {
         try { return p.GetIPv4Properties()?.Index ?? 0; } catch (Exception) { return 0; }

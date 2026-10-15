@@ -51,6 +51,9 @@ public sealed class Messenger : IDisposable
 
     public string LocalId { get; }
 
+    /// <summary>Takes effect on the next network check (every two seconds).</summary>
+    public string? PreferredInterface { get => _cfg.PreferredInterface; set => _cfg.PreferredInterface = value; }
+
     private readonly Dictionary<string, User> _users = new();
     private readonly Dictionary<string, Conn> _streams = new();
     private readonly Dictionary<string, SessionCipher> _keys = new();
@@ -209,7 +212,8 @@ public sealed class Messenger : IDisposable
         if (IsConnected && found.SameAs(_lan)) return;
         if (IsConnected) TeardownNetwork();
         _lan = found;
-        _log($"network up: {found.Name} {found.Ip}/{found.PrefixLength}");
+        _log($"network up: {found.Name} ({found.Description}) {found.Ip}/{found.PrefixLength}, broadcast {found.Broadcast}");
+        foreach (var c in NetUtil.ListInterfaces()) _log($"  adapter: {c.Name} ({c.Description}) {c.Ip}/{c.PrefixLength}{(c.SameAs(found) ? "  <- used" : "")}");
         var server = new TcpServer(_cfg.TcpPort, s => Task.Run(() => HandleIncoming(s)), _log);
         _tcp = server.Start() ? server : null;
         var u = new UdpService(found, _cfg.UdpPort, IPAddress.Parse(_cfg.Multicast), (ip, text) => Post(() => OnBroadcastDatagram(ip, text)), _log);
@@ -276,15 +280,24 @@ public sealed class Messenger : IDisposable
             foreach (var b in _cfg.ExtraBroadcasts) if (IPAddress.TryParse(b, out var ip)) Add(ip);
         }
         catch (Exception e) { _log($"broadcast target error: {e.Message}"); }
+        if (type == MessageType.Announce && !_loggedTargets)
+        {
+            _loggedTargets = true;
+            _log($"announcing {LocalId} to {string.Join(", ", targets)}");
+        }
         udp.Send(Encoding.UTF8.GetBytes(m.ToXml()), targets);
     }
+
+    private bool _loggedTargets;
+    private readonly HashSet<string> _seenSenders = new();
 
     private void OnBroadcastDatagram(string fromIp, string text)
     {
         var m = XmlMessage.Parse(text);
-        if (m == null) return;
+        if (m == null) { _log($"UDP from {fromIp}: not a LAN Messenger datagram ({text.Length} chars)"); return; }
         var from = m.Header(Xn.From);
         if (from.Length == 0 || from == LocalId) return;
+        if (!_seenSenders.Contains(from)) { _seenSenders.Add(from); _log($"UDP {m.Header(Xn.Type)} from {from} @ {fromIp}"); }
         switch (Wire.ParseMessageType(m.Header(Xn.Type)))
         {
             case MessageType.Announce:
@@ -307,11 +320,13 @@ public sealed class Messenger : IDisposable
             Conn? conn = null;
             try
             {
+                _log($"TCP connect to {userId} @ {ip}:{_cfg.TcpPort}");
                 var s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
                 s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
                 var connect = s.ConnectAsync(new IPEndPoint(IPAddress.Parse(ip), _cfg.TcpPort));
                 if (!connect.Wait(5000)) { s.Close(); throw new TimeoutException("connect timed out"); }
                 conn = new Conn(s, incoming: false, peerId: userId);
+                _log($"TCP connected to {userId}, waiting for its public key");
                 conn.SendRaw(Encoding.UTF8.GetBytes("MSG" + LocalId));
                 ReadLoop(conn);
             }
@@ -333,10 +348,11 @@ public sealed class Messenger : IDisposable
             int n = s.Receive(first);
             if (n <= 0) { s.Close(); return; }
             string head = Encoding.ASCII.GetString(first, 0, Math.Min(n, 4));
-            if (head.StartsWith("MSG"))
+            if (head.StartsWith("MSG", StringComparison.Ordinal))
             {
                 s.ReceiveTimeout = 0;
                 var peerId = Encoding.UTF8.GetString(first, 3, n - 3);
+                _log($"TCP incoming from {peerId} @ {(s.RemoteEndPoint as IPEndPoint)?.Address}");
                 var conn = new Conn(s, incoming: true, peerId: peerId);
                 var key = _rsa?.PublicPem;
                 if (key == null) { conn.Close(); return; }
@@ -355,7 +371,7 @@ public sealed class Messenger : IDisposable
                 var fileId = Encoding.ASCII.GetString(first, 4, Proto.FileIdLength);
                 var userPrefix = Encoding.UTF8.GetString(first, 4 + Proto.FileIdLength, n - 4 - Proto.FileIdLength);
                 if (!_transfers.TryGetValue(fileId, out var t) || t.Outgoing ||
-                    !(t.UserId.StartsWith(userPrefix) || userPrefix.StartsWith(t.UserId)))
+                    !(t.UserId.StartsWith(userPrefix, StringComparison.Ordinal) || userPrefix.StartsWith(t.UserId, StringComparison.Ordinal)))
                 {
                     s.Close(); return;
                 }
@@ -423,6 +439,7 @@ public sealed class Messenger : IDisposable
                     var material = LmxCrypto.NewSessionMaterial();
                     conn.Cipher = new SessionCipher(material);
                     conn.SendFrame(DatagramType.Handshake, LmxCrypto.RsaEncrypt(pub, material));
+                    _log($"key exchange with {conn.PeerId}: {pub.KeySize} bit public key, session key sent");
                     RegisterStream(conn);
                 }
                 catch (Exception e)
@@ -436,6 +453,7 @@ public sealed class Messenger : IDisposable
                 {
                     var material = LmxCrypto.RsaDecrypt(_rsa!.Rsa, data);
                     conn.Cipher = new SessionCipher(material);
+                    _log($"key exchange with {conn.PeerId}: session key received");
                     RegisterStream(conn);
                     SendUserData(conn.PeerId, QueryOp.Get);
                 }

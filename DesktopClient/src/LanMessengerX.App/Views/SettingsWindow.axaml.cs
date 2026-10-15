@@ -32,6 +32,14 @@ public partial class SettingsWindow : Window
             NetText.Text = s.Connected
                 ? $"Connected as {s.Ip}\nUDP and TCP port {s.Settings.Port}, multicast group {Proto.DefaultMulticast}\nYour id on the network: {s.LocalId}"
                 : "Not connected. Join a network to find other people.";
+            var auto = new AdapterChoice(null, "Automatic");
+            var choices = new List<AdapterChoice> { auto };
+            choices.AddRange(NetUtil.ListInterfaces().Select(i => new AdapterChoice(i.Name, $"{i.Name} - {i.Ip}")));
+            AdapterBox.ItemsSource = choices;
+            AdapterBox.SelectedItem = choices.FirstOrDefault(c => c.Name == s.Settings.PreferredInterface) ?? auto;
+            FirewallBtn.IsVisible = Firewall.Supported;
+            LogBox.Text = FileLog.Tail();
+            LogBox.CaretIndex = LogBox.Text?.Length ?? 0;
             AboutTitle.Text = $"LAN Messenger X {Proto.Version}";
         };
     }
@@ -69,6 +77,28 @@ public partial class SettingsWindow : Window
         if (dirs.Count > 0 && dirs[0].TryGetLocalPath() is { } p) DownloadBox.Text = p;
     }
 
+    private sealed record AdapterChoice(string? Name, string Label)
+    {
+        public override string ToString() => Label;
+    }
+
+    private void OnFirewall(object? sender, RoutedEventArgs e)
+    {
+        Firewall.Allow(out var msg);
+        FirewallText.Text = msg;
+        State.Messenger?.Refresh();
+        LogBox.Text = FileLog.Tail();
+    }
+
+    private void OnRefreshNetwork(object? sender, RoutedEventArgs e)
+    {
+        State.Messenger?.Refresh();
+        LogBox.Text = FileLog.Tail();
+        LogBox.CaretIndex = LogBox.Text?.Length ?? 0;
+    }
+
+    private void OnOpenLog(object? sender, RoutedEventArgs e) => Shell.Reveal(FileLog.Path_);
+
     private void OnCancel(object? sender, RoutedEventArgs e) => Close();
 
     private void OnSave(object? sender, RoutedEventArgs e)
@@ -88,6 +118,12 @@ public partial class SettingsWindow : Window
         }
         var dl = DownloadBox.Text?.Trim();
         s.Settings.DownloadDir = string.IsNullOrEmpty(dl) || dl == new AppSettings().EffectiveDownloadDir ? null : dl;
+        var adapter = (AdapterBox.SelectedItem as AdapterChoice)?.Name;
+        if (adapter != s.Settings.PreferredInterface)
+        {
+            s.Settings.PreferredInterface = adapter;
+            if (s.Messenger != null) s.Messenger.PreferredInterface = adapter;
+        }
         s.Settings.Save();
         Close();
     }

@@ -122,6 +122,7 @@ internal sealed class UdpService
             try { r.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(_group, _lan.Address)); }
             catch (Exception e) { _log($"Multicast join failed: {e.Message} (broadcast discovery still works)"); }
             _receiver = r;
+            _log($"UDP listening on 0.0.0.0:{_port}, multicast {_group} via {_lan.Address}");
             new Thread(() => ReceiveLoop(r)) { IsBackground = true, Name = "lmx-udp" }.Start();
         }
         catch (Exception e)
@@ -141,6 +142,7 @@ internal sealed class UdpService
             }
             catch (Exception) { }
             _sender = s;
+            _log($"UDP sender bound to {_lan.Address}");
         }
         catch (Exception e)
         {
@@ -159,6 +161,11 @@ internal sealed class UdpService
                 int n = r.ReceiveFrom(buf, ref any);
                 var from = ((IPEndPoint)any).Address.ToString();
                 _onDatagram(from, System.Text.Encoding.UTF8.GetString(buf, 0, n));
+            }
+            catch (SocketException e) when (_running && e.SocketErrorCode is SocketError.ConnectionReset or SocketError.MessageSize or SocketError.NetworkReset or SocketError.HostUnreachable or SocketError.NetworkUnreachable)
+            {
+                // Windows reports ICMP "port unreachable" of earlier sends on the receiving socket - harmless, keep listening
+                _log($"UDP receive hiccup ignored: {e.SocketErrorCode}");
             }
             catch (Exception e)
             {

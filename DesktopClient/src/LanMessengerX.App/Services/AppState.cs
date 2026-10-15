@@ -87,6 +87,7 @@ public sealed class AppState : Observable
 
     public void Start()
     {
+        FileLog.Reset();
         var cfg = new MessengerConfig
         {
             UserName = Settings.Name,
@@ -102,7 +103,7 @@ public sealed class AppState : Observable
             PreferredInterface = Settings.PreferredInterface,
             ExtraBroadcasts = Settings.ExtraBroadcasts.ToList(),
         };
-        Messenger = new Messenger(cfg, s => System.Diagnostics.Debug.WriteLine("[lmx] " + s), e => Dispatcher.UIThread.Post(() => OnEvent(e)));
+        Messenger = new Messenger(cfg, FileLog.Write, e => Dispatcher.UIThread.Post(() => OnEvent(e)));
         Messenger.Start();
         if (File.Exists(AvatarFile)) Messenger.SetLocalAvatar(AvatarFile);
     }

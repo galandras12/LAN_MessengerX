@@ -3,7 +3,7 @@
 ## Nem látom a többieket / a többiek nem látnak engem
 1. Ugyanazon a **hálózaton** vagytok? (Ugyanaz a Wi-Fi/LAN, nem vendéghálózat, nem VPN.)
 2. Sok routeren a Wi-Fi-n van **„AP-/kliens-elkülönítés”** (client isolation), ami megszakítja a készülékek közti forgalmat. Kapcsold ki, vagy használj kábelt.
-3. **Tűzfal**: Windowson első indításkor engedélyezd a hozzáférést *privát* hálózaton. Kézzel: bejövő szabály UDP **és** TCP 50000-es portra.
+3. **Tűzfal**: Windowson első indításkor engedélyezd a hozzáférést *privát* hálózaton. Kézzel: bejövő szabály UDP **és** TCP 50000-es portra. Ha az első kérdést bezártad vagy elutasítottad, Windows tiltó szabályt hagy hátra – ilyenkor a *Beállítások → Network → Allow in Windows Firewall…* gomb (egyszeri rendszergazdai jóváhagyás) törli a tiltást és engedélyezi a programot. A *Beállítások* alján látszik a napló is (`%APPDATA%\LAN Messenger X\lanmessengerx.log`), ebből kiderül, melyik hálózati adaptert használja és kit lát.
    Linuxon `ufw allow 50000` (UDP és TCP).
 4. Más portot használ valaki? A kliensek **mind** az 50000-est használják alapból; az eredeti kliens a saját portját használja a többiek felé is, ezért mindenhol azonos kell legyen.
 5. Androidon a megosztott multicast/broadcast csomagokat az energiatakarékos Wi-Fi eldobhatja. Az alkalmazás ezért előtérszolgáltatást, Wi-Fi zárat és multicast zárat tart (az értesítési

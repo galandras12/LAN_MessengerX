@@ -66,6 +66,18 @@
       <StackPanel Spacing="6">
         <TextBlock Text="Network" FontWeight="SemiBold" />
         <TextBlock x:Name="NetText" Opacity="0.75" TextWrapping="Wrap" />
+        <StackPanel Spacing="4" Margin="0,6,0,0">
+          <TextBlock Text="Network adapter" FontSize="12" Opacity="0.7" />
+          <ComboBox x:Name="AdapterBox" HorizontalAlignment="Stretch" />
+          <TextBlock Text="Pick the adapter of the network where your colleagues are if automatic detection chooses a VPN or virtual one." FontSize="12" Opacity="0.65" TextWrapping="Wrap" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+          <Button x:Name="FirewallBtn" Content="Allow in Windows Firewall…" Click="OnFirewall" />
+          <Button Content="Refresh" Click="OnRefreshNetwork" />
+          <Button Content="Open log folder" Click="OnOpenLog" />
+        </StackPanel>
+        <TextBlock x:Name="FirewallText" FontSize="12" Opacity="0.75" TextWrapping="Wrap" />
+        <TextBox x:Name="LogBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas,Menlo,monospace" FontSize="11" Height="150" />
       </StackPanel>
 
       <!-- about -->
