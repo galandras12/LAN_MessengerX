@@ -12,7 +12,7 @@ public static class Proto
     public const string DefaultMulticast = "239.255.100.100";
 
     /// <summary>Must compare as newer than 1.2.30 (old clients gate group chat on &gt; 1.2.10).</summary>
-    public const string Version = "3.0.0";
+    public const string Version = "3.1.0";
 
     public const int IdPacketMax = 64;
     public const int FileIdLength = 32;

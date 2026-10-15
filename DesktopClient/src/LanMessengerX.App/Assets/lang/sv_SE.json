@@ -96,6 +96,7 @@
 "Send Broadcast Message": "Skicka massmeddelande",
 "Send File": "Skicka fil",
 "Send Folder": "Skicka mapp",
+"Send a file": "Skicka en fil",
 "Send messages using:": "Skicka meddelanden med:",
 "Show File Transfer window when sending or receiving files": "Visa överföringsfönster vid sändning och mottagning av filer",
 "Show balloon notifications in tray": "Visa aviseringsrutor i meddelandefältet",
@@ -125,6 +126,7 @@
 "away": "Borta",
 "busy": "Upptagen",
 "seconds": ":e sekund",
+"{0} is offline": "{0} är inte ansluten",
 "{0} is offline.": "{0} är inte ansluten",
 "{0} is online.": "{0} är ansluten"
 }

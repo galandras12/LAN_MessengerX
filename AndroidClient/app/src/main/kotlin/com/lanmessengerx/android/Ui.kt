@@ -103,7 +103,7 @@ object Ui {
 
         fun back(onClick: () -> Unit) {
             leading.removeAllViews()
-            leading.addView(M3.iconButton(context, R.drawable.ic_arrow_back, "Back", M3.colors.onSurface) { onClick() })
+            leading.addView(M3.iconButton(context, R.drawable.ic_arrow_back, Loc.t("Back"), M3.colors.onSurface) { onClick() })
         }
 
         fun withLeadingPadding() {
@@ -176,8 +176,8 @@ object Ui {
     fun formatDay(ms: Long): String {
         val now = System.currentTimeMillis()
         return when {
-            sameDay(ms, now) -> "Today"
-            sameDay(ms, now - 86_400_000L) -> "Yesterday"
+            sameDay(ms, now) -> Loc.t("Today")
+            sameDay(ms, now - 86_400_000L) -> Loc.t("Yesterday")
             else -> dateFmt.format(Date(ms))
         }
     }
@@ -192,12 +192,12 @@ object Ui {
     }
 
     fun statusLabel(code: String): String = when (code) {
-        "chat" -> "Available"
-        "busy" -> "Busy"
-        "dnd" -> "Do not disturb"
-        "brb" -> "Be right back"
-        "away" -> "Away"
-        "gone" -> "Appear offline"
+        "chat" -> Loc.t("Available")
+        "busy" -> Loc.t("Busy")
+        "dnd" -> Loc.t("Do not disturb")
+        "brb" -> Loc.t("Be right back")
+        "away" -> Loc.t("Away")
+        "gone" -> Loc.t("Appear offline")
         else -> code
     }
 }

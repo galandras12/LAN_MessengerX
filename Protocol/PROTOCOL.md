@@ -92,6 +92,13 @@ Küldés célpontjai: a multicast csoport, az alhálózat irányított broadcast
 * **depart fogadása**: a felhasználó eltávolítása.
 * A saját `from` azonosítójú datagramot el kell dobni (visszahallgatás).
 * Az új kliensek 30 másodpercenként újra `announce`-olnak, hogy a későn induló vagy hálózatot váltó társak is megtalálják őket.
+* **Alhálózat-átvizsgálás** (nem része az eredeti protokollnak, de azzal teljesen kompatibilis): az eredeti kliensek az `announce`-ot csak induláskor és a
+  „partnerlista frissítése” időközönként (alapból 5 percenként) küldik, ezért az, aki *később* indul, a korábban indultakat csak sokára találná meg – és sosem, ha a
+  tűzfal a bejövő forgalmat eldobja. Az új kliensek ezért indulás után néhány másodperccel, majd percenként (az első 10 percben, utána ritkábban) **TCP-kapcsolatot
+  próbálnak nyitni az alhálózat minden címének 50000-es portjára** (legfeljebb /22, nagyobb hálózatnál a saját /24); ahol válaszol valami, ott a szokásos
+  `MSG`+azonosító / `PUBKEY` / `HNDSHK` kézfogás következik. A partner azonosítóját a kézfogás után az **első üzenet** (`userdata get`) `<from>` mezője adja.
+  Ami nem kezd kézfogást 6 mp alatt, azt 10 percig nem zaklatjuk. Csak kimenő kapcsolatot igényel, tehát tűzfal mögött is működik. Kikapcsolható (*Hálózat*).
+* Induláskor az `announce` 2 és 6 másodperc múlva megismétlődik (az UDP veszíthet, főleg Wi-Fin).
 * **`tcpport` (az eredeti LAN Messenger 2.x-től)**: az announce `<body>`-jában `<tcpport>` mező mondja meg, melyik TCP-porton figyel a feladó. A 2.x kliens
   alapértelmezésben „automatikus” portot használ (előbb 50000, ha foglalt, bármelyik szabad portot), és **olyan társhoz, amelyik nem közli a portját, a 0-s portra
   próbál csatlakozni** – vagyis egy `tcpport` nélküli kliens a 2.x számára láthatatlan marad (megjelenik a hálózaton, de sosem kerül a partnerlistára). Ezért
@@ -167,7 +174,7 @@ kapcsolatbontás miatt, ha az *aktuális* folyam zárult le.
   * `message`: a résztvevőnek külön-külön, `thread` + `message` mezővel;
   * `leave`: minden ismert felhasználónak; a fogadó eltávolítja a küldőt;
   * csak **1.2.10-nél újabb** verziójú partner vehető fel szobába (régebbi nem ismeri a funkciót).
-* **Verzió**: az új kliensek `3.0.0`-t hirdetnek, ami minden eredeti küszöbnél (`> 1.2.10`, `> 1.2.30`) újabb.
+* **Verzió**: az új kliensek `3.1.0`-t hirdetnek, ami minden eredeti küszöbnél (`> 1.2.10`, `> 1.2.30`) újabb.
 
 ## 7. Fájlátvitel
 
@@ -200,7 +207,27 @@ Fontos részletek, mind az eredeti klienssel való együttműködésből:
 * Időtúllépés: a fogadó 30 mp mozdulatlanság után (az eredeti: 20 × 1,5 mp) hibát jelez.
 * **Avatar**: ugyanez a folyamat `type=avatar` / `filetype=avatar` jelöléssel, a fogadó **automatikusan elfogadja** (a képet a gyorsítótárba
   menti). Új partner felvételekor és profilkép-váltáskor mindenkinek elküldendő.
-* **Mappa** (`folder`): az új kliensek nem fogadják – az ajánlatra `folder{fileop=decline, fileid, folderid}` a válasz, hogy a küldő ne ragadjon be.
+### 7.1 Mappa (`folder`)
+
+Egy mappa **egymás utáni, hagyományos fájlátvitelek sorozata**, `filetype=folder` jelöléssel, egy közös `folderid` alatt. A mappa szintű üzenetek
+típusa `folder` (a `<type>` mezőben), a `filetype` bennük az eredeti felületének megfelelően `normal`.
+
+```
+küldő                                           fogadó
+ ── folder{fileop=request, folderid, fileid=folderid, mode=send, filename=<mappa neve>, filesize=<összes bájt>, filecount=<fájlok száma>} ─▶
+ ◀─ folder{fileop=accept, mode=receive, fileid=folderid, folderid}                    (vagy fileop=decline)
+ ── file{filetype=folder, fileop=request, fileid, folderid, relpath=<út a mappán belül, '/' jellel>, filename, filesize, mode=send} ─▶
+ ◀─ file{filetype=folder, fileop=accept, fileid, filesize}          (a fogadó automatikusan elfogadja, kérdés nélkül)
+ ── a fájl bájtjai a „FILE” kapcsolaton, mint egy normál fájlnál ─▶
+ ── … a következő fájl kérése csak az előző befejezése után …
+```
+
+* A küldő az `accept` után az **első** fájlt kéri, a következőt mindig az előző befejezése után; a fogadó a `relpath` szerint hozza létre az alkönyvtárakat.
+* A fogadó a `relpath`-ot **sosem bízza el**: `..`, abszolút út és tiltott karakterek nélkül használja (útvonalbejárás ellen).
+* `cancel`/`abort` mappa szinten (`folderid`) az egész átvitelt leállítja; az új kliensek a hibás fájl után `abort`-ot küldenek.
+* **Üres fájl**: az eredeti *fogadó* nem tud üres fájlt fogadni (az egész mappát megszakítja), az eredeti *küldő* pedig üreset küldeni sem – ezért az új kliensek
+  3.0.0-nál régebbi partnernek az üres fájlokat kihagyják (a darabszám és a méret ennek megfelelően csökken), egymásnak elküldik.
+* A képességet a `usercaps` 4-es bitje (`UC_FOLDER`) jelzi; az új kliensek hirdetik, és csak ilyen partnernek ajánlanak mappát.
 
 ## 8. Ismert sajátosságok az eredetiben (amiket az új kliensek kikerülnek)
 

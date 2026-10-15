@@ -42,6 +42,9 @@ object Hub {
     var ip: String? = null
         private set
     val contacts = ArrayList<User>()
+    /** The public chat: everybody on the network who has it open sees what is written here. */
+    val publicRoom = Room("public")
+    fun roomFor(id: String): Room? = if (id == "public") publicRoom else rooms[id]
     val chats = HashMap<String, Chat>()
     val rooms = LinkedHashMap<String, Room>()
     var appVisible = false
@@ -58,9 +61,12 @@ object Hub {
         initialised = true
         app = ctx.applicationContext
         prefs = Prefs(app)
+        Loc.use(app, prefs.language)
         history = HistoryStore(app)
         Notifier.ensureChannels(app)
         if (prefs.name.isBlank()) prefs.name = defaultName()
+        // like the original: start with a random stock picture so nobody shows up as a blank circle
+        if (!prefs.avatarChosen && !hasAvatar) useStockAvatar(kotlin.random.Random.nextInt(Avatars.STOCK_COUNT), chosen = false)
     }
 
     private fun defaultName(): String {
@@ -133,7 +139,7 @@ object Hub {
             is MessengerEvent.ConnectionChanged -> {
                 connected = e.connected
                 ip = e.ip
-                Notifier.updateService(app, if (e.connected) "Online · ${e.ip}" else "Waiting for a network…")
+                Notifier.updateService(app, if (e.connected) Loc.f("Online · {0}", e.ip ?: "") else Loc.t("Waiting for a network…"))
             }
             is MessengerEvent.UserOnline -> {
                 contacts.removeAll { it.id == e.user.id }
@@ -180,7 +186,7 @@ object Hub {
                 saveHistory(e.userId, c.name, c.name, "[broadcast] ${e.text}", false, e.timeMs)
                 if (openChat != e.userId || !appVisible) {
                     c.unread++
-                    if (prefs.notifications) Notifier.message(app, e.userId, "user", "${c.name} · broadcast", e.text)
+                    if (prefs.notifications) Notifier.message(app, e.userId, "user", Loc.f("{0} · broadcast", c.name), e.text)
                 }
             }
             is MessengerEvent.ChatStateChanged -> {
@@ -197,18 +203,27 @@ object Hub {
             is MessengerEvent.RoomClosed -> rooms.remove(e.threadId)
             is MessengerEvent.RoomNotice -> {
                 val r = rooms[e.threadId] ?: return
-                val verb = if (e.joined) "joined" else "left"
-                r.items.add(ChatItem.Notice("${nameOf(e.userId)} $verb", e.timeMs))
+                r.items.add(ChatItem.Notice(Loc.f(if (e.joined) "{0} joined" else "{0} left", nameOf(e.userId)), e.timeMs))
             }
             is MessengerEvent.RoomMessage -> {
                 val r = rooms.getOrPut(e.threadId) { Room(e.threadId) }
                 val who = nameOf(e.userId)
                 r.items.add(ChatItem.Msg(e.text, false, who, e.timeMs, 0))
                 r.lastTime = e.timeMs
-                saveHistory("group", "Group conversations", who, e.text, false, e.timeMs)
+                saveHistory("group", Loc.t("Group conversations"), who, e.text, false, e.timeMs)
                 if (openRoom != e.threadId || !appVisible) {
                     r.unread++
-                    if (prefs.notifications) Notifier.message(app, e.threadId, "room", "Group · $who", e.text)
+                    if (prefs.notifications) Notifier.message(app, e.threadId, "room", Loc.f("Group · {0}", who), e.text)
+                }
+            }
+            is MessengerEvent.PublicMessage -> {
+                val who = nameOf(e.userId)
+                publicRoom.items.add(ChatItem.Msg(e.text, false, who, e.timeMs, 0))
+                publicRoom.lastTime = e.timeMs
+                saveHistory("public", Loc.t("Public chat"), who, e.text, false, e.timeMs)
+                if (openRoom != "public" || !appVisible) {
+                    publicRoom.unread++
+                    if (prefs.notifications) Notifier.message(app, "public", "room", Loc.f("Public chat · {0}", who), e.text)
                 }
             }
             is MessengerEvent.Transfer -> onTransfer(e.info)
@@ -224,12 +239,12 @@ object Hub {
         val c = chatFor(t.userId)
         val existing = c.items.firstOrNull { it is ChatItem.FileItem && it.fileId == t.id } as ChatItem.FileItem?
         if (existing == null) {
-            c.items.add(ChatItem.FileItem(t.id, t.name, t.size, t.outgoing, t.state, t.bytes, t.location, System.currentTimeMillis()))
+            c.items.add(ChatItem.FileItem(t.id, t.name, t.size, t.outgoing, t.state, t.bytes, t.location, System.currentTimeMillis(), t.isFolder, t.fileCount))
             c.lastTime = System.currentTimeMillis()
             if (!t.outgoing && t.state == TransferState.REQUESTED) {
                 if (openChat != t.userId || !appVisible) {
                     c.unread++
-                    if (prefs.notifications) Notifier.message(app, t.userId, "user", c.name, "Wants to send you ${t.name}")
+                    if (prefs.notifications) Notifier.message(app, t.userId, "user", c.name, Loc.f("Wants to send you {0}", t.name))
                 }
             }
         } else {
@@ -246,7 +261,7 @@ object Hub {
 
     // ---- actions (main thread) ----------------------------------------------------------------
 
-    val totalUnread: Int get() = chats.values.sumOf { it.unread } + rooms.values.sumOf { it.unread }
+    val totalUnread: Int get() = chats.values.sumOf { it.unread } + rooms.values.sumOf { it.unread } + publicRoom.unread
 
     fun sendText(userId: String, text: String) {
         val m = engine ?: return
@@ -273,13 +288,31 @@ object Hub {
         m.sendFile(userId, UriFileSource(app, uri))
     }
 
-    fun acceptFile(userId: String, fileId: String) {
-        val item = chats[userId]?.items?.firstOrNull { it is ChatItem.FileItem && it.fileId == fileId } as ChatItem.FileItem? ?: return
-        engine?.acceptFile(userId, fileId, ReceivedFileSink(app, item.name))
+    fun sendFolder(userId: String, tree: Uri) {
+        val m = engine ?: return
+        m.sendFolder(userId, TreeFolderSource(app, tree))
     }
 
-    fun declineFile(userId: String, fileId: String) = engine?.declineFile(userId, fileId)
-    fun cancelFile(userId: String, fileId: String) = engine?.cancelFile(userId, fileId)
+    fun acceptFile(userId: String, fileId: String) {
+        val item = chats[userId]?.items?.firstOrNull { it is ChatItem.FileItem && it.fileId == fileId } as ChatItem.FileItem? ?: return
+        if (item.isFolder) {
+            engine?.acceptFolder(userId, fileId, com.lanmessengerx.core.FolderSinkFactory { folder, rel ->
+                val sub = rel.substringBeforeLast('/', "")
+                ReceivedFileSink(app, rel.substringAfterLast('/'), if (sub.isEmpty()) folder else "$folder/$sub")
+            }, "Downloads/LAN Messenger X/${item.name}")
+        } else engine?.acceptFile(userId, fileId, ReceivedFileSink(app, item.name))
+    }
+
+    fun declineFile(userId: String, fileId: String) {
+        if (isFolder(userId, fileId)) engine?.declineFolder(userId, fileId) else engine?.declineFile(userId, fileId)
+    }
+
+    fun cancelFile(userId: String, fileId: String) {
+        if (isFolder(userId, fileId)) engine?.cancelFolder(userId, fileId) else engine?.cancelFile(userId, fileId)
+    }
+
+    private fun isFolder(userId: String, fileId: String) =
+        (chats[userId]?.items?.firstOrNull { it is ChatItem.FileItem && it.fileId == fileId } as ChatItem.FileItem?)?.isFolder == true
 
     fun typing(userId: String, state: ChatStateKind) {
         engine?.sendChatState(userId, state)
@@ -294,7 +327,7 @@ object Hub {
     }
 
     fun markRoomRead(threadId: String) {
-        rooms[threadId]?.unread = 0
+        roomFor(threadId)?.unread = 0
         Notifier.cancelFor(app, threadId)
         changed()
     }
@@ -313,12 +346,13 @@ object Hub {
 
     fun sendRoomText(threadId: String, text: String) {
         val m = engine ?: return
-        val r = rooms[threadId] ?: return
+        val r = roomFor(threadId) ?: return
         val now = System.currentTimeMillis()
-        m.sendGroupText(threadId, text)
+        if (threadId == "public") m.sendPublicText(text) else m.sendGroupText(threadId, text)
         r.items.add(ChatItem.Msg(text, true, localUserName, now, 0))
         r.lastTime = now
-        saveHistory("group", "Group conversations", localUserName, text, true, now)
+        if (threadId == "public") saveHistory("public", Loc.t("Public chat"), localUserName, text, true, now)
+        else saveHistory("group", Loc.t("Group conversations"), localUserName, text, true, now)
         changed()
     }
 
@@ -332,7 +366,7 @@ object Hub {
 
     fun roomTitle(r: Room): String {
         val names = r.participants.filter { it != localId }.map { nameOf(it) }
-        return if (names.isEmpty()) "Group chat" else names.joinToString(", ")
+        return if (names.isEmpty()) Loc.t("Group chat") else names.joinToString(", ")
     }
 
     // profile
@@ -357,13 +391,33 @@ object Hub {
         changed()
     }
 
+    /** One of the stock pictures becomes the profile picture. */
+    fun useStockAvatar(index: Int, chosen: Boolean = true) {
+        try {
+            app.assets.open("avatars/$index.png").use { src -> avatarFile.outputStream().use { src.copyTo(it) } }
+        } catch (_: Exception) {
+            return
+        }
+        if (chosen) prefs.avatarChosen = true
+        engine?.setLocalAvatar(avatarFile)
+        Avatars.invalidate("local")
+        changed()
+    }
+
+    fun setLanguage(code: String) {
+        prefs.language = code
+        Loc.use(app, code)
+    }
+
     fun avatarSaved() {
+        prefs.avatarChosen = true
         engine?.setLocalAvatar(avatarFile)
         Avatars.invalidate("local")
         changed()
     }
 
     fun removeAvatar() {
+        prefs.avatarChosen = true
         avatarFile.delete()
         engine?.setLocalAvatar(null)
         Avatars.invalidate("local")

@@ -3,7 +3,7 @@
 Qt-mentes, tiszta Kotlin. Két modul:
 
 * **`core/`** – a protokoll teljes megvalósítása, **nem függ Androidtól** (sima JVM-en fut és tesztelhető): XML boríték, RSA/AES kézfogás, UDP felfedezés, TCP keretezés,
-  felhasználólista, nyugta/újraküldés, csoportos chat, fájlátvitel, avatar. Az `Messenger` osztály az egyetlen belépési pont; az eseményeket (`MessengerEvent`) egy dedikált
+  felhasználólista, nyugta/újraküldés, csoportos chat, fájl- és mappaátvitel, avatar, alhálózat-átvizsgálás. Az `Messenger` osztály az egyetlen belépési pont; az eseményeket (`MessengerEvent`) egy dedikált
   motorszálon kapod. A leírás: [`../Protocol/PROTOCOL.md`](../Protocol/PROTOCOL.md).
 * **`app/`** – az Android alkalmazás, csak a keretrendszer API-jait használja (nincs AndroidX, Compose vagy Material Components – a Google Maven a fejlesztői környezetből nem volt elérhető, és így az
   APK ~160 KB).
@@ -16,11 +16,11 @@ kapcsoló, folyamatjelző, kártyák, saját menü és dialógus. Az ikonok Mate
 
 | Képernyő | |
 |---|---|
-| People | online emberek (avatar, jelenlét-pötty, jegyzet, olvasatlan jelvény), Broadcast FAB |
-| Groups | csoportos szobák, „New group” FAB |
+| People | saját profilsáv (kép – a 20 beépített kép közül választható, első indításkor véletlenszerű –, állapot és állapotüzenet), online emberek (avatar, jelenlét-pötty, jegyzet, olvasatlan jelvény), Broadcast FAB |
+| Groups | Public chat (mindenki a hálózaton), csoportos szobák, „New group” FAB |
 | History | mentett beszélgetések, részletes nézet, törlés |
-| Settings | profil (név, jegyzet, kép), állapot-chipek, beállítások, hálózat, névjegy |
-| Chat / Group chat | buborékok, kézbesítési jelzés, „ír…”, fájlkártyák (Elfogadás/Elutasítás/Megszakítás/Megnyitás), hivatkozások, hosszú nyomás = másolás |
+| Settings | profil (név, jegyzet, kép), állapot-chipek, beállítások, **nyelv** (19 nyelv, magyarral), hálózat, névjegy |
+| Chat / Group chat | buborékok, kézbesítési jelzés, „ír…”, fájl- és mappakártyák (Elfogadás/Elutasítás/Megszakítás/Megnyitás), a gemkapocs menüje: fájl vagy mappa küldése, hivatkozások, hosszú nyomás = másolás |
 
 ## Háttérműködés
 

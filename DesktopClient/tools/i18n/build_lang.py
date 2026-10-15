@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.normpath(os.path.join(HERE, "..", "..", "src", "LanMessengerX.App"))
+ANDROID = os.path.normpath(os.path.join(HERE, "..", "..", "..", "AndroidClient", "app", "src", "main", "kotlin"))
 OUT = os.path.join(APP, "Assets", "lang")
 DEFAULT_TS = os.path.normpath(os.path.join(HERE, "..", "..", "..", "legacy-qt", "Windows", "lmc", "src"))
 
@@ -23,7 +24,7 @@ LANGS = ["ar_SA", "bg_BG", "de_DE", "en_US", "es_ES", "fr_FR", "hu_HU", "it_IT",
 def cs_literals(src):
     """All string literals inside Loc.T( ... ) / Loc.F( ... ) calls."""
     out = []
-    for m in re.finditer(r"\bLoc\.[TF]\(", src):
+    for m in re.finditer(r"\bLoc\.[TFtf]\(", src):
         i, depth = m.end(), 1
         while i < len(src) and depth:
             c = src[i]
@@ -56,6 +57,8 @@ def collect_keys():
         # help page helpers: H("heading"); P("paragraph");
         for m in re.finditer(r'^\s*[HP]\(("(?:[^"\\]|\\.)*")\);', text, re.M):
             keys.append(json.loads(m.group(1)))
+    for path in glob.glob(os.path.join(ANDROID, "**", "*.kt"), recursive=True):
+        keys += cs_literals(open(path, encoding="utf-8").read())
     for path in glob.glob(os.path.join(APP, "**", "*.axaml"), recursive=True):
         txt = open(path, encoding="utf-8").read()
         for m in re.finditer(r"\{loc:T '((?:[^'\\]|\\.)*)'\}", txt):

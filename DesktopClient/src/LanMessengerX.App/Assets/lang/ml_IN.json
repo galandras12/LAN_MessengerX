@@ -95,6 +95,7 @@
 "Send Broadcast Message": "പ്രക്ഷേപണം ചെയ്യുക",
 "Send File": "ഫയല്‍ അയക്കുക",
 "Send Folder": "ഫോള്‍ഡര്‍ അയക്കുക",
+"Send a file": "ഒരു ഫയല്‍ അയക്കുക",
 "Send messages using:": "സന്ദേശം അയക്കുവാനുള്ള കീബോര്‍ഡ് ബട്ടണ്‍:",
 "Show File Transfer window when sending or receiving files": "ഫയല്‍ കൈമാറുമ്പോള്‍ ജാലകം കാണിക്കുക",
 "Show balloon notifications in tray": "സിസ്റ്റം ട്രേ സന്ദേശങ്ങള്‍ കാണിക്കുക",
@@ -123,6 +124,7 @@
 "away": "സ്ഥലത്തില്ല",
 "busy": "തിരക്കില്‍",
 "seconds": "നിമിഷങ്ങള്‍",
+"{0} is offline": "{0} ഓഫ്‌ലൈന്‍ ആകുന്നു",
 "{0} is offline.": "{0} ഓഫ്‌ലൈന്‍ ആകുന്നു",
 "{0} is online.": "{0} ഓണ്‍ലൈന്‍ ആകുന്നു"
 }

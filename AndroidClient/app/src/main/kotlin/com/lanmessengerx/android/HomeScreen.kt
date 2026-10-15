@@ -121,11 +121,93 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
     }
 
     // =======================================================================================
+    // Profile: picture, status, status message (shared by the People and Settings tabs)
+    // =======================================================================================
+
+    /** The 20 stock pictures of the original LAN Messenger, or a picture of your own. */
+    private fun photoDialog() {
+        val ctx = act
+        val col = LinearLayout(ctx)
+        col.orientation = LinearLayout.VERTICAL
+        val d = M3.dialog(ctx, Loc.t("Profile photo"), Loc.t("Other people see this picture next to your name."), body = col, dismiss = Loc.t("Close"))
+        val perRow = 5
+        for (r in 0 until Avatars.STOCK_COUNT / perRow) {
+            val row = LinearLayout(ctx)
+            row.orientation = LinearLayout.HORIZONTAL
+            for (i in r * perRow until (r + 1) * perRow) {
+                val iv = android.widget.ImageView(ctx)
+                iv.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+                iv.setImageBitmap(Avatars.stock(ctx, i))
+                iv.background = M3.roundRect(ctx, M3.colors.surfaceContainerHighest, 12f)
+                iv.clipToOutline = true
+                iv.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+                iv.setOnClickListener { d.dismiss(); Hub.useStockAvatar(i) }
+                val lp = LinearLayout.LayoutParams(0, ctx.dp(52), 1f)
+                lp.setMargins(ctx.dp(3), ctx.dp(3), ctx.dp(3), ctx.dp(3))
+                row.addView(iv, lp)
+            }
+            col.addView(row)
+        }
+        val choose = M3.button(ctx, Loc.t("Choose a picture"), M3.ButtonKind.TONAL, R.drawable.ic_edit) {
+            d.dismiss()
+            act.pickDocument("image/*") { uri -> if (uri != null) act.setAvatarFrom(uri) }
+        }
+        (choose.layoutParams as? LinearLayout.LayoutParams)?.topMargin = ctx.dp(12)
+        col.addView(choose)
+        if (Hub.hasAvatar) {
+            val rm = M3.button(ctx, Loc.t("Remove picture"), M3.ButtonKind.TEXT, R.drawable.ic_delete) { d.dismiss(); Hub.removeAvatar() }
+            (rm.layoutParams as? LinearLayout.LayoutParams)?.topMargin = ctx.dp(4)
+            col.addView(rm)
+        }
+        d.show()
+    }
+
+    /** Tap on the profile bar: status and status message in one place. */
+    private fun quickProfileDialog() {
+        val ctx = act
+        var picked = Hub.prefs.status
+        val note = M3.outlinedField(ctx, Loc.t("Type a status message"), multiline = false, text = Hub.note)
+        val col = LinearLayout(ctx)
+        col.orientation = LinearLayout.VERTICAL
+        col.addView(note, LinearLayout.LayoutParams(-1, -2))
+        val chips = ArrayList<TextView>()
+        var row: LinearLayout? = null
+        Proto.STATUS_CODES.forEachIndexed { i, code ->
+            if (i % 2 == 0) {
+                row = LinearLayout(ctx)
+                row!!.orientation = LinearLayout.HORIZONTAL
+                row!!.setPadding(0, ctx.dp(8), 0, 0)
+                col.addView(row)
+            }
+            val chip = M3.chip(ctx, Ui.statusLabel(code), picked == code) { }
+            chip.setOnClickListener {
+                picked = code
+                chips.forEachIndexed { j, ch -> M3.setChipSelected(ch, Proto.STATUS_CODES[j] == picked) }
+            }
+            (chip.layoutParams as? LinearLayout.LayoutParams)?.marginEnd = ctx.dp(8)
+            chips.add(chip)
+            row!!.addView(chip)
+        }
+        val pic = M3.button(ctx, Loc.t("Profile photo"), M3.ButtonKind.TEXT, R.drawable.ic_edit) { }
+        val d = M3.dialog(
+            ctx, Loc.t("Status message"), body = col,
+            confirm = Loc.t("Share"), onConfirm = {
+                if (picked != Hub.prefs.status) Hub.setStatus(picked)
+                Hub.setNote(note.text.toString().trim())
+            },
+            dismiss = Loc.t("Cancel"),
+        )
+        pic.setOnClickListener { d.dismiss(); photoDialog() }
+        col.addView(pic)
+        d.show()
+    }
+
+    // =======================================================================================
     // People
     // =======================================================================================
 
     private inner class PeopleTab : Tab() {
-        override val label = "People"
+        override val label get() = Loc.t("People")
         override val icon = R.drawable.ic_person
         private lateinit var adapter: RowAdapter<User>
         private lateinit var bar: Ui.AppBar
@@ -139,9 +221,10 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             col.orientation = LinearLayout.VERTICAL
             bar = Ui.AppBar(ctx)
             bar.withLeadingPadding()
-            bar.setTitle("LAN Messenger X", "Connecting…")
-            bar.action(R.drawable.ic_refresh, "Refresh") { Hub.refresh(); act.toast("Looking for people on your network…") }
+            bar.setTitle(Loc.t("LAN Messenger X"), Loc.t("Connecting…"))
+            bar.action(R.drawable.ic_refresh, Loc.t("Refresh")) { Hub.refresh(); act.toast(Loc.t("Looking for people on your network…")) }
             col.addView(bar)
+            col.addView(profileBar(ctx))
             banner = networkBanner(ctx)
             col.addView(banner)
             list = Ui.listView(ctx)
@@ -149,16 +232,43 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             list.adapter = adapter
             list.setOnItemClickListener { _, _, pos, _ -> act.push(ChatScreen(act, adapter.getItem(pos).id)) }
             empty = Ui.emptyState(
-                ctx, R.drawable.ic_group, "No one else is online",
-                "Make sure this device is on the same Wi-Fi network as the people you want to reach.",
+                ctx, R.drawable.ic_group, Loc.t("No one else is online"),
+                Loc.t("Make sure this device is on the same Wi-Fi network as the people you want to reach."),
             )
             val listBox = FrameLayout(ctx)
             listBox.addView(list, FrameLayout.LayoutParams(-1, -1))
             listBox.addView(empty, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
             col.addView(listBox, lpWeight())
             frame.addView(col, FrameLayout.LayoutParams(-1, -1))
-            frame.addView(M3.fab(ctx, R.drawable.ic_campaign, "Send a broadcast message", "Broadcast") { broadcastDialog() })
+            frame.addView(M3.fab(ctx, R.drawable.ic_campaign, Loc.t("Send a broadcast message"), Loc.t("Broadcast")) { broadcastDialog() })
             return frame
+        }
+
+        private lateinit var meAvatar: AvatarView
+        private lateinit var meName: TextView
+        private lateinit var meNote: TextView
+
+        /** Your own picture, name and status message: tap the picture to change it, the rest to change status and message. */
+        private fun profileBar(ctx: Context): View {
+            val c = M3.colors
+            val row = LinearLayout(ctx)
+            row.orientation = LinearLayout.HORIZONTAL
+            row.gravity = Gravity.CENTER_VERTICAL
+            row.setPadding(ctx.dp(16), ctx.dp(4), ctx.dp(16), ctx.dp(8))
+            meAvatar = AvatarView(ctx, 48)
+            meAvatar.setOnClickListener { photoDialog() }
+            row.addView(meAvatar, LinearLayout.LayoutParams(ctx.dp(48), ctx.dp(48)))
+            val box = LinearLayout(ctx)
+            box.orientation = LinearLayout.VERTICAL
+            box.setPadding(ctx.dp(16), 0, 0, 0)
+            meName = M3.ellipsize(M3.text(ctx, "", Type.TITLE_MEDIUM, c.onSurface))
+            meNote = M3.ellipsize(M3.text(ctx, "", Type.BODY_MEDIUM, c.onSurfaceVariant))
+            box.addView(meName)
+            box.addView(meNote)
+            row.addView(box, LinearLayout.LayoutParams(0, -2, 1f))
+            row.background = M3.ripple(ctx, null, 0f)
+            row.setOnClickListener { quickProfileDialog() }
+            return row
         }
 
         private fun networkBanner(ctx: Context): View {
@@ -169,7 +279,7 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             row.background = M3.roundRect(ctx, c.errorContainer, 12f)
             row.setPadding(ctx.dp(16), ctx.dp(12), ctx.dp(16), ctx.dp(12))
             row.addView(M3.icon(ctx, R.drawable.ic_wifi, c.onErrorContainer))
-            val t = M3.text(ctx, "Not connected to a network. Connect to Wi-Fi to find people.", Type.BODY_MEDIUM, c.onErrorContainer)
+            val t = M3.text(ctx, Loc.t("Not connected to a network. Connect to Wi-Fi to find people."), Type.BODY_MEDIUM, c.onErrorContainer)
             t.setPadding(ctx.dp(12), 0, 0, 0)
             row.addView(t)
             val lp = LinearLayout.LayoutParams(-1, -2)
@@ -195,7 +305,7 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             col.addView(M3.ellipsize(M3.text(ctx, u.name, Type.BODY_LARGE, c.onSurface)))
             val chat = Hub.chats[u.id]
             val sub = when {
-                chat?.typing == true -> "typing…"
+                chat?.typing == true -> Loc.t("typing…")
                 u.note.isNotBlank() -> u.note
                 else -> Ui.statusLabel(u.status)
             }
@@ -210,12 +320,15 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
 
         override fun refresh() {
             adapter.reload()
+            meAvatar.bind(Hub.localUserName, Avatars.load("local", if (Hub.hasAvatar) Hub.avatarFile.absolutePath else null, 96), Hub.prefs.status)
+            meName.text = Hub.localUserName
+            meNote.text = Hub.note.ifBlank { Ui.statusLabel(Hub.prefs.status) }
             bar.setTitle(
                 "LAN Messenger X",
                 when {
-                    !Hub.connected -> "Waiting for a network…"
-                    Hub.contacts.isEmpty() -> "Online · ${Hub.ip}"
-                    else -> "${Hub.contacts.size} online · ${Hub.ip}"
+                    !Hub.connected -> Loc.t("Waiting for a network…")
+                    Hub.contacts.isEmpty() -> Loc.f("Online · {0}", Hub.ip ?: "")
+                    else -> Loc.f("{0} online · {1}", Hub.contacts.size, Hub.ip ?: "")
                 },
             )
             banner.visibility = if (Hub.connected) View.GONE else View.VISIBLE
@@ -226,20 +339,20 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
     private fun broadcastDialog() {
         val ctx = act
         if (Hub.contacts.none { !it.isOffline }) {
-            act.toast("Nobody is online to receive it")
+            act.toast(Loc.t("Nobody is online to receive it"))
             return
         }
-        val field = M3.outlinedField(ctx, "Message to everyone online", multiline = true)
+        val field = M3.outlinedField(ctx, Loc.t("Message to everyone online"), multiline = true)
         field.minLines = 3
         field.gravity = Gravity.TOP
         val d = M3.dialog(
-            ctx, "Broadcast message", "Sent to ${Hub.contacts.count { !it.isOffline }} people who are online right now.",
+            ctx, Loc.t("Broadcast message"), Loc.f("Sent to {0} people who are online right now.", Hub.contacts.count { !it.isOffline }),
             body = LinearLayout(ctx).also { it.addView(field, LinearLayout.LayoutParams(-1, -2)) },
-            confirm = "Send", onConfirm = {
+            confirm = Loc.t("Send"), onConfirm = {
                 val t = field.text.toString().trim()
                 if (t.isNotEmpty()) Hub.sendBroadcast(t)
             },
-            dismiss = "Cancel",
+            dismiss = Loc.t("Cancel"),
         )
         d.show()
     }
@@ -249,7 +362,7 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
     // =======================================================================================
 
     private inner class GroupsTab : Tab() {
-        override val label = "Groups"
+        override val label get() = Loc.t("Groups")
         override val icon = R.drawable.ic_group
         private lateinit var adapter: RowAdapter<Room>
         private lateinit var empty: View
@@ -260,20 +373,49 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             col.orientation = LinearLayout.VERTICAL
             val bar = Ui.AppBar(ctx)
             bar.withLeadingPadding()
-            bar.setTitle("Group chats")
+            bar.setTitle(Loc.t("Group chats"))
             col.addView(bar)
+            col.addView(publicRow(ctx))
             val list = Ui.listView(ctx)
             adapter = RowAdapter(ctx, { Hub.rooms.values.sortedByDescending { it.lastTime } }, { r, _, _ -> roomRow(ctx, r) })
             list.adapter = adapter
             list.setOnItemClickListener { _, _, pos, _ -> act.push(RoomScreen(act, adapter.getItem(pos).threadId)) }
-            empty = Ui.emptyState(ctx, R.drawable.ic_group_add, "No group chats yet", "Start one with the button below, or wait for an invitation.")
+            empty = Ui.emptyState(ctx, R.drawable.ic_group_add, Loc.t("No group chats yet"), Loc.t("Start one with the button below, or wait for an invitation."))
             val box = FrameLayout(ctx)
             box.addView(list, FrameLayout.LayoutParams(-1, -1))
             box.addView(empty, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
             col.addView(box, lpWeight())
             frame.addView(col, FrameLayout.LayoutParams(-1, -1))
-            frame.addView(M3.fab(ctx, R.drawable.ic_group_add, "New group chat", "New group") { act.push(NewGroupScreen(act, null)) })
+            frame.addView(M3.fab(ctx, R.drawable.ic_group_add, Loc.t("New group chat"), Loc.t("New group")) { act.push(NewGroupScreen(act, null)) })
             return frame
+        }
+
+        private lateinit var publicBadge: TextView
+
+        /** The public chat: written to everyone on the network who has it open. */
+        private fun publicRow(ctx: Context): View {
+            val c = M3.colors
+            val row = LinearLayout(ctx)
+            row.orientation = LinearLayout.HORIZONTAL
+            row.gravity = Gravity.CENTER_VERTICAL
+            row.minimumHeight = ctx.dp(72)
+            row.setPadding(ctx.dp(16), ctx.dp(8), ctx.dp(24), ctx.dp(8))
+            row.background = M3.ripple(ctx, null, 0f)
+            val circle = FrameLayout(ctx)
+            circle.background = M3.circle(c.secondaryContainer)
+            circle.addView(M3.icon(ctx, R.drawable.ic_public, c.onSecondaryContainer), FrameLayout.LayoutParams(ctx.dp(24), ctx.dp(24), Gravity.CENTER))
+            row.addView(circle, LinearLayout.LayoutParams(ctx.dp(48), ctx.dp(48)))
+            val col = LinearLayout(ctx)
+            col.orientation = LinearLayout.VERTICAL
+            col.setPadding(ctx.dp(16), 0, ctx.dp(8), 0)
+            col.addView(M3.ellipsize(M3.text(ctx, Loc.t("Public chat"), Type.BODY_LARGE, c.onSurface)))
+            col.addView(M3.ellipsize(M3.text(ctx, Loc.t("Everyone on the network"), Type.BODY_MEDIUM, c.onSurfaceVariant)))
+            row.addView(col, LinearLayout.LayoutParams(0, -2, 1f))
+            publicBadge = Ui.badge(ctx, 0)
+            publicBadge.visibility = View.GONE
+            row.addView(publicBadge)
+            row.setOnClickListener { act.push(RoomScreen(act, "public")) }
+            return row
         }
 
         private fun roomRow(ctx: Context, r: Room): View {
@@ -293,7 +435,7 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             col.setPadding(ctx.dp(16), 0, ctx.dp(8), 0)
             col.addView(M3.ellipsize(M3.text(ctx, Hub.roomTitle(r), Type.BODY_LARGE, c.onSurface)))
             val last = r.items.lastOrNull { it is ChatItem.Msg } as ChatItem.Msg?
-            val sub = if (last != null) "${last.sender}: ${last.text}" else "${r.participants.size} participants"
+            val sub = if (last != null) "${last.sender}: ${last.text}" else Loc.f("{0} participants", r.participants.size)
             val s = M3.ellipsize(M3.text(ctx, sub, Type.BODY_MEDIUM, c.onSurfaceVariant))
             s.setPadding(0, ctx.dp(2), 0, 0)
             col.addView(s)
@@ -304,6 +446,8 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
 
         override fun refresh() {
             adapter.reload()
+            publicBadge.visibility = if (Hub.publicRoom.unread > 0) View.VISIBLE else View.GONE
+            publicBadge.text = Hub.publicRoom.unread.toString()
             empty.visibility = if (Hub.rooms.isEmpty()) View.VISIBLE else View.GONE
         }
     }
@@ -313,7 +457,7 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
     // =======================================================================================
 
     private inner class HistoryTab : Tab() {
-        override val label = "History"
+        override val label get() = Loc.t("History")
         override val icon = R.drawable.ic_history
         private lateinit var adapter: RowAdapter<com.lanmessengerx.android.HistoryStore.Conversation>
         private lateinit var empty: View
@@ -324,11 +468,11 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             col.orientation = LinearLayout.VERTICAL
             val bar = Ui.AppBar(ctx)
             bar.withLeadingPadding()
-            bar.setTitle("History")
-            bar.action(R.drawable.ic_delete, "Clear all history") {
+            bar.setTitle(Loc.t("History"))
+            bar.action(R.drawable.ic_delete, Loc.t("Clear all history")) {
                 M3.dialog(
-                    ctx, "Clear history?", "All saved conversations will be deleted from this device.",
-                    confirm = "Clear", onConfirm = { Hub.history.clear(); refresh() }, dismiss = "Cancel",
+                    ctx, Loc.t("Clear history?"), Loc.t("All saved conversations will be deleted from this device."),
+                    confirm = Loc.t("Clear"), onConfirm = { Hub.history.clear(); refresh() }, dismiss = Loc.t("Cancel"),
                 ).show()
             }
             col.addView(bar)
@@ -336,7 +480,7 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             adapter = RowAdapter(ctx, { data }, { c, _, _ -> row(ctx, c) })
             list.adapter = adapter
             list.setOnItemClickListener { _, _, pos, _ -> act.push(HistoryDetailScreen(act, adapter.getItem(pos).key)) }
-            empty = Ui.emptyState(ctx, R.drawable.ic_history, "Nothing saved yet", "Conversations are stored on this device when history is turned on in Settings.")
+            empty = Ui.emptyState(ctx, R.drawable.ic_history, Loc.t("Nothing saved yet"), Loc.t("Conversations are stored on this device when history is turned on in Settings."))
             val box = FrameLayout(ctx)
             box.addView(list, FrameLayout.LayoutParams(-1, -1))
             box.addView(empty, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
@@ -359,7 +503,7 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             col.orientation = LinearLayout.VERTICAL
             col.setPadding(ctx.dp(16), 0, 0, 0)
             col.addView(M3.ellipsize(M3.text(ctx, conv.title, Type.BODY_LARGE, c.onSurface)))
-            val s = M3.text(ctx, "${conv.count} messages · ${Ui.formatDateTime(conv.lastTime)}", Type.BODY_MEDIUM, c.onSurfaceVariant)
+            val s = M3.text(ctx, Loc.f("{0} messages · {1}", conv.count, Ui.formatDateTime(conv.lastTime)), Type.BODY_MEDIUM, c.onSurfaceVariant)
             s.setPadding(0, ctx.dp(2), 0, 0)
             col.addView(s)
             row.addView(col, LinearLayout.LayoutParams(0, -2, 1f))
@@ -382,7 +526,7 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
     // =======================================================================================
 
     private inner class SettingsTab : Tab() {
-        override val label = "Settings"
+        override val label get() = Loc.t("Settings")
         override val icon = R.drawable.ic_settings
         private lateinit var profileName: TextView
         private lateinit var profileNote: TextView
@@ -396,7 +540,7 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             col.orientation = LinearLayout.VERTICAL
             val bar = Ui.AppBar(ctx)
             bar.withLeadingPadding()
-            bar.setTitle("Settings")
+            bar.setTitle(Loc.t("Settings"))
             col.addView(bar)
             val scroll = ScrollView(ctx)
             scroll.isVerticalScrollBarEnabled = false
@@ -418,8 +562,8 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             val names = LinearLayout(ctx)
             names.orientation = LinearLayout.VERTICAL
             names.setPadding(ctx.dp(16), 0, 0, 0)
-            profileName = M3.ellipsize(M3.text(ctx, "", Type.TITLE_LARGE, c.onSurface))
-            profileNote = M3.ellipsize(M3.text(ctx, "", Type.BODY_MEDIUM, c.onSurfaceVariant), 2)
+            profileName = M3.ellipsize(M3.text(ctx, Loc.t(""), Type.TITLE_LARGE, c.onSurface))
+            profileNote = M3.ellipsize(M3.text(ctx, Loc.t(""), Type.BODY_MEDIUM, c.onSurfaceVariant), 2)
             profileNote.setPadding(0, ctx.dp(2), 0, 0)
             names.addView(profileName)
             names.addView(profileNote)
@@ -428,40 +572,51 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             val actions = LinearLayout(ctx)
             actions.gravity = Gravity.END
             actions.setPadding(0, ctx.dp(8), 0, 0)
-            actions.addView(M3.button(ctx, "Photo", M3.ButtonKind.TEXT, R.drawable.ic_edit) { photoDialog() })
-            actions.addView(M3.button(ctx, "Edit", M3.ButtonKind.TEXT, R.drawable.ic_edit) { editProfileDialog() })
+            actions.addView(M3.button(ctx, Loc.t("Photo"), M3.ButtonKind.TEXT, R.drawable.ic_edit) { photoDialog() })
+            actions.addView(M3.button(ctx, Loc.t("Edit"), M3.ButtonKind.TEXT, R.drawable.ic_edit) { editProfileDialog() })
             card.addView(actions)
             body.addView(card, LinearLayout.LayoutParams(-1, -2).also { it.setMargins(ctx.dp(16), ctx.dp(8), ctx.dp(16), 0) })
 
             // status
-            body.addView(Ui.sectionHeader(ctx, "Status"))
+            body.addView(Ui.sectionHeader(ctx, Loc.t("Status")))
             statusRow = LinearLayout(ctx)
             statusRow.orientation = LinearLayout.VERTICAL
             statusRow.setPadding(ctx.dp(16), 0, ctx.dp(16), 0)
             body.addView(statusRow)
 
             // preferences
-            body.addView(Ui.sectionHeader(ctx, "Preferences"))
-            body.addView(switchRow(ctx, "Save conversation history", "Keep chats on this device so you can read them later", Hub.prefs.saveHistory) { Hub.prefs.saveHistory = it })
-            body.addView(switchRow(ctx, "Notifications", "Show alerts for messages, files and broadcasts", Hub.prefs.notifications) { Hub.prefs.notifications = it })
-            body.addView(switchRow(ctx, "Keep running in background", "Stay reachable while the app is closed (shows a status notification)", Hub.prefs.runInBackground) { Hub.prefs.runInBackground = it })
+            body.addView(Ui.sectionHeader(ctx, Loc.t("Preferences")))
+            body.addView(switchRow(ctx, Loc.t("Save conversation history"), Loc.t("Keep chats on this device so you can read them later"), Hub.prefs.saveHistory) { Hub.prefs.saveHistory = it })
+            body.addView(switchRow(ctx, Loc.t("Notifications"), Loc.t("Show alerts for messages, files and broadcasts"), Hub.prefs.notifications) { Hub.prefs.notifications = it })
+            body.addView(switchRow(ctx, Loc.t("Keep running in background"), Loc.t("Stay reachable while the app is closed (shows a status notification)"), Hub.prefs.runInBackground) { Hub.prefs.runInBackground = it })
             if (Build.VERSION.SDK_INT >= 31) {
-                body.addView(switchRow(ctx, "Dynamic colour", "Use colours from your wallpaper", Hub.prefs.dynamicColor) {
+                body.addView(switchRow(ctx, Loc.t("Dynamic colour"), Loc.t("Use colours from your wallpaper"), Hub.prefs.dynamicColor) {
                     Hub.prefs.dynamicColor = it
                     act.restyle()
                 })
             }
 
+            // language
+            body.addView(Ui.sectionHeader(ctx, Loc.t("Language")))
+            val currentLang = Loc.languages.firstOrNull { it.first == Hub.prefs.language }?.second ?: Loc.t("System default")
+            val langRow = actionRow(ctx, Loc.t("Language"), currentLang) { anchor ->
+                val items = ArrayList<Pair<String, () -> Unit>>()
+                items.add(Loc.t("System default") to { Hub.setLanguage("system"); act.restyle() })
+                for ((code, name) in Loc.languages) items.add(name to { Hub.setLanguage(code); act.restyle() })
+                M3.showMenu(anchor, items)
+            }
+            body.addView(langRow)
+
             // network
-            body.addView(Ui.sectionHeader(ctx, "Network"))
-            netText = M3.text(ctx, "", Type.BODY_MEDIUM, c.onSurfaceVariant)
+            body.addView(Ui.sectionHeader(ctx, Loc.t("Network")))
+            netText = M3.text(ctx, Loc.t(""), Type.BODY_MEDIUM, c.onSurfaceVariant)
             netText.setPadding(ctx.dp(16), 0, ctx.dp(16), ctx.dp(8))
             body.addView(netText)
-            val netBtn = M3.button(ctx, "Look for people again", M3.ButtonKind.TONAL, R.drawable.ic_refresh) { Hub.refresh(); act.toast("Looking for people on your network…") }
+            val netBtn = M3.button(ctx, Loc.t("Look for people again"), M3.ButtonKind.TONAL, R.drawable.ic_refresh) { Hub.refresh(); act.toast(Loc.t("Looking for people on your network…")) }
             body.addView(netBtn, LinearLayout.LayoutParams(-2, ctx.dp(40)).also { it.marginStart = ctx.dp(16) })
 
             // about
-            body.addView(Ui.sectionHeader(ctx, "About"))
+            body.addView(Ui.sectionHeader(ctx, Loc.t("About")))
             val about = LinearLayout(ctx)
             about.orientation = LinearLayout.VERTICAL
             about.background = M3.roundRect(ctx, c.surfaceContainerLow, 12f, c.outlineVariant, 1f)
@@ -469,15 +624,31 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             about.addView(M3.text(ctx, "LAN Messenger X ${Proto.VERSION}", Type.TITLE_MEDIUM, c.onSurface))
             val d = M3.text(
                 ctx,
-                "Serverless messaging for local networks. Speaks the original LAN Messenger protocol, so it works with the Windows, Linux and older clients on the same network.\n\n" +
-                    "Original LAN Messenger by Dilip Radhakrishnan (Qualia Digital Solutions). Modernised and continued by galandras12.\n\n" +
-                    "Free software, GNU GPL version 3.",
+                Loc.t("Serverless messaging for local networks. Speaks the original LAN Messenger protocol, so it works with the Windows, Linux and older clients on the same network.") + "\n\n" +
+                    Loc.t("Original LAN Messenger by Dilip Radhakrishnan (Qualia Digital Solutions). Modernised and continued by galandras12.") + "\n\n" +
+                    Loc.t("Free software, GNU GPL version 3."),
                 Type.BODY_MEDIUM, c.onSurfaceVariant,
             )
             d.setPadding(0, ctx.dp(8), 0, 0)
             about.addView(d)
             body.addView(about, LinearLayout.LayoutParams(-1, -2).also { it.setMargins(ctx.dp(16), 0, ctx.dp(16), 0) })
             return col
+        }
+
+        private fun actionRow(ctx: Context, title: String, value: String, onClick: (View) -> Unit): View {
+            val c = M3.colors
+            val row = LinearLayout(ctx)
+            row.orientation = LinearLayout.VERTICAL
+            row.minimumHeight = ctx.dp(64)
+            row.gravity = Gravity.CENTER_VERTICAL
+            row.setPadding(ctx.dp(16), ctx.dp(8), ctx.dp(24), ctx.dp(8))
+            row.background = M3.ripple(ctx, null, 0f)
+            row.addView(M3.text(ctx, title, Type.BODY_LARGE, c.onSurface))
+            val s = M3.text(ctx, value, Type.BODY_MEDIUM, c.onSurfaceVariant)
+            s.setPadding(0, ctx.dp(2), 0, 0)
+            row.addView(s)
+            row.setOnClickListener { onClick(row) }
+            return row
         }
 
         private fun switchRow(ctx: Context, title: String, desc: String, checked: Boolean, onChange: (Boolean) -> Unit): View {
@@ -503,27 +674,10 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             return row
         }
 
-        private fun photoDialog() {
-            val ctx = act
-            val col = LinearLayout(ctx)
-            col.orientation = LinearLayout.VERTICAL
-            val d = M3.dialog(ctx, "Profile photo", "Other people see this picture next to your name.", body = col, dismiss = "Close")
-            col.addView(M3.button(ctx, "Choose a picture", M3.ButtonKind.TONAL, R.drawable.ic_edit) {
-                d.dismiss()
-                act.pickDocument("image/*") { uri -> if (uri != null) act.setAvatarFrom(uri) }
-            })
-            if (Hub.hasAvatar) {
-                val rm = M3.button(ctx, "Remove picture", M3.ButtonKind.TEXT, R.drawable.ic_delete) { d.dismiss(); Hub.removeAvatar() }
-                (rm.layoutParams as LinearLayout.LayoutParams).topMargin = ctx.dp(8)
-                col.addView(rm)
-            }
-            d.show()
-        }
-
         private fun editProfileDialog() {
             val ctx = act
-            val name = M3.outlinedField(ctx, "Name", text = Hub.localUserName)
-            val note = M3.outlinedField(ctx, "Note (optional)", multiline = true, text = Hub.note)
+            val name = M3.outlinedField(ctx, Loc.t("Name"), text = Hub.localUserName)
+            val note = M3.outlinedField(ctx, Loc.t("Note (optional)"), multiline = true, text = Hub.note)
             val col = LinearLayout(ctx)
             col.orientation = LinearLayout.VERTICAL
             col.addView(name, LinearLayout.LayoutParams(-1, -2))
@@ -531,12 +685,12 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
             lp.topMargin = ctx.dp(12)
             col.addView(note, lp)
             M3.dialog(
-                ctx, "Edit profile", body = col,
-                confirm = "Save", onConfirm = {
+                ctx, Loc.t("Edit profile"), body = col,
+                confirm = Loc.t("Save"), onConfirm = {
                     Hub.setName(name.text.toString())
                     Hub.setNote(note.text.toString().trim())
                 },
-                dismiss = "Cancel",
+                dismiss = Loc.t("Cancel"),
             ).show()
         }
 
@@ -562,8 +716,8 @@ class HomeScreen(act: MainActivity, private var tab: Int = 0) : Screen(act) {
                 row!!.addView(chip)
             }
             statusRow.addView(flow)
-            netText.text = if (Hub.connected) "Connected as ${Hub.ip}\nUDP/TCP port ${Proto.DEFAULT_PORT} · multicast ${Proto.DEFAULT_MULTICAST}"
-            else "Not connected. Join a Wi-Fi network to find other people."
+            netText.text = if (Hub.connected) Loc.f("Connected as {0}", Hub.ip ?: "") + "\n" + Loc.f("UDP/TCP port {0} · multicast {1}", Proto.DEFAULT_PORT, Proto.DEFAULT_MULTICAST)
+            else Loc.t("Not connected. Join a Wi-Fi network to find other people.")
         }
     }
 }

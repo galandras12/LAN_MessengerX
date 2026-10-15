@@ -86,6 +86,7 @@
 "Send": "Pošlji",
 "Send Broadcast Message": "Pošlji skupinsko sporočilo",
 "Send File": "Pošlji File",
+"Send a file": "Pošlji Datoteko",
 "Send messages using:": "Sporočila pošiljaj z uporabo:",
 "Show File Transfer window when sending or receiving files": "Prikaži okno prenosov, ko pošiljaš ali sprejemaš datoteke",
 "Show balloon notifications in tray": "Pokaži opozorila v balonu",
@@ -115,6 +116,7 @@
 "away": "Odsoten",
 "busy": "Zaseden",
 "seconds": "sekund",
+"{0} is offline": "{0} je odklopljen",
 "{0} is offline.": "{0} je odklopljen",
 "{0} is online.": "{0} je prijavljen"
 }

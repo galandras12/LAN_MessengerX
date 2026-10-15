@@ -18,6 +18,21 @@ object Avatars {
     private val cache = LruCache<String, Bitmap>(64)
     private val missing = HashSet<String>()
 
+    const val STOCK_COUNT = 20
+
+    /** The 20 stock pictures of the original LAN Messenger (assets/avatars/N.png). */
+    fun stock(ctx: Context, index: Int): Bitmap? {
+        val key = "stock$index"
+        synchronized(cache) { cache.get(key)?.let { return it } }
+        val bmp = try {
+            ctx.assets.open("avatars/$index.png").use { BitmapFactory.decodeStream(it) }
+        } catch (_: Exception) {
+            null
+        }
+        if (bmp != null) synchronized(cache) { cache.put(key, bmp) }
+        return bmp
+    }
+
     fun invalidate(key: String) {
         synchronized(cache) {
             cache.remove(key)

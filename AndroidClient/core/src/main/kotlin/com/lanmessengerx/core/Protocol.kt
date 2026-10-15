@@ -11,7 +11,7 @@ object Proto {
     const val DEFAULT_MULTICAST = "239.255.100.100"
 
     /** Must compare as newer than 1.2.30 (old clients gate group chat on > 1.2.10). */
-    const val VERSION = "3.0.0"
+    const val VERSION = "3.1.0"
 
     /** Client sends this many raw bytes ("MSG" + id) when opening a message stream. */
     const val ID_PACKET_MAX = 64

@@ -86,6 +86,7 @@
 "Send": "보내기",
 "Send Broadcast Message": "전체 메세지 보내기",
 "Send File": "파일 보내기(F)",
+"Send a file": "파일 전송하기(F)",
 "Send messages using:": "메세지를 보낼 때 사용할 키:",
 "Show File Transfer window when sending or receiving files": "파일을 주고 받을 때 전송창을 표시하기",
 "Show balloon notifications in tray": "풍선 도움말 보기",
@@ -113,6 +114,7 @@
 "away": "멀리 감",
 "busy": "바쁨",
 "seconds": "초",
+"{0} is offline": "{0}는 오프라인",
 "{0} is offline.": "{0}는 오프라인",
 "{0} is online.": "{0}와 연결됨"
 }

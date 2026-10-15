@@ -116,8 +116,9 @@ class Messenger(
         var size: Long = 0,
         var count: Int = 0,
         var state: TransferState = TransferState.REQUESTED,
-        val files: MutableList<File> = ArrayList(), // outgoing
-        var root: File? = null,                      // outgoing: the folder sent; incoming: where it is written
+        val files: MutableList<FolderEntry> = ArrayList(), // outgoing
+        var sinks: FolderSinkFactory? = null,              // incoming: where the files are written
+        var location: String? = null,                      // incoming: shown to the user when done
         var done: Int = 0,
         var doneBytes: Long = 0,
         var currentFileId: String? = null,
@@ -1069,7 +1070,7 @@ class Messenger(
                         return
                     }
                     t.folderId = folderId
-                    t.sink = LocalFileSink(File(folder.root!!, safeRelative(m.data(Xn.REL_PATH))))
+                    t.sink = folder.sinks!!.sink(folder.name, safeRelative(m.data(Xn.REL_PATH)).replace(File.separatorChar, '/'))
                     t.state = TransferState.TRANSFERRING
                     folder.currentFileId = fileId
                     transfers[fileId] = t
@@ -1131,34 +1132,39 @@ class Messenger(
     // ---- folders ----------------------------------------------------------------------------------
 
     /** Offers a whole folder (all files below it) to [userId]. Returns the folder id. */
-    fun sendFolder(userId: String, dir: File): String? {
-        if (!dir.isDirectory) return null
+    fun sendFolder(userId: String, dir: File): String? = if (dir.isDirectory) sendFolder(userId, LocalFolderSource(dir)) else null
+
+    fun sendFolder(userId: String, source: FolderSource): String {
         val folderId = UUID.randomUUID().toString().replace("-", "").uppercase()
-        post {
-            val u = users[userId] ?: return@post
-            if (u.caps and Proto.UC_FOLDER == 0) return@post
-            val f = FolderTx(folderId, userId, true, name = dir.name, root = dir)
-            // the original client's receiver cannot take an empty file (it aborts the whole folder), so older peers do not get them
-            val skipEmpty = Proto.compareVersions(u.version, "3.0.0") < 0
-            dir.walkTopDown().filter { it.isFile }.forEach { file ->
-                if (file.length() == 0L && skipEmpty) return@forEach
-                f.files.add(file)
-                f.size += file.length()
+        io.execute {
+            // listing may take a while (document trees): off the engine thread
+            val entries = try { source.entries() } catch (e: Exception) { log("folder ${source.name}: $e"); return@execute }
+            post {
+                val u = users[userId] ?: return@post
+                if (u.caps and Proto.UC_FOLDER == 0) return@post
+                val f = FolderTx(folderId, userId, true, name = source.name)
+                // the original client's receiver cannot take an empty file (it aborts the whole folder), so older peers do not get them
+                val skipEmpty = Proto.compareVersions(u.version, "3.0.0") < 0
+                for (e in entries) {
+                    if (e.size == 0L && skipEmpty) continue
+                    f.files.add(e)
+                    f.size += e.size
+                }
+                f.count = f.files.size
+                if (f.count == 0) return@post
+                folders[folderId] = f
+                val b = XmlMessage()
+                b.addData(Xn.FOLDER_ID, folderId)
+                b.addData(Xn.FILE_ID, folderId)
+                b.addData(Xn.FILE_TYPE, FileType.NORMAL.wire)
+                b.addData(Xn.FILE_OP, FileOp.REQUEST.wire)
+                b.addData(Xn.MODE, FileMode.SEND.wire)
+                b.addData(Xn.FILE_NAME, f.name)
+                b.addData(Xn.FILE_SIZE, f.size.toString())
+                b.addData(Xn.FILE_COUNT, f.count.toString())
+                transmit(userId, MessageType.FOLDER, msgIdSeq.getAndIncrement(), b)
+                emitFolder(f)
             }
-            f.count = f.files.size
-            if (f.count == 0) return@post
-            folders[folderId] = f
-            val b = XmlMessage()
-            b.addData(Xn.FOLDER_ID, folderId)
-            b.addData(Xn.FILE_ID, folderId)
-            b.addData(Xn.FILE_TYPE, FileType.NORMAL.wire)
-            b.addData(Xn.FILE_OP, FileOp.REQUEST.wire)
-            b.addData(Xn.MODE, FileMode.SEND.wire)
-            b.addData(Xn.FILE_NAME, f.name)
-            b.addData(Xn.FILE_SIZE, f.size.toString())
-            b.addData(Xn.FILE_COUNT, f.count.toString())
-            transmit(userId, MessageType.FOLDER, msgIdSeq.getAndIncrement(), b)
-            emitFolder(f)
         }
         return folderId
     }
@@ -1167,25 +1173,39 @@ class Messenger(
     fun acceptFolder(userId: String, folderId: String, parentDir: File) {
         post {
             val f = folders[folderId] ?: return@post
-            if (f.outgoing || f.userId != userId || f.accepted) return@post
             val base = sanitizeFileName(f.name)
             var dir = File(parentDir, base)
             var i = 1
             while (dir.exists()) dir = File(parentDir, "$base [${i++}]")
             if (!dir.mkdirs()) { log("folder ${dir}: cannot create"); return@post }
-            f.root = dir
-            f.accepted = true
-            f.state = TransferState.TRANSFERRING
-            val b = XmlMessage()
-            b.addData(Xn.MODE, FileMode.RECEIVE.wire)
-            b.addData(Xn.FILE_TYPE, FileType.NORMAL.wire)
-            b.addData(Xn.FILE_OP, FileOp.ACCEPT.wire)
-            b.addData(Xn.FILE_ID, folderId)
-            b.addData(Xn.FOLDER_ID, folderId)
-            tcp?.let { b.addData(Xn.TCP_PORT, it.boundPort.toString()) }
-            transmit(userId, MessageType.FOLDER, msgIdSeq.getAndIncrement(), b)
-            emitFolder(f)
+            f.location = dir.absolutePath
+            acceptFolderWith(userId, folderId) { _, rel -> LocalFileSink(File(dir, safeRelative(rel))) }
         }
+    }
+
+    /** Accept an offered folder; [sinks] decides where each file goes (Android: MediaStore). */
+    fun acceptFolder(userId: String, folderId: String, sinks: FolderSinkFactory, location: String? = null) {
+        post {
+            folders[folderId]?.location = location
+            acceptFolderWith(userId, folderId, sinks)
+        }
+    }
+
+    private fun acceptFolderWith(userId: String, folderId: String, sinks: FolderSinkFactory) {
+        val f = folders[folderId] ?: return
+        if (f.outgoing || f.userId != userId || f.accepted) return
+        f.sinks = sinks
+        f.accepted = true
+        f.state = TransferState.TRANSFERRING
+        val b = XmlMessage()
+        b.addData(Xn.MODE, FileMode.RECEIVE.wire)
+        b.addData(Xn.FILE_TYPE, FileType.NORMAL.wire)
+        b.addData(Xn.FILE_OP, FileOp.ACCEPT.wire)
+        b.addData(Xn.FILE_ID, folderId)
+        b.addData(Xn.FOLDER_ID, folderId)
+        tcp?.let { b.addData(Xn.TCP_PORT, it.boundPort.toString()) }
+        transmit(userId, MessageType.FOLDER, msgIdSeq.getAndIncrement(), b)
+        emitFolder(f)
     }
 
     fun declineFolder(userId: String, folderId: String) {
@@ -1227,7 +1247,7 @@ class Messenger(
 
     private fun emitFolder(f: FolderTx, location: String? = null) {
         val current = f.currentFileId?.let { transfers[it]?.bytes } ?: 0L
-        emit(MessengerEvent.Transfer(TransferInfo(f.id, f.userId, f.name, f.size, f.doneBytes + current, f.outgoing, f.state, location, isFolder = true, fileCount = f.count)))
+        emit(MessengerEvent.Transfer(TransferInfo(f.id, f.userId, f.name, f.size, f.doneBytes + current, f.outgoing, f.state, location ?: f.location, isFolder = true, fileCount = f.count)))
     }
 
     private fun processFolder(from: String, m: XmlMessage) {
@@ -1269,14 +1289,19 @@ class Messenger(
         if (f.done >= f.count) {
             folders.remove(f.id)
             f.state = TransferState.COMPLETE
-            emitFolder(f, f.root?.absolutePath)
+            emitFolder(f, f.location)
             return
         }
-        val file = f.files[f.done]
+        val entry = f.files[f.done]
         val fileId = UUID.randomUUID().toString().replace("-", "").uppercase()
         f.currentFileId = fileId
-        val rel = file.relativeTo(f.root!!).path.replace('\\', '/')
-        requestSend(f.userId, fileId, LocalFileSource(file), FileType.FOLDER, { b ->
+        val rel = entry.relPath
+        val source = object : FileSource {
+            override val name = entry.relPath.substringAfterLast('/')
+            override val size = entry.size
+            override fun open() = entry.open()
+        }
+        requestSend(f.userId, fileId, source, FileType.FOLDER, { b ->
             b.addData(Xn.FOLDER_ID, f.id)
             b.addData(Xn.REL_PATH, rel)
         }, f.id)
@@ -1299,7 +1324,7 @@ class Messenger(
         else if (f.done >= f.count) {
             folders.remove(f.id)
             f.state = TransferState.COMPLETE
-            emitFolder(f, f.root?.absolutePath)
+            emitFolder(f, f.location)
         } else emitFolder(f)
     }
 

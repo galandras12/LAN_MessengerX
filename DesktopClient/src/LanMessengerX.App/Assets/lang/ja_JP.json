@@ -91,6 +91,7 @@
 "Send Broadcast Message": "ブロードキャストでメッセージを送信",
 "Send File": "ファイルを送る(F)",
 "Send Folder": "フォルダを送る(D)",
+"Send a file": "ファイルを送る(F)",
 "Send messages using:": "メッセージ送信に使用:",
 "Show File Transfer window when sending or receiving files": "ファイルの送受信の際にファイル転送ウインドウを表示",
 "Show balloon notifications in tray": "バルーン通知を利用",
@@ -120,6 +121,7 @@
 "away": "離席中",
 "busy": "忙しいです",
 "seconds": "秒",
+"{0} is offline": "{0}はオフラインです。",
 "{0} is offline.": "{0}はオフラインです。",
 "{0} is online.": "{0} がオンラインです。"
 }

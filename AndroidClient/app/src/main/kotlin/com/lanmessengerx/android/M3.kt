@@ -304,6 +304,15 @@ object M3 {
         return t
     }
 
+    /** Re-styles a chip made by [chip] after its selection changed. */
+    fun setChipSelected(t: TextView, selected: Boolean) {
+        val c = colors
+        val ctx = t.context
+        t.setTextColor(if (selected) c.onSecondaryContainer else c.onSurfaceVariant)
+        val shape = if (selected) roundRect(ctx, c.secondaryContainer, 8f) else roundRect(ctx, 0, 8f, c.outline, 1f)
+        t.background = ripple(ctx, shape, 8f)
+    }
+
     // ---- text field ----------------------------------------------------------------------------
 
     /** Outlined text field (label shown as hint). */

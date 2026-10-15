@@ -5,10 +5,13 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import com.lanmessengerx.core.FileSink
+import com.lanmessengerx.core.FolderEntry
+import com.lanmessengerx.core.FolderSource
 import com.lanmessengerx.core.FileSource
 import com.lanmessengerx.core.TransferState
 import java.io.File
@@ -26,6 +29,7 @@ sealed class ChatItem(val time: Long) {
     class FileItem(
         val fileId: String, var name: String, var size: Long, val outgoing: Boolean,
         var state: TransferState, var bytes: Long, var location: String?, time: Long,
+        val isFolder: Boolean = false, val fileCount: Int = 0,
     ) : ChatItem(time)
 
     class Notice(val text: String, time: Long) : ChatItem(time)
@@ -79,6 +83,14 @@ class Prefs(ctx: Context) {
     var notifications: Boolean
         get() = sp.getBoolean("notify", true)
         set(v) = sp.edit().putBoolean("notify", v).apply()
+    /** "system" or a code from Loc.languages. */
+    var language: String
+        get() = sp.getString("language", "system") ?: "system"
+        set(v) = sp.edit().putString("language", v).apply()
+    /** The profile picture was chosen (or removed) by the user; until then a random stock picture is used. */
+    var avatarChosen: Boolean
+        get() = sp.getBoolean("avatarChosen", false)
+        set(v) = sp.edit().putBoolean("avatarChosen", v).apply()
     var askedNotificationPermission: Boolean
         get() = sp.getBoolean("askedNotif", false)
         set(v) = sp.edit().putBoolean("askedNotif", v).apply()
@@ -205,7 +217,7 @@ class UriFileSource(private val ctx: Context, private val uri: Uri) : FileSource
 }
 
 /** Incoming file: written to a temp file, then published to Downloads/LAN Messenger X. */
-class ReceivedFileSink(private val ctx: Context, private val name: String) : FileSink {
+class ReceivedFileSink(private val ctx: Context, private val name: String, private val subdir: String = "") : FileSink {
     private val tmp = File(ctx.cacheDir, "rx_${System.nanoTime()}.part")
 
     override fun open(): OutputStream = tmp.outputStream()
@@ -218,7 +230,7 @@ class ReceivedFileSink(private val ctx: Context, private val name: String) : Fil
                 val values = ContentValues().apply {
                     put(MediaStore.Downloads.DISPLAY_NAME, name)
                     put(MediaStore.Downloads.MIME_TYPE, mime)
-                    put(MediaStore.Downloads.RELATIVE_PATH, "Download/LAN Messenger X")
+                    put(MediaStore.Downloads.RELATIVE_PATH, "Download/LAN Messenger X" + if (subdir.isEmpty()) "" else "/$subdir")
                     put(MediaStore.Downloads.IS_PENDING, 1)
                 }
                 val uri = ctx.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
@@ -235,7 +247,7 @@ class ReceivedFileSink(private val ctx: Context, private val name: String) : Fil
     }
 
     private fun fallback(): String? {
-        val dir = File(ctx.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS), "LAN Messenger X").also { it.mkdirs() }
+        val dir = File(File(ctx.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS), "LAN Messenger X"), subdir).also { it.mkdirs() }
         var target = File(dir, name)
         var n = 1
         while (target.exists()) {
@@ -249,5 +261,53 @@ class ReceivedFileSink(private val ctx: Context, private val name: String) : Fil
 
     override fun discard() {
         tmp.delete()
+    }
+}
+
+/** A folder picked with the system folder chooser (a document tree); all files below it are offered. */
+class TreeFolderSource(private val ctx: Context, private val tree: Uri) : FolderSource {
+    private val rootId = DocumentsContract.getTreeDocumentId(tree)
+    override val name: String = queryName(DocumentsContract.buildDocumentUriUsingTree(tree, rootId)) ?: "folder"
+
+    private fun queryName(doc: Uri): String? = try {
+        ctx.contentResolver.query(doc, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { c ->
+            if (c.moveToFirst()) c.getString(0) else null
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    override fun entries(): List<FolderEntry> {
+        val out = ArrayList<FolderEntry>()
+        walk(rootId, "", out, 0)
+        return out
+    }
+
+    private fun walk(docId: String, prefix: String, out: MutableList<FolderEntry>, depth: Int) {
+        if (depth > 24) return
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId)
+        val cols = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE, DocumentsContract.Document.COLUMN_SIZE,
+        )
+        val found = ArrayList<Array<Any?>>()
+        ctx.contentResolver.query(children, cols, null, null, null)?.use { c ->
+            while (c.moveToNext()) found.add(arrayOf(c.getString(0), c.getString(1), c.getString(2), if (c.isNull(3)) -1L else c.getLong(3)))
+        }
+        for (f in found) {
+            val id = f[0] as String
+            val n = (f[1] as String?) ?: continue
+            if (f[2] == DocumentsContract.Document.MIME_TYPE_DIR) walk(id, "$prefix$n/", out, depth + 1)
+            else {
+                val uri = DocumentsContract.buildDocumentUriUsingTree(tree, id)
+                val rel = prefix + n
+                val size = (f[3] as Long).let { if (it >= 0) it else ctx.contentResolver.openAssetFileDescriptor(uri, "r")?.use { d -> d.length } ?: 0L }
+                out.add(object : FolderEntry {
+                    override val relPath = rel
+                    override val size = size
+                    override fun open(): InputStream = ctx.contentResolver.openInputStream(uri) ?: throw java.io.IOException("cannot open $uri")
+                })
+            }
+        }
     }
 }

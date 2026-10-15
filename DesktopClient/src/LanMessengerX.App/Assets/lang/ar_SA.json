@@ -86,6 +86,7 @@
 "Send": "ارسال",
 "Send Broadcast Message": "ارسال رسالة بث",
 "Send File": "ارسال ملف",
+"Send a file": "ارسال ملف",
 "Send messages using:": "ارسال رسالة باستخدام:",
 "Show File Transfer window when sending or receiving files": "عرض نقل الملفات عند الارسال او الاستقبال",
 "Show balloon notifications in tray": "اظهار علامة البالون في شريط المهام",
@@ -112,6 +113,7 @@
 "away": "بعيد",
 "busy": "مشغول",
 "seconds": "ثانية",
+"{0} is offline": "{0} غير متصل",
 "{0} is offline.": "{0} غير متصل",
 "{0} is online.": "{0} متصل"
 }

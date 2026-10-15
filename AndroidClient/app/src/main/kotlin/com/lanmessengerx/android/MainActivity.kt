@@ -168,6 +168,13 @@ class MainActivity : Activity(), Hub.Listener {
 
     // ---- system pickers and permissions ------------------------------------------------------
 
+    /** A folder (document tree) to send. */
+    fun pickTree(handler: (Uri?) -> Unit) {
+        resultHandler = handler
+        @Suppress("DEPRECATION")
+        startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_TREE)
+    }
+
     fun pickDocument(mime: String, handler: (Uri?) -> Unit) {
         resultHandler = handler
         val i = Intent(Intent.ACTION_OPEN_DOCUMENT)
@@ -180,6 +187,19 @@ class MainActivity : Activity(), Hub.Listener {
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_TREE) {
+            val h = resultHandler
+            resultHandler = null
+            val uri = if (resultCode == RESULT_OK) data?.data else null
+            if (uri != null) {
+                try {
+                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: Exception) {
+                }
+            }
+            h?.invoke(uri)
+            return
+        }
         if (requestCode == REQ_PICK) {
             val h = resultHandler
             resultHandler = null
@@ -217,9 +237,9 @@ class MainActivity : Activity(), Hub.Listener {
             }
             if (bmp != null && Avatars.saveSquarePng(bmp, Hub.avatarFile)) {
                 Hub.avatarSaved()
-            } else toast("Could not read that image")
+            } else toast(Loc.t("Could not read that image"))
         } catch (e: Exception) {
-            toast("Could not read that image")
+            toast(Loc.t("Could not read that image"))
         }
     }
 
@@ -234,11 +254,12 @@ class MainActivity : Activity(), Hub.Listener {
             val i = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             startActivity(Intent.createChooser(i, null))
         } catch (e: Exception) {
-            toast("No app can open this file")
+            toast(Loc.t("No app can open this file"))
         }
     }
 
     companion object {
         const val REQ_PICK = 11
+        const val REQ_TREE = 12
     }
 }

@@ -14,6 +14,7 @@ public partial class TransfersWindow : Window
     public TransfersWindow()
     {
         InitializeComponent();
+        FlowDirection = Loc.IsRightToLeft ? Avalonia.Media.FlowDirection.RightToLeft : Avalonia.Media.FlowDirection.LeftToRight;
         DataContextChanged += (_, _) =>
         {
             if (DataContext is not AppState s) return;

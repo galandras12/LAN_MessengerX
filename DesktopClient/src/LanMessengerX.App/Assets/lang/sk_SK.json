@@ -95,6 +95,7 @@
 "Send Broadcast Message": "Poslať hromadnú správu",
 "Send File": "Poslať súbor",
 "Send Folder": "Poslať priečinok",
+"Send a file": "Poslať súbor",
 "Send messages using:": "Odosielať správy pomocou:",
 "Show File Transfer window when sending or receiving files": "Zobraziť okno s prenosmi súborov pri odosielaní alebo prijímaní súborov",
 "Show balloon notifications in tray": "Zobrazovať bublinové notifikácie v oblasti oznámení",
@@ -124,6 +125,7 @@
 "away": "Preč",
 "busy": "Zaneprázdnený",
 "seconds": "sekúnd",
+"{0} is offline": "{0} je offline",
 "{0} is offline.": "{0} je offline",
 "{0} is online.": "{0} je online"
 }

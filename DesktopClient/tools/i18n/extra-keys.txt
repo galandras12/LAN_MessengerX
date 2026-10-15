@@ -5,3 +5,9 @@ Do not disturb
 Be right back
 Away
 Appear offline
+Windows Firewall now allows LAN Messenger X on every network profile.
+The firewall rule could not be added.
+Only needed on Windows.
+Windows Firewall
+For other people to reach this computer (messages, files), the Windows Firewall has to allow LAN Messenger X. Allow it now? Windows asks for administrator permission once.
+Allow

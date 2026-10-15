@@ -52,7 +52,12 @@ public partial class MainWindow : Window
             s.TransferStarted += () => OpenTransfers(activate: false);
             BuildStockGrid();
             BuildStatusUi();
-            Loc.Instance.PropertyChanged += (_, _) => { BuildStatusUi(); UpdateEmpty(); s.RebuildRoster(); };
+            FlowDirection = Loc.IsRightToLeft ? Avalonia.Media.FlowDirection.RightToLeft : Avalonia.Media.FlowDirection.LeftToRight;
+            Loc.Instance.PropertyChanged += (_, _) =>
+            {
+                FlowDirection = Loc.IsRightToLeft ? Avalonia.Media.FlowDirection.RightToLeft : Avalonia.Media.FlowDirection.LeftToRight;
+                BuildStatusUi(); UpdateEmpty(); s.RebuildRoster();
+            };
             NoteBox.Text = s.Note;
             NoteBox.KeyDown += (_, e) => { if (e.Key == Avalonia.Input.Key.Enter) { CommitNote(); e.Handled = true; } };
             NoteBox.LostFocus += (_, _) => CommitNote();

@@ -17,7 +17,21 @@ public static class Pickers
 
     public static async Task<IReadOnlyList<string>> OpenFiles(Window owner, string title, bool multiple, bool imagesOnly = false)
     {
-        // 1. Avalonia's own dialog
+        // 1. Windows: the classic common dialog - the oldest and most dependable one
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                var sw = Stopwatch.StartNew();
+                var hwnd = owner.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+                var res = Win32.OpenFileName(hwnd, title, multiple, imagesOnly, out var ok);
+                if (ok) return res;                      // chosen, or cancelled by the user
+                FileLog.Write("win32 file dialog could not be shown (" + sw.ElapsedMilliseconds + " ms)");
+            }
+            catch (Exception e) { FileLog.Write("win32 file dialog failed: " + e.Message); }
+        }
+
+        // 2. the platform dialog of Avalonia
         try
         {
             var sw = Stopwatch.StartNew();
@@ -28,23 +42,9 @@ public static class Pickers
             var paths = files.Select(f => f.TryGetLocalPath()).Where(p => !string.IsNullOrEmpty(p)).Select(p => p!).ToList();
             if (paths.Count > 0) return paths;
             if (sw.ElapsedMilliseconds >= 600) return paths; // the user looked at it and cancelled
-            FileLog.Write("file dialog: returned nothing after " + sw.ElapsedMilliseconds + " ms, trying the next one");
+            FileLog.Write("file dialog: returned nothing after " + sw.ElapsedMilliseconds + " ms, using the built-in chooser");
         }
         catch (Exception e) { FileLog.Write("file dialog failed: " + e.Message); }
-
-        // 2. the classic Windows dialog
-        if (OperatingSystem.IsWindows())
-        {
-            try
-            {
-                var sw = Stopwatch.StartNew();
-                var hwnd = owner.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-                var res = Win32.OpenFileName(hwnd, title, multiple, imagesOnly, out var ok);
-                if (ok) return res;
-                if (sw.ElapsedMilliseconds >= 600) return res;
-            }
-            catch (Exception e) { FileLog.Write("win32 file dialog failed: " + e.Message); }
-        }
 
         // 3. our own
         var r = await FileBrowserWindow.Show(owner, title, multiple ? FileBrowserWindow.Mode.Files : FileBrowserWindow.Mode.File, imagesOnly);

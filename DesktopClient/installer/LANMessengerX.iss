@@ -1,7 +1,7 @@
 ; Inno Setup 6 script. Build with:  iscc installer\LANMessengerX.iss   (publish-windows.bat does it when Inno Setup is installed)
 ; Expects dist\win-x64\LanMessengerX.exe from publish-windows.bat.
 #define AppName "LAN Messenger X"
-#define AppVersion "3.0.0"
+#define AppVersion "3.1.0"
 #define AppExe "LanMessengerX.exe"
 
 [Setup]

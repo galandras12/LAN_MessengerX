@@ -69,3 +69,10 @@ sudo Protocol/interop/run-all.sh
 
 A felület képernyőképei fejetlenül renderelhetők (valódi ablakok, bemutató adatokkal, világos és sötét témában):
 `cd DesktopClient/tools/LanMessengerX.UiShots && dotnet run -c Release -- ../../shots`.
+
+## Nyelvi fájlok
+
+A felületi szövegek angolul vannak a forráskódban (`Loc.T("…")` / `{loc:T '…'}` a C#-ban és XAML-ben, `Loc.t("…")` Kotlinban). A fordításokat a
+`DesktopClient/tools/i18n/build_lang.py` állítja elő az `Assets/lang/*.json` fájlokba: az eredeti LAN Messenger `*.ts` fordításaiból (egyező angol szöveg alapján)
+és a `tools/i18n/manual/<nyelvkód>.json` saját fordításokból (ezek győznek). A Windows- és az Android-kliens ugyanezeket a fájlokat használja
+(az `AndroidClient/tools/build-apk.sh` az APK-ba másolja). Új szöveg után: `python3 DesktopClient/tools/i18n/build_lang.py --report` listázza, mi hiányzik a magyarból.

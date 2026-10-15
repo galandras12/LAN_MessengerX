@@ -3,9 +3,10 @@
 Egyetlen kódbázis **Windowsra és Linuxra** (macOS-en is lefordul, kipróbálva nem). .NET 8, [Avalonia 11](https://avaloniaui.net), Qt nélkül.
 
 ```
-src/LanMessengerX.Core/     protokoll-motor – nincs UI-függése (XML boríték, kripto, UDP/TCP, felhasználók, csoportok, fájlok)
+src/LanMessengerX.Core/     protokoll-motor – nincs UI-függése (XML boríték, kripto, UDP/TCP, felhasználók, csoportok, fájlok, mappák)
 src/LanMessengerX.App/      Avalonia alkalmazás (nézetek, nézetmodellek, beállítások, előzmények, értesítések, tálca)
-tests/LanMessengerX.Tests/  xUnit: XML, kripto (OpenSSL-vektorok), protokoll-segédek
+tests/LanMessengerX.Tests/  xUnit: XML, kripto (OpenSSL-vektorok), protokoll-segédek, felfedezés
+tools/i18n/                 a nyelvi fájlok előállítása (az eredeti .ts fordításokból + saját fordításokból)
 tools/LanMessengerX.Cli/    parancssoros kliens az interop teszteknek (../Protocol/interop)
 tools/LanMessengerX.UiShots/ valódi ablakok fejetlen renderelése PNG-be (felülvizsgálathoz)
 packaging/, installer/      .deb/.desktop és Inno Setup
@@ -17,9 +18,17 @@ igazolt az eredeti klienssel szemben. Leírás: [`../Protocol/PROTOCOL.md`](../P
 
 ## Felület
 
-Kétpaneles: balra profil + állapot, **People/Groups** lista, alul *Broadcast / Group / History*; jobbra a beszélgetés (buborékok, kézbesítési pipa, „ír…”, fájlkártyák
-elfogadással és folyamatsávval, broadcast-kártya, napi elválasztók). A téma követi a rendszert (állítható). Bezáráskor a tálcára megy (állítható); az egy példányos futást
-zárolófájl biztosítja.
+Kétpaneles, az eredeti 1.x kliens funkcióival: fent menüsor (*Messenger / Tools / Help*), balra profil (kép – kattintásra a 20 beépített kép és a saját képek tallózása –, állapot-menü, **állapotüzenet**),
+**People** lista (partnercsoportokkal, jobb gombos menüvel: beszélgetés, broadcast, fájl, mappa, adatok, áthelyezés csoportba) és **Chat rooms** (Public chat + csoportos csevegőszobák), alul
+*Broadcast / Chat room / Transfers*; jobbra a beszélgetés (buborékok, hangulatjelek, kattintható hivatkozások, kézbesítési pipa, „ír…”, fájl- és mappakártyák elfogadással és folyamatsávval,
+broadcast-kártya, napi elválasztók). Külön ablakok: Beállítások (9 oldal), Fájlátvitelek, Előzmények, Névjegy, Súgó. A téma követi a rendszert (állítható). Bezáráskor/kicsinyítéskor a tálcára
+mehet (állítható); az egy példányos futást zárolófájl biztosítja.
+
+**Nyelv:** *Beállítások → Általános → Nyelv* (19 nyelv, magyarral). A szövegek angol kulccsal a `Assets/lang/*.json` fájlokban vannak; előállításuk: `tools/i18n/build_lang.py`.
+
+**Fájlválasztás:** először a klasszikus Windows-párbeszédablak, ha az nem jön létre, az Avalonia ablaka, végül a programba épített böngésző – a gomb sosem „csinál semmit”.
+
+**Felfedezés:** UDP broadcast/multicast **és** az alhálózat átvizsgálása (a bejövő forgalmat tiltó tűzfal mögött is másodpercek alatt megtalálja a partnereket). Az első indításkor Windowson felajánlja a tűzfalszabályt.
 
 ## Adatok
 

@@ -88,6 +88,7 @@
 "Send": "Gönder",
 "Send Broadcast Message": "Yayın İletisi Gönder",
 "Send File": "Dosya gönder",
+"Send a file": "Bir dosya gönder",
 "Send messages using:": "Mesajı göndermek için girin:",
 "Show File Transfer window when sending or receiving files": "Dosya alınırken/gönderilirken Dosya Transfer Penceresini göster",
 "Show balloon notifications in tray": "Balon uyarıları bildirim alanında göster",
@@ -116,6 +117,7 @@
 "away": "Uzakta",
 "busy": "Meşgul",
 "seconds": "saniyede güncelle",
+"{0} is offline": "{0} çevrimdışı",
 "{0} is offline.": "{0} çevrimdışı",
 "{0} is online.": "{0} çevrimiçi"
 }

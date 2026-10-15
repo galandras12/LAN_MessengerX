@@ -1,6 +1,6 @@
 # LAN Messenger X
 
-**Verzió:** 3.0.0 · **Licenc:** GNU GPLv3
+**Verzió:** 3.1.0 · **Licenc:** GNU GPLv3
 
 Az eredeti, megszűnt támogatású **LAN Messenger** (Dilip Radhakrishnan / Qualia Digital Solutions) teljes újraírása **Qt nélkül**:
 szerver és fiók nélküli csevegés és fájlküldés a helyi hálózaton, **az eredeti protokollal kompatibilisen** – az új kliensek és a régi LAN Messenger
@@ -12,14 +12,25 @@ kliensek ugyanazon a hálózaton látják egymást, és mindkét irányban tudna
 | **Windows** (10/11) és **Linux** | C# (.NET 8) + [Avalonia](https://avaloniaui.net) – egyetlen kódbázis, két célplatform | [`DesktopClient/`](DesktopClient) |
 | Protokoll-leírás, tesztvektorok, interop tesztek | – | [`Protocol/`](Protocol) |
 
-Funkciók mindhárom kliensben: automatikus felfedezés (UDP broadcast + multicast), 1:1 chat kézbesítési visszajelzéssel és „ír…” jelzéssel, csoportos
-chat (meghívás, csatlakozás, kilépés), broadcast üzenet, fájlküldés/fogadás folyamatjelzéssel, profilkép, állapot (elérhető / foglalt / ne zavarj /
-mindjárt jövök / távol / offline) és jegyzet, előzmények, értesítések. A mappaátvitelt a kliensek nem fogadják (udvariasan elutasítják, hogy a
-küldő ne ragadjon be).
+Funkciók: automatikus felfedezés (UDP broadcast + multicast, plusz alhálózat-átvizsgálás, így másodpercek alatt látszanak a partnerek), 1:1 chat
+kézbesítési visszajelzéssel és „ír…” jelzéssel, csoportos chat (meghívás, csatlakozás, kilépés), **nyilvános csevegés**, broadcast üzenet, fájl- és
+**mappaküldés/fogadás** folyamatjelzéssel, profilkép (a 20 eredeti beépített kép közül választható, első indításkor véletlenszerű – vagy saját kép),
+állapot (elérhető / foglalt / ne zavarj / mindjárt jövök / távol / offline) és **állapotüzenet**, előzmények, értesítések,
+**nyelvválasztás** az eredeti kliens 19 nyelvén (magyarral együtt; lásd alább).
+
+A **Windows/Linux** kliens az eredeti 1.x kliens beállításainak és funkcióinak nagy részét is tudja: partnercsoportok (hozzáadás / átnevezés / törlés / áthelyezés),
+helyi menü (beszélgetés, broadcast, fájl, mappa, adatok), hangulatjelek az eredeti 70 képpel, kattintható hivatkozások, időbélyeg / dátum, betűtípus és szín,
+Enter / Ctrl+Enter küldés, hangok és értesítések, tálcaikon, automatikus indítás, Fájlátvitelek ablak előzménnyel, névjegy, súgó.
+A *Beállítások* az eredetivel azonos kilenc oldalra tagolódnak (Általános, Fiók, Üzenetek, Előzmények, Riasztások, Hálózat, Fájlátvitel, Megjelenés, Gyorsbillentyűk).
+
+**Nyelvek.** A felületi szövegek az eredeti LAN Messenger fordításaiból (`*.ts`) származnak, ahol a szöveg megegyezik, a többit saját fordítás pótolja.
+**Teljes** a **magyar, német, francia, spanyol, olasz, brazil portugál, orosz és lengyel**; a többi nyelvben (arab, bolgár, japán, koreai, malayalam, román, szlovák, szlovén, svéd, török)
+jelenleg csak az eredetiben is meglévő szövegek vannak lefordítva (kb. 36–39 %), a többi angolul jelenik meg.
+Új nyelv vagy javítás: `DesktopClient/tools/i18n/manual/<kód>.json`, majd `python3 DesktopClient/tools/i18n/build_lang.py` (a Windows- és az Android-kliens ugyanazokat a fájlokat használja).
 
 ## Telepítés
 
-* **Android:** a [`Releases/`](Releases) mappában lévő `LANMessengerX-3.0.0.apk` telepítése (ismeretlen forrásból telepítés engedélyezése kell).
+* **Android:** a [`Releases/`](Releases) mappában lévő `LANMessengerX-3.1.0.apk` telepítése (ismeretlen forrásból telepítés engedélyezése kell).
 * **Windows:** a [`Releases/`](Releases) mappában lévő `LanmessengerX-Windows.exe` (önálló, nem kell hozzá .NET), vagy saját build: `DesktopClient\publish-windows.bat` (dupla kattintás) → `dist\win-x64\LanMessengerX.exe`; opcionálisan telepítő is
   (Inno Setup). Első indításkor a Windows tűzfal engedélyt kér – privát hálózaton engedélyezd.
 * **Linux:** `DesktopClient/publish.sh` → `dist/` alatt `.deb` és `.tar.gz`.
@@ -30,8 +41,10 @@ Részletek, fejlesztői build, tesztek: [`BUILD.md`](BUILD.md). Gyakori kérdés
 
 * **Protokoll-kompatibilitás az eredeti klienssel – valódi forgalommal.** Az eredeti Qt-s klienst fej nélkül futtatva, két hálózati névtérben, mindkét új
   implementáció (Kotlin, C#) ellen lefutnak: felfedezés, kézfogás, szöveg (unicode, escape), nyugta, állapot, adatlap, fájl mindkét irányban (40 MB-ig,
-  több száz ismétlés), profilkép és csoportos chat – lásd [`Protocol/interop`](Protocol/interop). A Kotlin ↔ C# páros is átmegy.
-* **Egységtesztek** (Kotlin: 16, C#: 23), köztük OpenSSL-lel előállított kripto-tesztvektorok ([`Protocol/testvectors`](Protocol/testvectors)).
+  több száz ismétlés), **mappák mindkét irányban**, profilkép és csoportos chat – lásd [`Protocol/interop`](Protocol/interop). Ugyanez lefut az eredeti LAN Messenger
+  **2.x** (Qt 6) kliensével szemben is. Külön teszt: minden bejövő csomagot eldobó tűzfal mögött a kliens az alhálózat-átvizsgálással találja meg az eredetit.
+  A Kotlin ↔ C# páros is átmegy.
+* **Egységtesztek** (Kotlin: 16, C#: 26), köztük OpenSSL-lel előállított kripto-tesztvektorok ([`Protocol/testvectors`](Protocol/testvectors)).
 * **A C# asztali kliens** valódi, publikált Linux-bináris formájában, virtuális kijelzőn indítva, egérrel/billentyűzettel vezérelve működött az eredeti klienssel
   szemben (felfedezés, üzenet oda-vissza, állapotváltozás, fájl elfogadása); a felület képernyőképei fejetlen Skia-renderelésből ellenőrizve (világos/sötét téma).
 * **Az Android alkalmazás:** a protokollmag a JVM-en az fenti módon tesztelt; az APK lefordul, R8-cal zsugorított, aláírt és az `aapt`/`apksigner` ellenőrzi.

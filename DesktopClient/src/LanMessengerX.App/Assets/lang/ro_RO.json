@@ -87,6 +87,7 @@
 "Send": "Trimite",
 "Send Broadcast Message": "Trimite un mesaj către mai mulți",
 "Send File": "Trimite fișierul",
+"Send a file": "Trimite un fișier",
 "Send messages using:": "Trimite mesaje folosind:",
 "Show File Transfer window when sending or receiving files": "Arată fereastra de transfer de fișiere cânt se trimit sau se primesc fișiere",
 "Show balloon notifications in tray": "Arată înștiințările în zona de notificare",
@@ -115,6 +116,7 @@
 "away": "Plecat (Away)",
 "busy": "Ocupat (Busy)",
 "seconds": "secunde",
+"{0} is offline": "{0} este deconectat",
 "{0} is offline.": "{0} este deconectat",
 "{0} is online.": "{0} este conectat"
 }

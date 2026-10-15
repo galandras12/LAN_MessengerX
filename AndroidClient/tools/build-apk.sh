@@ -29,11 +29,17 @@ rm -rf "$OUT"; mkdir -p "$OUT"/{gen,rclasses,classes,dex}
 KCP="$KOTLIN_LIBS/kotlin-compiler-embeddable-$KOTLIN_VER.jar:$KOTLIN_LIBS/kotlin-stdlib-$KOTLIN_VER.jar:$KOTLIN_LIBS/kotlin-script-runtime-$KOTLIN_VER.jar:$KOTLIN_LIBS/kotlin-reflect-$KOTLIN_VER.jar:$KOTLIN_LIBS/kotlin-daemon-embeddable-$KOTLIN_VER.jar:$(ls "$KOTLIN_LIBS"/trove4j-*.jar):$(ls "$KOTLIN_LIBS"/annotations-*.jar | head -1):$(ls "$KOTLIN_LIBS"/kotlinx-coroutines-core-jvm-*.jar | head -1)"
 STDLIB="$KOTLIN_LIBS/kotlin-stdlib-$KOTLIN_VER.jar"
 
+echo "==> assets (translations and stock pictures are shared with the desktop client)"
+SHARED="$ROOT/../DesktopClient/src/LanMessengerX.App/Assets"
+mkdir -p "$OUT/assets/lang" "$OUT/assets/avatars"
+cp "$SHARED"/lang/*.json "$OUT/assets/lang/"
+cp "$SHARED"/avatars/[0-9]*.png "$OUT/assets/avatars/"
+
 echo "==> resources (aapt)"
 # The shared manifest carries no package attribute (Gradle/AGP takes it from "namespace"); aapt needs it.
 sed "s#<manifest #<manifest package=\"$APP_ID\" #" "$ROOT/app/src/main/AndroidManifest.xml" > "$OUT/AndroidManifest.xml"
 aapt package -f -m -J "$OUT/gen" -M "$OUT/AndroidManifest.xml" -S "$ROOT/app/src/main/res" \
-  -I "$ANDROID_JAR" --min-sdk-version $MIN_SDK --target-sdk-version $TARGET_SDK \
+  -A "$OUT/assets" -I "$ANDROID_JAR" --min-sdk-version $MIN_SDK --target-sdk-version $TARGET_SDK \
   --version-code "$versionCode" --version-name "$versionName" -F "$OUT/resources.apk"
 javac -nowarn --release 17 -d "$OUT/rclasses" $(find "$OUT/gen" -name '*.java')
 

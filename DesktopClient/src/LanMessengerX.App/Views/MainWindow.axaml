@@ -86,13 +86,13 @@
         <Border DockPanel.Dock="Bottom" Padding="10,8" BorderThickness="0,1,0,0" BorderBrush="#33808080">
           <Grid ColumnDefinitions="*,*,*">
             <Button Grid.Column="0" Padding="6,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnBroadcast" ToolTip.Tip="{loc:T 'Send Broadcast Message'}">
-              <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Width="15" Height="15" Data="{StaticResource IconCampaign}" /><TextBlock Text="{loc:T 'Broadcast'}" FontSize="12" /></StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Width="15" Height="15" Data="{StaticResource IconCampaign}" /><TextBlock Text="{loc:T 'Broadcast'}" FontSize="12" TextTrimming="CharacterEllipsis" /></StackPanel>
             </Button>
             <Button Grid.Column="1" Padding="6,6" Margin="6,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnNewGroup" ToolTip.Tip="{loc:T 'New Chat Room'}">
-              <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Width="15" Height="15" Data="{StaticResource IconGroupAdd}" /><TextBlock Text="{loc:T 'Chat room'}" FontSize="12" /></StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Width="15" Height="15" Data="{StaticResource IconGroupAdd}" /><TextBlock Text="{loc:T 'Chat room'}" FontSize="12" TextTrimming="CharacterEllipsis" /></StackPanel>
             </Button>
             <Button Grid.Column="2" Padding="6,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnTransfers" ToolTip.Tip="{loc:T 'File Transfers'}">
-              <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Width="15" Height="15" Data="{StaticResource IconTransfer}" /><TextBlock Text="{loc:T 'Transfers'}" FontSize="12" /></StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6"><PathIcon Width="15" Height="15" Data="{StaticResource IconTransfer}" /><TextBlock Text="{loc:T 'Transfers'}" FontSize="12" TextTrimming="CharacterEllipsis" /></StackPanel>
             </Button>
           </Grid>
         </Border>

@@ -44,7 +44,16 @@ android {
         jvmTarget = "17"
     }
     sourceSets["main"].java.srcDir("src/main/kotlin")
+    // translations and stock pictures are shared with the desktop client
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/shared-assets"))
 }
+
+val sharedAssets = rootProject.file("../DesktopClient/src/LanMessengerX.App/Assets")
+val copySharedAssets by tasks.registering(Copy::class) {
+    from(sharedAssets) { include("lang/*.json", "avatars/[0-9]*.png") }
+    into(layout.buildDirectory.dir("generated/shared-assets"))
+}
+tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(copySharedAssets) }
 
 dependencies {
     implementation(project(":core"))

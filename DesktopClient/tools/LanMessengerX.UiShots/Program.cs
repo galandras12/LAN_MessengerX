@@ -55,6 +55,11 @@ Dispatcher.UIThread.Invoke(() =>
     main2.Show();
     state.Selected = state.Rooms[0];
     Shot(main2, "room-light" + suffix);
+    var ab = main2.FindControl<Button>("AvatarButton")!;
+    ab.Flyout!.ShowAt(ab);
+    Dispatcher.UIThread.RunJobs();
+    Shot(main2, "profile-flyout" + suffix);
+    ab.Flyout!.Hide();
     state.Selected = state.PublicChat;
     Shot(main2, "public-light" + suffix);
     state.Selected = null;

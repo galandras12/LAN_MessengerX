@@ -49,6 +49,35 @@ class LocalFileSource(private val file: File) : FileSource {
     override fun open(): InputStream = file.inputStream()
 }
 
+/** One file of a folder that is being sent: its path inside the folder ('/' separated) and its content. */
+interface FolderEntry {
+    val relPath: String
+    val size: Long
+    fun open(): InputStream
+}
+
+/** A folder to send (a directory on disk, or a document tree the app walks itself). */
+interface FolderSource {
+    val name: String
+    fun entries(): List<FolderEntry>
+}
+
+class LocalFolderSource(private val dir: File) : FolderSource {
+    override val name: String get() = dir.name
+    override fun entries(): List<FolderEntry> = dir.walkTopDown().filter { it.isFile }.map { f ->
+        object : FolderEntry {
+            override val relPath = f.relativeTo(dir).path.replace('\\', '/')
+            override val size = f.length()
+            override fun open(): InputStream = f.inputStream()
+        }
+    }.toList()
+}
+
+/** Creates the sink for each file of a folder being received (the app decides where it ends up). */
+fun interface FolderSinkFactory {
+    fun sink(folderName: String, relPath: String): FileSink
+}
+
 /** Where an incoming file is written. [commit] returns a user visible location. */
 interface FileSink {
     fun open(): OutputStream
