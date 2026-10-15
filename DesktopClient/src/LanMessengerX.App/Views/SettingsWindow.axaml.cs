@@ -293,8 +293,10 @@ public partial class SettingsWindow : Window
             string text;
             try { text = File.ReadAllText(FileLog.Path_); } catch (Exception) { text = FileLog.Tail(200); }
             if (text.Length > 60000) text = text[^60000..];
+            // user names / ids, IP and MAC addresses and profile paths are replaced by numbered placeholders before it leaves the program
+            text = LogAnonymizer.Summary(text) + "\n" + LogAnonymizer.Apply(text);
             if (Clipboard is { } cb) await cb.SetTextAsync(text);
-            FirewallText.Text = Loc.T("The log was copied to the clipboard.");
+            FirewallText.Text = Loc.T("The anonymised log was copied to the clipboard (no names, no IP addresses).");
         }
         catch (Exception ex) { FirewallText.Text = ex.Message; }
     }

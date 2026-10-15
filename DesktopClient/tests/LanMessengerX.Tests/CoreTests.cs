@@ -210,3 +210,28 @@ public class DiscoveryTests
         Assert.Equal("10.0.7.254", hosts[^1]);
     }
 }
+
+public class LogAnonymizerTests
+{
+    [Fact]
+    public void RemovesNamesAndAddressesButKeepsTheStory()
+    {
+        var log = "TCP incoming from D684CAA55881alice @ 10.20.30.40\n" +
+                  "user added: D684CAA55881alice (Alice Kovács) 1.3.3 @10.20.30.40\n" +
+                  "TCP connect to AABBCCDDEE01bob @ 10.20.30.41:50000\n" +
+                  "announcing AABBCCDDEE01bob to 239.255.100.100, 10.20.30.255, 255.255.255.255\n" +
+                  @"path C:\Users\alice\AppData\x mac 00:1A:2B:3C:4D:5E";
+        var r = LogAnonymizer.Apply(log);
+        Assert.DoesNotContain("alice", r, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("bob", r, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Kovács", r);
+        Assert.DoesNotContain("10.20.30", r);
+        Assert.DoesNotContain("00:1A", r);
+        Assert.Contains("239.255.100.100", r);
+        Assert.Contains("255.255.255.255", r);
+        // same value, same placeholder
+        var first = System.Text.RegularExpressions.Regex.Match(r, "user#\\d+").Value;
+        Assert.True(r.Split(first).Length - 1 >= 2);
+        Assert.Contains("1.3.3", r); // versions are not addresses
+    }
+}
