@@ -96,3 +96,6 @@ CMakeLists.txt.user*
 # interop test artifacts
 __pycache__/
 /Protocol/interop/legacy-harness/build/
+
+# release binaries are tracked on purpose
+!/Releases/*.exe
