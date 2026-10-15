@@ -1,11 +1,9 @@
 name: CI
 
-# Not run on GitHub yet: every step mirrors a command that was run by hand in the development environment
-# (see BUILD.md). The interop tests against the original client need root + Qt and are not part of CI.
+# Manual only (Actions tab -> Run workflow): nothing here is needed to make a release, the packages are built
+# locally (see BUILD.md). Every step mirrors a command that was run by hand. The interop tests against the
+# original client need root + Qt and are not part of CI.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 jobs:
