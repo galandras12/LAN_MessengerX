@@ -20,7 +20,7 @@ küldő ne ragadjon be).
 ## Telepítés
 
 * **Android:** a [`Releases/`](Releases) mappában lévő `LANMessengerX-3.0.0.apk` telepítése (ismeretlen forrásból telepítés engedélyezése kell).
-* **Windows:** `DesktopClient\publish-windows.bat` (dupla kattintás) → `dist\win-x64\LanMessengerX.exe`, egyetlen, önálló fájl; opcionálisan telepítő is
+* **Windows:** a [`Releases/`](Releases) mappában lévő `LANMessengerX-3.0.0-win-x64.exe` (önálló, nem kell hozzá .NET), vagy saját build: `DesktopClient\publish-windows.bat` (dupla kattintás) → `dist\win-x64\LanMessengerX.exe`; opcionálisan telepítő is
   (Inno Setup). Első indításkor a Windows tűzfal engedélyt kér – privát hálózaton engedélyezd.
 * **Linux:** `DesktopClient/publish.sh` → `dist/` alatt `.deb` és `.tar.gz`.
 
