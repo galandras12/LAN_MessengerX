@@ -215,7 +215,14 @@ public sealed class Messenger : IDisposable
         _log($"network up: {found.Name} ({found.Description}) {found.Ip}/{found.PrefixLength}, broadcast {found.Broadcast}");
         foreach (var c in NetUtil.ListInterfaces()) _log($"  adapter: {c.Name} ({c.Description}) {c.Ip}/{c.PrefixLength}{(c.SameAs(found) ? "  <- used" : "")}");
         var server = new TcpServer(_cfg.TcpPort, s => Task.Run(() => HandleIncoming(s)), _log);
-        _tcp = server.Start() ? server : null;
+        if (!server.Start())
+        {
+            // like the current original client: if the port is taken, take any free one and advertise it in the announce
+            server = new TcpServer(0, sock => Task.Run(() => HandleIncoming(sock)), _log);
+            if (!server.Start()) server = null!;
+        }
+        _tcp = server;
+        if (_tcp != null) _log($"TCP listening on port {_tcp.Port}");
         var u = new UdpService(found, _cfg.UdpPort, IPAddress.Parse(_cfg.Multicast), (ip, text) => Post(() => OnBroadcastDatagram(ip, text)), _log);
         u.Start();
         _udp = u;
@@ -270,6 +277,9 @@ public sealed class Messenger : IDisposable
         m.AddHeader(Xn.From, LocalId);
         m.AddHeader(Xn.MessageId, Interlocked.Read(ref _msgIdSeq).ToString());
         m.AddHeader(Xn.Type, type.Name());
+        // The current original client (2.x) listens on a free port when 50000 is taken, and cannot reach a peer
+        // that does not say where to connect: it would dial port 0.
+        if (type == MessageType.Announce && _tcp != null) m.AddData(Xn.TcpPort, _tcp.Port.ToString());
         var targets = new List<IPAddress>();
         void Add(IPAddress a) { if (!targets.Contains(a)) targets.Add(a); }
         try
@@ -301,7 +311,7 @@ public sealed class Messenger : IDisposable
         switch (Wire.ParseMessageType(m.Header(Xn.Type)))
         {
             case MessageType.Announce:
-                if (!_users.ContainsKey(from) && !_streams.ContainsKey(from) && _connecting.Add(from)) ConnectTo(from, fromIp);
+                if (!_users.ContainsKey(from) && !_streams.ContainsKey(from) && _connecting.Add(from)) ConnectTo(from, fromIp, PeerPort(m));
                 break;
             case MessageType.Depart:
                 RemoveUser(from);
@@ -313,17 +323,20 @@ public sealed class Messenger : IDisposable
     // TCP: connection establishment
     // ==========================================================================================
 
-    private void ConnectTo(string userId, string ip)
+    /// <summary>TCP port a peer advertised (announce / file accept), or our own configured port for older peers.</summary>
+    private int PeerPort(XmlMessage m) => int.TryParse(m.Data(Xn.TcpPort), out var p) && p is > 0 and < 65536 ? p : _cfg.TcpPort;
+
+    private void ConnectTo(string userId, string ip, int port)
     {
         Task.Run(() =>
         {
             Conn? conn = null;
             try
             {
-                _log($"TCP connect to {userId} @ {ip}:{_cfg.TcpPort}");
+                _log($"TCP connect to {userId} @ {ip}:{port}");
                 var s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
                 s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                var connect = s.ConnectAsync(new IPEndPoint(IPAddress.Parse(ip), _cfg.TcpPort));
+                var connect = s.ConnectAsync(new IPEndPoint(IPAddress.Parse(ip), port));
                 if (!connect.Wait(5000)) { s.Close(); throw new TimeoutException("connect timed out"); }
                 conn = new Conn(s, incoming: false, peerId: userId);
                 _log($"TCP connected to {userId}, waiting for its public key");
@@ -979,6 +992,7 @@ public sealed class Messenger : IDisposable
         b.AddData(Xn.FileId, fileId);
         b.AddData(Xn.FileName, t.Name);
         b.AddData(Xn.FileSize, t.Size.ToString());
+        if (_tcp != null) b.AddData(Xn.TcpPort, _tcp.Port.ToString());
         Transmit(userId, t.Type == FileType.Avatar ? MessageType.Avatar : MessageType.File, NextId(), b);
         EmitTransfer(t);
     });
@@ -1059,6 +1073,7 @@ public sealed class Messenger : IDisposable
                         b.AddData(Xn.FileOp, FileOp.Accept.Name());
                         b.AddData(Xn.FileId, fileId);
                         b.AddData(Xn.FileSize, size.ToString());
+                        if (_tcp != null) b.AddData(Xn.TcpPort, _tcp.Port.ToString());
                         Transmit(from, MessageType.Avatar, NextId(), b);
                     }
                     else _transfers.TryRemove(fileId, out _);
@@ -1077,7 +1092,8 @@ public sealed class Messenger : IDisposable
                 // backlog, so a sender that outruns it stalls on the last chunk. Peers older than 3.0.0
                 // therefore get a paced stream (see PROTOCOL.md).
                 bool paced = Proto.CompareVersions(_users.GetValueOrDefault(from)?.Version ?? "0.0.0", "3.0.0") < 0;
-                Task.Run(() => SendFileLoop(t, addr, paced));
+                var port = PeerPort(m);
+                Task.Run(() => SendFileLoop(t, addr, port, paced));
                 break;
             }
             case FileOp.Decline:
@@ -1117,14 +1133,14 @@ public sealed class Messenger : IDisposable
     }
 
     /// <summary>Dedicated thread: connect to the receiver, wait for START, stream the file raw.</summary>
-    private void SendFileLoop(Transfer t, string ip, bool paced)
+    private void SendFileLoop(Transfer t, string ip, int port, bool paced)
     {
         bool ok = false;
         try
         {
             var s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
             t.Socket = s;
-            if (!s.ConnectAsync(new IPEndPoint(IPAddress.Parse(ip), _cfg.TcpPort)).Wait(8000)) throw new TimeoutException("connect timed out");
+            if (!s.ConnectAsync(new IPEndPoint(IPAddress.Parse(ip), port)).Wait(8000)) throw new TimeoutException("connect timed out");
             s.ReceiveTimeout = 30000;
             s.SendTimeout = 30000;
             using var net = new NetworkStream(s, ownsSocket: false);

@@ -92,6 +92,11 @@ Küldés célpontjai: a multicast csoport, az alhálózat irányított broadcast
 * **depart fogadása**: a felhasználó eltávolítása.
 * A saját `from` azonosítójú datagramot el kell dobni (visszahallgatás).
 * Az új kliensek 30 másodpercenként újra `announce`-olnak, hogy a későn induló vagy hálózatot váltó társak is megtalálják őket.
+* **`tcpport` (az eredeti LAN Messenger 2.x-től)**: az announce `<body>`-jában `<tcpport>` mező mondja meg, melyik TCP-porton figyel a feladó. A 2.x kliens
+  alapértelmezésben „automatikus” portot használ (előbb 50000, ha foglalt, bármelyik szabad portot), és **olyan társhoz, amelyik nem közli a portját, a 0-s portra
+  próbál csatlakozni** – vagyis egy `tcpport` nélküli kliens a 2.x számára láthatatlan marad (megjelenik a hálózaton, de sosem kerül a partnerlistára). Ezért
+  minden announce-ba és fájl-`accept` üzenetbe bekerül a `tcpport`, a fogadó pedig ezt használja a kapcsolódáshoz (hiányában a saját beállított portját, ez a régi 1.x viselkedés).
+  A 2.x az announce-ot **csak induláskor** (és kézi frissítéskor) küldi el, ezért a nála korábban elindult kliens csak az ő kapcsolódására számíthat.
 
 Az interfész kiválasztása: első olyan interfész, ami *fel van kapcsolva, nem loopback*, van IPv4 címe. (Az új kliensek ezen felül előnyben
 részesítik a Wi-Fi/Ethernet nevűeket és a magáncímeket, kerülik a VPN/virtuális adaptereket.) Hálózatváltáskor a szolgáltatások újraindulnak.

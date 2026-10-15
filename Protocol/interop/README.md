@@ -25,6 +25,8 @@ Külön-külön:
 sudo ./lab.sh up
 sudo CLIENT=kotlin python3 test_legacy.py     # szöveg, nyugta, állapot, adatlap, fájl, avatar, csoportos chat
 sudo CLIENT=csharp python3 test_legacy.py
+# a jelenlegi eredeti (2.x, Qt 6) kliens ellen: LMC_UPSTREAM=<lanmessenger>/lmc/src ./build.sh, majd
+sudo LEGACYD=$PWD/legacy-harness/build-up/upstreamd CLIENT=csharp python3 test_legacy.py   (és test_files.py)
 sudo python3 test_kotlin_csharp.py            # az új két implementáció egymással
 sudo CLIENT=csharp ROUNDS=20 python3 test_files.py   # fájlátviteli terhelés mindkét irányban, 40 MB-ig
 sudo ./lab.sh down

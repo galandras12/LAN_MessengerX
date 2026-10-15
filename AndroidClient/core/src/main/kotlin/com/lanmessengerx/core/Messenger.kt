@@ -180,9 +180,15 @@ class Messenger(
         if (connected) teardownNetwork()
         lan = found
         log("network up: ${found.name} ${found.ip}/${found.prefixLength}")
-        val server = TcpServer(cfg.tcpPort, { s -> io.execute { handleIncoming(s) } }, log)
-        val tcpOk = server.start()
+        var server = TcpServer(cfg.tcpPort, { s -> io.execute { handleIncoming(s) } }, log)
+        var tcpOk = server.start()
+        if (!tcpOk) {
+            // like the current original client: if the port is taken, take any free one and advertise it in the announce
+            server = TcpServer(0, { s -> io.execute { handleIncoming(s) } }, log)
+            tcpOk = server.start()
+        }
         tcp = if (tcpOk) server else null
+        if (tcpOk) log("TCP listening on port ${server.boundPort}")
         val u = UdpService(found, cfg.udpPort, InetAddress.getByName(cfg.multicast), { ip, text ->
             post { onBroadcastDatagram(ip, text) }
         }, log)
@@ -237,6 +243,9 @@ class Messenger(
         m.addHeader(Xn.FROM, localId)
         m.addHeader(Xn.MESSAGE_ID, msgIdSeq.get().toString())
         m.addHeader(Xn.TYPE, type.wire)
+        // The current original client (2.x) listens on a free port when 50000 is taken, and cannot reach a peer
+        // that does not say where to connect: it would dial port 0.
+        if (type == MessageType.ANNOUNCE) tcp?.let { m.addData(Xn.TCP_PORT, it.boundPort.toString()) }
         val targets = LinkedHashSet<InetAddress>()
         try {
             targets.add(InetAddress.getByName(cfg.multicast))
@@ -256,7 +265,7 @@ class Messenger(
         when (MessageType.fromWire(m.header(Xn.TYPE))) {
             MessageType.ANNOUNCE -> {
                 if (!users.containsKey(from) && !streams.containsKey(from) && connecting.add(from)) {
-                    connectTo(from, fromIp)
+                    connectTo(from, fromIp, peerPort(m))
                 }
             }
             MessageType.DEPART -> removeUser(from)
@@ -268,14 +277,17 @@ class Messenger(
     // TCP: connection establishment
     // ==========================================================================================
 
-    private fun connectTo(userId: String, ip: String) {
+    /** TCP port a peer advertised (announce / file accept), or our own configured port for older peers. */
+    private fun peerPort(m: XmlMessage): Int = m.data(Xn.TCP_PORT).toIntOrNull()?.takeIf { it in 1..65535 } ?: cfg.tcpPort
+
+    private fun connectTo(userId: String, ip: String, port: Int) {
         io.execute {
             var conn: Conn? = null
             try {
                 val s = Socket()
                 s.tcpNoDelay = true
                 s.keepAlive = true
-                s.connect(InetSocketAddress(ip, cfg.tcpPort), 5000)
+                s.connect(InetSocketAddress(ip, port), 5000)
                 conn = Conn(s, incoming = false, peerId = userId)
                 conn.sendRaw(("MSG$localId").toByteArray(Charsets.UTF_8))
                 readLoop(conn)
@@ -861,6 +873,7 @@ class Messenger(
             b.addData(Xn.FILE_ID, fileId)
             b.addData(Xn.FILE_NAME, t.name)
             b.addData(Xn.FILE_SIZE, t.size.toString())
+            tcp?.let { b.addData(Xn.TCP_PORT, it.boundPort.toString()) }
             transmit(userId, if (t.type == FileType.AVATAR) MessageType.AVATAR else MessageType.FILE, msgIdSeq.getAndIncrement(), b)
             emitTransfer(t)
         }
@@ -934,6 +947,7 @@ class Messenger(
                         b.addData(Xn.FILE_OP, FileOp.ACCEPT.wire)
                         b.addData(Xn.FILE_ID, fileId)
                         b.addData(Xn.FILE_SIZE, size.toString())
+                        tcp?.let { b.addData(Xn.TCP_PORT, it.boundPort.toString()) }
                         transmit(from, MessageType.AVATAR, msgIdSeq.getAndIncrement(), b)
                     } else transfers.remove(fileId)
                 } else emitTransfer(t)
@@ -948,7 +962,8 @@ class Messenger(
                 // drains a backlog, so a sender that outruns it stalls the transfer on the last
                 // chunk. Peers older than 3.0.0 therefore get a paced stream (see PROTOCOL.md).
                 val paced = Proto.compareVersions(users[from]?.version ?: "0.0.0", "3.0.0") < 0
-                io.execute { sendFileLoop(t, addr, paced) }
+                val port = peerPort(m)
+                io.execute { sendFileLoop(t, addr, port, paced) }
             }
             FileOp.DECLINE -> {
                 val t = transfers.remove(fileId) ?: return
@@ -984,12 +999,12 @@ class Messenger(
     }
 
     /** Dedicated thread: connect to the receiver, wait for START, stream the file raw. */
-    private fun sendFileLoop(t: Transfer, ip: String, paced: Boolean) {
+    private fun sendFileLoop(t: Transfer, ip: String, port: Int, paced: Boolean) {
         var ok = false
         try {
             val s = Socket()
             t.socket = s
-            s.connect(InetSocketAddress(ip, cfg.tcpPort), 8000)
+            s.connect(InetSocketAddress(ip, port), 8000)
             s.soTimeout = 30000
             s.tcpNoDelay = true
             val out = s.getOutputStream()

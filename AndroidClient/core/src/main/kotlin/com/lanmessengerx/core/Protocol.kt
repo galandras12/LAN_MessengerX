@@ -130,6 +130,7 @@ object Xn {
     const val NOTE = "note"
     const val USER_CAPS = "usercaps"
     const val FOLDER_ID = "folderid"
+    const val TCP_PORT = "tcpport"
     const val REL_PATH = "relpath"
     const val FILE_COUNT = "filecount"
 }

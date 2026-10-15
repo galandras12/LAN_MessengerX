@@ -99,3 +99,6 @@ __pycache__/
 
 # release binaries are tracked on purpose
 !/Releases/*.exe
+
+# the APK build script matches the generic build-* rule above, keep it tracked
+!/AndroidClient/tools/build-apk.sh

@@ -161,4 +161,5 @@ public static class Xn
     public const string Note = "note";
     public const string UserCaps = "usercaps";
     public const string FolderId = "folderid";
+    public const string TcpPort = "tcpport";
 }

@@ -204,6 +204,9 @@ internal sealed class TcpServer
     private Socket? _server;
     private volatile bool _running;
 
+    /// <summary>The port actually listened on (differs from the requested one if that was taken and 0 = any port was used).</summary>
+    public int Port { get; private set; }
+
     public TcpServer(int port, Action<Socket> onSocket, Action<string> log)
     {
         _port = port;
@@ -221,6 +224,7 @@ internal sealed class TcpServer
             s.ReceiveBufferSize = 1 << 20;
             s.Bind(new IPEndPoint(IPAddress.Any, _port));
             s.Listen(64);
+            Port = ((IPEndPoint)s.LocalEndPoint!).Port;
             _server = s;
             _running = true;
             new Thread(() =>

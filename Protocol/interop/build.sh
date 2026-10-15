@@ -8,6 +8,12 @@ TOOLS="${LMX_TOOLCHAIN:-/opt/lmx-android}"
 echo "==> original client (Qt, headless)"
 mkdir -p "$HERE/legacy-harness/build" && (cd "$HERE/legacy-harness/build" && qmake6 ../harness.pro >/dev/null && make -j"$(nproc)" >/dev/null)
 
+# optional: the current upstream LAN Messenger (2.x) - LMC_UPSTREAM=/path/to/lanmessenger/lmc/src
+if [ -n "${LMC_UPSTREAM:-}" ]; then
+  echo "==> upstream 2.x client (Qt, headless)"
+  mkdir -p "$HERE/legacy-harness/build-up" && (cd "$HERE/legacy-harness/build-up" && qmake6 ../harness-upstream.pro >/dev/null && make -j"$(nproc)" >/dev/null)
+fi
+
 echo "==> Kotlin CLI"
 K="$TOOLS/kotlin"
 KCP="$K/kotlin-compiler-embeddable-2.0.21.jar:$K/kotlin-stdlib-2.0.21.jar:$K/kotlin-script-runtime-2.0.21.jar:$K/kotlin-reflect-2.0.21.jar:$K/kotlin-daemon-embeddable-2.0.21.jar:$(ls "$K"/trove4j-*.jar):$(ls "$K"/annotations-*.jar | head -1):$(ls "$K"/kotlinx-coroutines-core-jvm-*.jar | head -1)"

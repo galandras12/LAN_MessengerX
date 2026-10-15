@@ -199,6 +199,10 @@ internal class TcpServer(
     @Volatile
     private var running = false
 
+    /** The port actually listened on (differs from the requested one if 0 = any free port was asked for). */
+    var boundPort = port
+        private set
+
     /** @return true if the port could be bound */
     fun start(): Boolean {
         return try {
@@ -207,6 +211,7 @@ internal class TcpServer(
             // inherited by accepted sockets: a roomy window keeps the original client's file sender from stalling
             s.receiveBufferSize = 1 shl 20
             s.bind(InetSocketAddress(port), 64)
+            boundPort = s.localPort
             server = s
             running = true
             Thread({

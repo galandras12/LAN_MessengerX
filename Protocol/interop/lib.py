@@ -3,7 +3,7 @@ import subprocess, threading, time, sys, os, re, shutil, hashlib, queue
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 TOOLS = os.environ.get("LMX_TOOLCHAIN", "/opt/lmx-android")
-LEGACYD = os.path.join(HERE, "legacy-harness", "build", "legacyd")
+LEGACYD = os.environ.get("LEGACYD", os.path.join(HERE, "legacy-harness", "build", "legacyd"))
 DATA = "/tmp/lmx-interop-data"
 os.makedirs(DATA, exist_ok=True)
 

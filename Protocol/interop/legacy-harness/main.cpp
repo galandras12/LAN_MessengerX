@@ -2,6 +2,10 @@
 #include "harness.h"
 #include "settings.h"
 #include "trace.h"
+#ifndef XN_TRACEMODE
+#define XN_TRACEMODE XN_ARGTRACEMODE
+#define XN_LOGFILE XN_ARGLOGFILE
+#endif
 int main(int argc, char** argv) {
   QCoreApplication app(argc, argv);
   app.setApplicationName("legacyd");
